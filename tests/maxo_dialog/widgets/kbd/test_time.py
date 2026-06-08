@@ -1,10 +1,10 @@
 import datetime
 
+from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import TimeSelect
-from maxo.types import MaxoType
 
 
-async def test_render_time_select(mock_manager) -> None:
+async def test_render_time_select(mock_manager: DialogManager) -> None:
     select = TimeSelect("x")
 
     keyboard_before = await select.render_keyboard(
@@ -15,7 +15,7 @@ async def test_render_time_select(mock_manager) -> None:
     assert len(keyboard_before) == 8
 
     await select.set_value(
-        MaxoType(),
+        mock_manager.event,
         mock_manager,
         datetime.time(0, 10),
     )

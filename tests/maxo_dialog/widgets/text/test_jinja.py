@@ -6,7 +6,7 @@ from maxo.dialogs.widgets.text import Jinja
 
 @pytest.fixture
 def mock_manager(mock_manager: DialogManager) -> DialogManager:
-    mock_manager.middleware_data = {}  # type: ignore[method-assign]
+    mock_manager.middleware_data = {}  # type: ignore[misc]
     return mock_manager
 
 

@@ -5,7 +5,7 @@ import pytest
 
 from maxo.bot.bot import Bot
 from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
-from maxo.types import PhotoAttachmentRequest, VideoAttachmentRequest
+from maxo.types import Message, PhotoAttachmentRequest, VideoAttachmentRequest
 from maxo.utils.upload_media import BufferedInputFile
 
 
@@ -15,7 +15,7 @@ class DummyFacade(AttachmentsFacade):
 
 class DummyMessageFacade(MessageMethodsFacade):
     @property
-    def message(self) -> object:
+    def message(self) -> Message:
         return AsyncMock()
 
     @property
@@ -29,12 +29,12 @@ def bot_mock() -> AsyncMock:
 
 
 @pytest.fixture
-def facade(bot_mock) -> DummyFacade:
+def facade(bot_mock: AsyncMock) -> DummyFacade:
     return DummyFacade(bot=bot_mock)
 
 
 @pytest.fixture
-def message_facade(bot_mock) -> DummyMessageFacade:
+def message_facade(bot_mock: AsyncMock) -> DummyMessageFacade:
     return DummyMessageFacade(bot=bot_mock)
 
 
@@ -69,7 +69,7 @@ async def test_build_media_only_input_files(facade: DummyFacade) -> None:
 
 
 async def test_build_media_only_requests(facade: DummyFacade) -> None:
-    requests = [
+    requests: list[MediaInput] = [
         PhotoAttachmentRequest.factory(token="photo_token"),  # noqa: S106
         VideoAttachmentRequest.factory(token="video_token"),  # noqa: S106
     ]

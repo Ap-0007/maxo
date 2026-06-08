@@ -1,10 +1,11 @@
 """Тесты обработки сообщений из каналов (без sender.user) - закрывает issue #111."""
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
-from maxo import Dispatcher, Router
+from maxo import Ctx, Dispatcher, Router
 from maxo.dialogs import setup_dialogs
 from maxo.dialogs.api.entities import AccessSettings, EventContext, Stack
 from maxo.dialogs.api.entities.events import EVENT_CONTEXT_KEY
@@ -17,6 +18,8 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
+from maxo.routing.updates import MessageCreated
+from maxo.types import Message, MessageBody, Recipient
 from maxo.types.update_context import UpdateContext
 
 
@@ -35,7 +38,7 @@ def dp(message_manager: MockMessageManager, captured_ctx: dict[str, Any]) -> Dis
     router = Router()
 
     @router.message_created()
-    async def handler(event, ctx):
+    async def handler(event: Any, ctx: Ctx) -> None:
         captured_ctx["event_context"] = ctx[EVENT_CONTEXT_KEY]
 
     dp = Dispatcher(
@@ -50,6 +53,18 @@ def dp(message_manager: MockMessageManager, captured_ctx: dict[str, Any]) -> Dis
 @pytest.fixture
 def channel_client(dp: Dispatcher) -> BotClient:
     return BotClient(dp, user_id=1, chat_id=-100, chat_type=ChatType.CHANNEL)
+
+
+@pytest.fixture
+def event_message_created() -> MessageCreated:
+    return MessageCreated(
+        message=Message(
+            recipient=Recipient(chat_type=ChatType.CHANNEL, chat_id=-100),
+            timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+            body=MessageBody(mid="42", seq=42, text="channel post"),
+        ),
+        timestamp=datetime.fromtimestamp(1234567890, tz=UTC),
+    )
 
 
 async def test_storage_proxy_channel_message_created(
@@ -95,46 +110,71 @@ async def test_event_context_user_none_visible_in_handler(
     assert ev_ctx.chat_id == -100
 
 
-async def test_access_validator_allows_when_no_settings() -> None:
+async def test_access_validator_allows_when_no_settings(
+    event_message_created: MessageCreated,
+) -> None:
     """Если access_settings отсутствуют - доступ разрешён даже без user."""
     validator = DefaultAccessValidator()
     stack = Stack(_id="default", access_settings=None)
-    ctx: dict = {EVENT_FROM_USER_KEY: None}
+    ctx = Ctx({EVENT_FROM_USER_KEY: None})
 
-    allowed = await validator.is_allowed(stack=stack, context=None, event=None, ctx=ctx)
+    allowed = await validator.is_allowed(
+        stack=stack,
+        context=None,
+        event=event_message_created,
+        ctx=ctx,
+    )
 
     assert allowed is True
 
 
-async def test_access_validator_allows_in_dialog_chat() -> None:
+async def test_access_validator_allows_in_dialog_chat(
+    event_message_created: MessageCreated,
+) -> None:
     """В приватном чате (DIALOG) доступ разрешён даже при заданных user_ids."""
     validator = DefaultAccessValidator()
     stack = Stack(
         _id="default",
         access_settings=AccessSettings(user_ids=[999]),
     )
-    ctx: dict = {
-        UPDATE_CONTEXT_KEY: UpdateContext(type=ChatType.DIALOG),
-        EVENT_FROM_USER_KEY: None,
-    }
+    ctx = Ctx(
+        {
+            UPDATE_CONTEXT_KEY: UpdateContext(type=ChatType.DIALOG),
+            EVENT_FROM_USER_KEY: None,
+        },
+    )
 
-    allowed = await validator.is_allowed(stack=stack, context=None, event=None, ctx=ctx)
+    allowed = await validator.is_allowed(
+        stack=stack,
+        context=None,
+        event=event_message_created,
+        ctx=ctx,
+    )
 
     assert allowed is True
 
 
-async def test_access_validator_denies_when_user_required_but_missing() -> None:
+async def test_access_validator_denies_when_user_required_but_missing(
+    event_message_created: MessageCreated,
+) -> None:
     """В канале без user и при заданных user_ids - доступ запрещён (не AttributeError)."""
     validator = DefaultAccessValidator()
     stack = Stack(
         _id="default",
         access_settings=AccessSettings(user_ids=[1, 2, 3]),
     )
-    ctx: dict = {
-        UPDATE_CONTEXT_KEY: UpdateContext(type=ChatType.CHANNEL),
-        EVENT_FROM_USER_KEY: None,
-    }
+    ctx = Ctx(
+        {
+            UPDATE_CONTEXT_KEY: UpdateContext(type=ChatType.CHANNEL),
+            EVENT_FROM_USER_KEY: None,
+        },
+    )
 
-    allowed = await validator.is_allowed(stack=stack, context=None, event=None, ctx=ctx)
+    allowed = await validator.is_allowed(
+        stack=stack,
+        context=None,
+        event=event_message_created,
+        ctx=ctx,
+    )
 
     assert allowed is False

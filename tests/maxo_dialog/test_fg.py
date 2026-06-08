@@ -55,7 +55,7 @@ def message_manager() -> MockMessageManager:
 
 
 @pytest.fixture
-def dp(message_manager) -> Dispatcher:
+def dp(message_manager: MockMessageManager) -> Dispatcher:
     dp = Dispatcher(storage=JsonMemoryStorage())
     dp.include_router(Dialog(window))
     setup_dialogs(dp, message_manager=message_manager)
@@ -63,12 +63,12 @@ def dp(message_manager) -> Dispatcher:
 
 
 @pytest.fixture
-def client(dp) -> BotClient:
+def client(dp: Dispatcher) -> BotClient:
     return BotClient(dp, chat_id=-1, user_id=1, chat_type=ChatType.CHAT)
 
 
 @pytest.fixture
-def second_client(dp) -> BotClient:
+def second_client(dp: Dispatcher) -> BotClient:
     return BotClient(dp, chat_id=-1, user_id=2, chat_type=ChatType.CHAT)
 
 

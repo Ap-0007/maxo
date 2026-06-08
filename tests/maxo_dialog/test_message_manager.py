@@ -25,7 +25,7 @@ async def test_remove_inline_kbd_skips_refetch() -> None:
     bot.get_message_by_id = AsyncMock()
     mgr = MessageManager(media_id_storage=AsyncMock())
 
-    result = await mgr.remove_inline_kbd(bot, _make_old_message_with_kbd(mid="55"))
+    result = await mgr.remove_inline_kbd(bot, _make_old_message_with_kbd(mid="55"))  # type: ignore[func-returns-value]
 
     bot.edit_message.assert_awaited_once()
     bot.get_message_by_id.assert_not_called()
@@ -35,7 +35,7 @@ async def test_remove_inline_kbd_skips_refetch() -> None:
 async def test_remove_kbd_no_update_returns_none() -> None:
     """remove_kbd с ShowMode.NO_UPDATE возвращает None."""
     mgr = MessageManager(media_id_storage=AsyncMock())
-    result = await mgr.remove_kbd(
+    result = await mgr.remove_kbd(  # type: ignore[func-returns-value]
         bot=AsyncMock(),
         show_mode=ShowMode.NO_UPDATE,
         old_message=None,

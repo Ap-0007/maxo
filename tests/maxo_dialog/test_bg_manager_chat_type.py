@@ -19,7 +19,7 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
-from maxo.dialogs.api.entities import DialogStartEvent
+from maxo.dialogs.api.entities import DialogAction, DialogStartEvent
 from maxo.dialogs.api.protocols import BgManagerFactory
 from maxo.dialogs.manager.bg_manager import BgManager, BgManagerFactoryImpl
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
@@ -54,7 +54,9 @@ async def on_message(
     widget: MessageInput,
     manager: DialogManager,
 ) -> None:
-    received_texts.append(message.message.body.text)
+    text = message.message.body.text
+    assert text is not None
+    received_texts.append(text)
 
 
 @pytest.fixture(autouse=True)
@@ -149,7 +151,7 @@ class TestUpdateContextMiddlewareDialogEvent:
         middleware = UpdateContextMiddleware()
         user = _fake_user(100)
         event = DialogStartEvent(
-            action="start",
+            action=DialogAction.START,
             data=None,
             new_state=ChatSG.active,
             mode=StartMode.RESET_STACK,
@@ -161,12 +163,12 @@ class TestUpdateContextMiddlewareDialogEvent:
             intent_id=None,
             stack_id=None,
         )
-        captured_ctx: Ctx = {}
+        captured_ctx = Ctx({})
 
         async def next_handler(ctx: Ctx) -> None:
             captured_ctx.update(ctx)
 
-        ctx: Ctx = {}
+        ctx = Ctx({})
         await middleware(MaxoUpdate(update=event), ctx, next_handler)
 
         assert EVENT_FROM_USER_KEY in captured_ctx
@@ -177,7 +179,7 @@ class TestUpdateContextMiddlewareDialogEvent:
         middleware = UpdateContextMiddleware()
         user = _fake_user(100)
         event = DialogStartEvent(
-            action="start",
+            action=DialogAction.START,
             data=None,
             new_state=ChatSG.active,
             mode=StartMode.RESET_STACK,
@@ -189,12 +191,12 @@ class TestUpdateContextMiddlewareDialogEvent:
             intent_id=None,
             stack_id=None,
         )
-        captured_ctx: Ctx = {}
+        captured_ctx = Ctx({})
 
         async def next_handler(ctx: Ctx) -> None:
             captured_ctx.update(ctx)
 
-        ctx: Ctx = {}
+        ctx = Ctx({})
         await middleware(MaxoUpdate(update=event), ctx, next_handler)
 
         update_context = captured_ctx[UPDATE_CONTEXT_KEY]
