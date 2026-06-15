@@ -120,48 +120,8 @@
                     "chats"
                 ],
                 "operationId": "getChats",
-                "description": "Возвращает список групповых чатов и каналов, в которые добавлен бот, информацию о каждом чате и маркер для перехода к следующей странице списка\n\nПример запроса:\n```bash\ncurl -X GET \"https://platform-api.max.ru/chats\" \\\n  -H \"Authorization: {access_token}\"\n```",
-                "summary": "Получение списка всех групповых чатов и каналов",
-                "parameters": [
-                    {
-                        "description": "Количество запрашиваемых чатов",
-                        "name": "count",
-                        "in": "query",
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32",
-                            "minimum": 1,
-                            "maximum": 100,
-                            "default": 50
-                        }
-                    },
-                    {
-                        "description": "Указатель на следующую страницу данных. Для первой страницы передайте `null`",
-                        "name": "marker",
-                        "in": "query",
-                        "schema": {
-                            "$ref": "#/components/schemas/bigint"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "В ответе с пагинацией возвращаются чаты",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChatList"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthorized"
-                    },
-                    "500": {
-                        "$ref": "#/components/responses/InternalError"
-                    }
-                }
+                "description": "> ! Начиная **с июня 2026** метод `GET /chats` больше не поддерживается, и API не предоставляет готовой возможности для получения списка групповых чатов и каналов, в которые добавлен бот\n\n Если вам требуется получить для бота такой список, используйте [POST /subscriptions](/docs-api/methods/POST/subscriptions). При этом задача сбора, хранения и поддержки идентификаторов ложится на разработчика: он выбирает способ реализации исходя из своей инфраструктуры и сценария использования\n\n**Возможный алгоритм действий:**\n\n1. **Cоздайте подписку** через [POST /subscriptions](/docs-api/methods/POST/subscriptions) и укажите нужные типы событий в параметре `update_types[]`, например, `bot_added` или `bot_started`. Список поддерживаемых типов событий – в объекте [Update](/docs-api/objects/Update)\n\n2. **Получите `chat_id` в событии** – о том, как это сделать, см. в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)\n\n3. **Сохраните `chat_id`**:\n\n   - разверните на своей стороне хранилище данных\n   - при получении каждого события с `chat_id` — сохраните его, если он ещё не сохранён\n   - обработайте возможные дубли (одно и то же событие может прийти повторно)\n   - удалите `chat_id` при возникновении соответствующих событий, например, `bot_removed`\n\n4. **Используйте сохранённый `chat_id` для вызовов API**. После того как `chat_id` окажется в вашем хранилище, вы сможете использовать его во всех методах, где он требуется:\n\n   - [POST `/messages`](/docs-api/methods/POST/messages) — отправить сообщение в чат\n   - [GET `/chats/{chat_id}/members`](/docs-api/methods/GET/chats/-chatId-/members) — получить участников группового чата или канала\n   - [POST `/chats/{chat_id}/actions`](/docs-api/methods/POST/chats/-chatId-/actions) — отправить действия бота в групповой чат\n   - и любые другие методы, принимающие `chat_id` как параметр\n\n > Использование [Long Polling](/docs-api#Long%C2%A0Polling) для получения списка чатов и каналов для бота не предусмотрено",
+                "summary": "Получение списка всех групповых чатов и каналов для бота"
             }
         },
         "/chats/{chatLink}": {
@@ -220,7 +180,7 @@
                 "parameters": [
                     {
                         "name": "chatId",
-                        "description": "ID запрашиваемого группового чата или канала",
+                        "description": "ID запрашиваемого группового чата или канала. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "required": true,
                         "in": "path",
                         "schema": {
@@ -290,42 +250,6 @@
                                 }
                             }
                         }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthorized"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "500": {
-                        "$ref": "#/components/responses/InternalError"
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "chats"
-                ],
-                "x-opGroup": "chat",
-                "operationId": "deleteChat",
-                "description": "Удаляет групповой чат для всех участников\n\n#### Пример запроса:\n```bash\ncurl -X DELETE \"https://platform-api.max.ru/chats/{chatId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
-                "summary": "Удаление группового чата",
-                "parameters": [
-                    {
-                        "name": "chatId",
-                        "description": "ID чата",
-                        "required": true,
-                        "in": "path",
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64",
-                            "pattern": "\\-?\\d+"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "$ref": "#/components/responses/SuccessResponse"
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthorized"
@@ -1061,11 +985,11 @@
                     "messages"
                 ],
                 "operationId": "getMessages",
-                "description": "Метод возвращает информацию о сообщении или массив сообщений из чата. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений из указанного чата. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Метод возвращает информацию о сообщении или массив сообщений из чата. Для выполнения запроса нужно указать один из параметров — `chat_id` или `message_ids`:\n\n- `chat_id` — метод возвращает массив сообщений из указанного чата. Сообщения возвращаются в обратном порядке: последние сообщения будут первыми в массиве. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)\n\n- `message_ids` — метод возвращает информацию о запрошенных сообщениях. Можно указать один идентификатор или несколько\n\n#### Пример запроса с использованием `chat_id`:\n```bash\ncurl -X GET \"https://platform-api.max.ru/messages?chat_id={chat_id}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n#### Пример запроса с использованием `message_ids`:\n```bash\ncurl -X GET \"https://platform-api.max.ru/messages?message_ids={message_id1},{message_id2}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Получение сообщений",
                 "parameters": [
                     {
-                        "description": " ID чата, чтобы получить сообщения из определённого чата. Обязательный параметр, если не указан `message_ids`",
+                        "description": " ID чата, чтобы получить сообщения из определённого чата. Обязательный параметр, если не указан `message_ids`. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "name": "chat_id",
                         "in": "query",
                         "schema": {
@@ -1160,7 +1084,7 @@
                     },
                     {
                         "name": "chat_id",
-                        "description": "Если сообщение отправляется в чат, укажите его ID",
+                        "description": "Если сообщение отправляется в чат, укажите его ID. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1769,7 +1693,7 @@
                 "description": "Объект содержит общую информацию о групповом чате или канале: его тип, настройки отображения (название, аватар, описание, ссылка), публичную доступность, а также информацию об участниках (владельце, боте и других пользователях), времени их последней активности и событиях",
                 "properties": {
                     "chat_id": {
-                        "description": "ID чата или канала",
+                        "description": "ID чата или канала — в зависимости от ограничений метода и от того, с чем вы работаете. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "type": "integer",
                         "format": "int64"
                     },
@@ -2146,7 +2070,7 @@
                 "description": "Новый получатель сообщения. Может быть пользователем или чатом",
                 "properties": {
                     "chat_id": {
-                        "description": "ID чата",
+                        "description": "ID чата. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "type": "integer",
                         "format": "int64",
                         "nullable": true
@@ -2409,7 +2333,7 @@
                         "readOnly": false
                     },
                     "chat_id": {
-                        "description": "Чат, в котором сообщение было изначально опубликовано. Только для пересланных сообщений",
+                        "description": "Чат, в котором сообщение было изначально опубликовано. Только для пересланных сообщений. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                         "type": "integer",
                         "format": "int64",
                         "readOnly": false
@@ -4107,7 +4031,7 @@
                 ]
             },
             "Update": {
-                "description": "Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:  \n\n - Вы подписались на обновления через Webhook — при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](/docs-api/methods/POST/subscriptions), который содержит объект `Update` \n\n - Вы отправили [GET-запрос /updates](/docs-api/methods/GET/updates) для получения обновлений через  Long Polling— в ответ вернётся объект `Update` \n\n  >! Получение обновлений с помощью [Long Polling](/do cs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Типы событий\n\n- `bot_added` — бот добавлен в чат или канал\n\n- `bot_started` — пользователь впервые начал общение с ботом или возобновил после остановки — нажал соответствующую кнопку в настройках бота в МАКС\n\n- `bot_stopped` — пользователь остановил или удалил бота через настройки бота в МАКС. Во втором случае одновременно с `bot_stopped` возвращается событие `dialog_removed`\n\n- `bot_removed` — бот удалён из чата или канала \n\n- `chat_title_changed` — пользователь изменил название чата или канала\n\n- `dialog_cleared` — пользователь очистил историю диалога с ботом\n\n- `dialog_muted` — пользователь отключил уведомления в диалоге с ботом \n\n- `dialog_unmuted` — пользователь включил уведомления в диалоге с ботом \n\n- `dialog_removed` — пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` — при удалении диалога бот останавливается автоматически \n\n- `message_callback` — пользователь нажал на кнопку в чате или канале\n\n - `message_created` — пользователь отправил новое сообщение или опубликовал пост\n\n- `message_edited` — пользователь отредактировал сообщение в чате или канале\n\n- `message_removed` — пользователь удалил сообщение из чата или канала\n\n- `user_added` — в чат или канал добавлен или перешёл по ссылке новый пользователь\n\n- `user_removed` — пользователь удалён или покинул чат или канал \n\n ## Свойства объекта Update",
+                "description": "Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:  \n\n - Вы подписались на обновления через Webhook — при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](/docs-api/methods/POST/subscriptions), который содержит объект `Update` \n\n - Вы отправили [GET-запрос /updates](/docs-api/methods/GET/updates) для получения обновлений через  Long Polling — в ответ вернётся объект `Update` \n\n  >! Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Типы событий\n\n- `bot_added` — бот добавлен в чат или канал\n\n- `bot_started` — пользователь впервые начал общение с ботом или возобновил после остановки — нажал соответствующую кнопку в настройках бота в МАКС\n\n- `bot_stopped` — пользователь остановил или удалил бота через настройки бота в МАКС. Во втором случае одновременно с `bot_stopped` возвращается событие `dialog_removed`\n\n- `bot_removed` — бот удалён из чата или канала \n\n- `chat_title_changed` — пользователь изменил название чата или канала\n\n- `dialog_cleared` — пользователь очистил историю диалога с ботом\n\n- `dialog_muted` — пользователь отключил уведомления в диалоге с ботом \n\n- `dialog_unmuted` — пользователь включил уведомления в диалоге с ботом \n\n- `dialog_removed` — пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` — при удалении диалога бот останавливается автоматически \n\n- `message_callback` — пользователь нажал на кнопку в чате или канале\n\n - `message_created` — пользователь отправил новое сообщение или опубликовал пост\n\n- `message_edited` — пользователь отредактировал сообщение в чате или канале\n\n- `message_removed` — пользователь удалил сообщение из чата или канала\n\n- `user_added` — в чат или канал добавлен или перешёл по ссылке новый пользователь\n\n- `user_removed` — пользователь удалён или покинул чат или канал \n\n ## Свойства объекта Update",
                 "discriminator": {
                     "propertyName": "update_type",
                     "mapping": {
@@ -4254,7 +4178,7 @@
                                 "type": "string"
                             },
                             "chat_id": {
-                                "description": "ID чата, где сообщение было удалено",
+                                "description": "ID чата, где сообщение было удалено. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4304,7 +4228,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, куда был добавлен бот",
+                                "description": "ID чата, куда был добавлен бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4338,7 +4262,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, откуда был удалён бот",
+                                "description": "ID чата, откуда был удалён бот. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4372,7 +4296,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4411,7 +4335,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4444,7 +4368,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4477,7 +4401,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4510,7 +4434,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4551,7 +4475,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4591,7 +4515,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID диалога, где произошло событие",
+                                "description": "ID диалога, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4632,7 +4556,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID диалога, где произошло событие",
+                                "description": "ID диалога, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
@@ -4666,7 +4590,7 @@
                     {
                         "properties": {
                             "chat_id": {
-                                "description": "ID чата, где произошло событие",
+                                "description": "ID чата, где произошло событие. Как получить ID — в [разделе «Получение chat_id»](/docs-api#Получение%20chat_id)",
                                 "type": "integer",
                                 "format": "int64"
                             },
