@@ -43,7 +43,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
 
     Args:
         attachments: Вложения сообщения. Если поле равно `null`, изменений не произойдет. Если пусто, все вложения будут удалены
-        chat_id: Если сообщение отправляется в чат, укажите его ID
+        chat_id: Если сообщение отправляется в чат, укажите его ID. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
         disable_link_preview: Если `false`, сервер не будет генерировать превью для ссылок в тексте сообщения
         format: Если установлен, текст сообщения будет форматирован данным способом. Для подробной информации загляните в раздел [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)
         link: Ссылка на сообщение
@@ -58,7 +58,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     __method__ = "post"
 
     chat_id: Query[Omittable[int]] = Omitted()
-    """Если сообщение отправляется в чат, укажите его ID"""
+    """Если сообщение отправляется в чат, укажите его ID. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     disable_link_preview: Query[Omittable[bool]] = Omitted()
     """Если `false`, сервер не будет генерировать превью для ссылок в тексте сообщения"""
     user_id: Query[Omittable[int]] = Omitted()
