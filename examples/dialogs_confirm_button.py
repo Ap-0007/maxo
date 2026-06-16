@@ -11,7 +11,7 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
-from maxo.dialogs.widgets.kbd import ConfirmButton
+from maxo.dialogs.widgets.kbd import Button, ConfirmButton
 from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
@@ -24,44 +24,54 @@ class SG(StatesGroup):
     main = State()
 
 
-async def on_confirm_handler(
+async def on_pizza(
     callback: MessageCallback,
     widget: ConfirmButton,
     manager: DialogManager,
 ) -> None:
-    await callback.message.answer("Action confirmed!")
+    await callback.message.answer("Пицца заказана, жди курьера 🍕")
     manager.show_mode = ShowMode.SEND
 
 
-async def on_cancel_handler(
+async def on_pizza_cancel(
     callback: MessageCallback,
     widget: ConfirmButton,
     manager: DialogManager,
 ) -> None:
-    await callback.message.answer("Action canceled!")
+    await callback.message.answer("Пицца уже в печи, жаль =(")
+    manager.show_mode = ShowMode.SEND
+
+
+async def on_sushi(
+    callback: MessageCallback,
+    widget: ConfirmButton,
+    manager: DialogManager,
+) -> None:
+    await callback.message.answer("Роллы заказаны, жди рыбу 🐡")
     manager.show_mode = ShowMode.SEND
 
 
 confirm_dialog = Dialog(
     Window(
-        Const("Click at any button to see the confirmation flow"),
+        Const("Нажми на любой заказ, чтобы посмотреть работу ConfirmButton"),
         ConfirmButton(
-            primary_text=Const("Primary 1"),
-            confirm_text=Const("Confirm 1"),
-            cancel_text=Const("Cancel 1"),
-            are_you_sure_text=Const("Are you sure? 1"),
-            id="1",
-            on_confirm=on_confirm_handler,
-            on_cancel=on_cancel_handler,
+            primary_text=Const("🍕 Заказать пиццу"),
+            confirm_text=Const("✅ Точно"),
+            cancel_text=Const("❌ Передумал"),
+            warning_text=Const("🍕 Подтверди заказ пиццы"),
+            on_confirm=on_pizza,
+            on_cancel=on_pizza_cancel,
+            id="pizza",
         ),
+        Button(Const("-"), id="empty"),
         ConfirmButton(
-            primary_text=Const("Primary 2"),
-            confirm_text=Const("Confirm 2"),
-            cancel_text=Const("Cancel 2"),
-            are_you_sure_text=Const("Are you sure? 2"),
-            id="2",
-            on_confirm=on_confirm_handler,
-            on_cancel=on_cancel_handler,
+            primary_text=Const("🍣 Заказать суши"),
+            confirm_text=Const("✅ Точно суши"),
+            cancel_text=Const("❌ Передумал, не суши"),
+            warning_text=None,
+            on_confirm=on_sushi,
+            on_cancel=None,
+            id="sushi",
         ),
         state=SG.main,
     ),
@@ -80,7 +90,7 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
 
 
 async def main() -> None:
-    bot = Bot(os.environ["TOKEN"])
+    bot = Bot(os.environ["TOKEN"], warming_up=not __debug__)
 
     key_builder = DefaultKeyBuilder(with_destiny=True)
     events_isolation = SimpleEventIsolation(key_builder=key_builder)

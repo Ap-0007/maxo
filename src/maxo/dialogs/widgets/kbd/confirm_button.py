@@ -3,6 +3,7 @@ from typing import Any
 
 from maxo.dialogs import DialogManager, DialogProtocol
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
+from maxo.dialogs.api.internal.middleware import PAYLOAD_KEY
 from maxo.dialogs.utils import remove_intent_id
 from maxo.dialogs.widgets.common import WhenCondition
 from maxo.dialogs.widgets.kbd import Keyboard
@@ -15,6 +16,10 @@ from maxo.types import CallbackButton
 
 OnClick = Callable[[MessageCallback, "ConfirmButton", DialogManager], Awaitable]
 
+ACTION_WAIT = "__wait__"
+ACTION_CONFIRM = "__confirm__"
+ACTION_CANCEL = "__cancel__"
+
 
 class ConfirmButton(Keyboard):
     def __init__(
@@ -23,7 +28,7 @@ class ConfirmButton(Keyboard):
         primary_text: TextWidget,
         confirm_text: TextWidget,
         cancel_text: TextWidget,
-        are_you_sure_text: TextWidget | None = None,
+        warning_text: TextWidget | None = None,
         on_confirm: OnClick | WidgetEventProcessor | None = None,
         on_cancel: OnClick | WidgetEventProcessor | None = None,
         when: WhenCondition = None,
@@ -32,7 +37,7 @@ class ConfirmButton(Keyboard):
         self.primary_text = primary_text
         self.confirm_text = confirm_text
         self.cancel_text = cancel_text
-        self.are_you_sure_text = are_you_sure_text
+        self.warning_text = warning_text
         self.on_confirm = ensure_event_processor(on_confirm)
         self.on_cancel = ensure_event_processor(on_cancel)
 
@@ -43,9 +48,9 @@ class ConfirmButton(Keyboard):
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
-        if data == "__confirm__":
+        if data == ACTION_CONFIRM:
             await self.on_confirm.process_event(callback, self, manager)
-        elif data == "__cancel__":
+        elif data == ACTION_CANCEL:
             await self.on_cancel.process_event(callback, self, manager)
         return True
 
@@ -54,36 +59,41 @@ class ConfirmButton(Keyboard):
         data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
-        payload: str | None = manager.middleware_data.get("aiogd_original_payload")
+        payload: str | None = manager.middleware_data.get(PAYLOAD_KEY)
         action = self._get_action(payload)
 
         # Если кнопка с primary_text
-        if action == "__wait__":
-            return [
-                [
-                    CallbackButton(
-                        text=await self.are_you_sure_text.render_text(data, manager),
-                        payload=f"{self.callback_prefix()}__wait__",
-                    ),
-                ],
+        if action == ACTION_WAIT:
+            keyboard = []
+            if self.warning_text is not None:
+                keyboard.append(
+                    [
+                        CallbackButton(
+                            text=await self.warning_text.render_text(data, manager),
+                            payload=self._item_payload(ACTION_WAIT),
+                        ),
+                    ],
+                )
+            keyboard.append(
                 [
                     CallbackButton(
                         text=await self.cancel_text.render_text(data, manager),
-                        payload=f"{self.callback_prefix()}__cancel__",
+                        payload=self._item_payload(ACTION_CANCEL),
                     ),
                     CallbackButton(
                         text=await self.confirm_text.render_text(data, manager),
-                        payload=f"{self.callback_prefix()}__confirm__",
+                        payload=self._item_payload(ACTION_CONFIRM),
                     ),
                 ],
-            ]
+            )
+            return keyboard
 
         # Любая другая кнопка, из другого окна или cancel/confirm
         return [
             [
                 CallbackButton(
                     text=await self.primary_text.render_text(data, manager),
-                    payload=f"{self.callback_prefix()}__wait__",
+                    payload=self._item_payload(ACTION_WAIT),
                 ),
             ],
         ]
@@ -101,5 +111,4 @@ class ConfirmButton(Keyboard):
             return None
 
         # ищем action (__confirm__ итп)
-        parts = payload.split(":", 1)
-        return parts[1] if len(parts) > 1 else None
+        return payload[len(prefix) :]
