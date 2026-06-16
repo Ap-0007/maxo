@@ -62,6 +62,8 @@ class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):
     def payload(self) -> Omittable[str]:
         return self.callback.payload
 
+    data = payload  # Подражание aiogram
+
     @property
     def user(self) -> User:
         return self.callback.user

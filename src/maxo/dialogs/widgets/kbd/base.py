@@ -4,11 +4,7 @@ from typing import Any, Self
 from maxo.dialogs.api.internal import KeyboardWidget, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.utils import add_exception_note
-from maxo.dialogs.widgets.common import (
-    Actionable,
-    WhenCondition,
-    Whenable,
-)
+from maxo.dialogs.widgets.common import Actionable, WhenCondition, Whenable
 from maxo.routing.updates import MessageCallback
 
 
