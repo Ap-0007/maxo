@@ -14,7 +14,7 @@ from maxo.dialogs.widgets.widget_event import (
 from maxo.routing.updates import MessageCallback
 from maxo.types import CallbackButton
 
-OnClick = Callable[[MessageCallback, "ConfirmButton", DialogManager], Awaitable]
+OnClick = Callable[[MessageCallback, "ConfirmButton", DialogManager], Awaitable[Any]]
 
 ACTION_WAIT = "__wait__"
 ACTION_CONFIRM = "__confirm__"
