@@ -16,6 +16,7 @@ from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
+from maxo.routing.filters import CommandStart
 from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.transport.long_polling import LongPolling
 
@@ -80,7 +81,7 @@ confirm_dialog = Dialog(
 router = Router()
 
 
-@router.message_created()
+@router.message_created(CommandStart())
 async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(
         state=SG.main,

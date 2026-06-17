@@ -12,7 +12,7 @@ from maxo.dialogs import (
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
-from maxo.dialogs.widgets.kbd import ConfirmButton
+from maxo.dialogs.widgets.kbd import ConfirmButton, SwitchTo
 from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
@@ -20,10 +20,12 @@ from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import Message
 
 
-class MainSG(StatesGroup):
-    main = State()
+class OrderSG(StatesGroup):
+    pizza = State()
+    sushi = State()
 
 
 async def on_pizza(
@@ -52,7 +54,7 @@ async def on_sushi(
 
 confirm_dialog = Dialog(
     Window(
-        Const("Нажми на любой заказ"),
+        Const("Пицца"),
         ConfirmButton(
             primary_text=Const("Заказать пиццу"),
             confirm_text=Const("Точно"),
@@ -62,6 +64,11 @@ confirm_dialog = Dialog(
             on_cancel=on_pizza_cancel,
             id="pizza",
         ),
+        SwitchTo(Const("К сушам"), state=OrderSG.sushi, id="to_sushi"),
+        state=OrderSG.pizza,
+    ),
+    Window(
+        Const("Суши"),
         ConfirmButton(
             primary_text=Const("Заказать суши"),
             confirm_text=Const("Точно суши"),
@@ -71,13 +78,25 @@ confirm_dialog = Dialog(
             on_cancel=None,
             id="sushi",
         ),
-        state=MainSG.main,
+        SwitchTo(Const("К пиццам"), state=OrderSG.pizza, id="to_pizza"),
+        state=OrderSG.sushi,
     ),
 )
 
 
 async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
-    await dialog_manager.start(MainSG.main, mode=StartMode.RESET_STACK)
+    await dialog_manager.start(OrderSG.pizza, mode=StartMode.RESET_STACK)
+
+
+def _assert_keyboard(message: Message, *buttons: tuple[str, ...]) -> None:
+    keyboard = message.body.keyboard
+    assert keyboard
+    assert len(keyboard.buttons) == len(buttons)
+
+    for i, row in enumerate(buttons):
+        assert len(keyboard.buttons[i]) == len(row)
+        for button, text in zip(keyboard.buttons[i], row, strict=True):
+            assert button.text == text
 
 
 async def test_click() -> None:
@@ -109,63 +128,76 @@ async def test_click() -> None:
 
     await client.send("/start")
     dialog_message = message_manager.one_message()
-    assert dialog_message.body.text == "Нажми на любой заказ"
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 1
+    assert dialog_message.body.text == "Пицца"
+    _assert_keyboard(dialog_message, ("Заказать пиццу",), ("К сушам",))
 
+    # Проверка отмены
     message_manager.reset_history()
     await client.click(dialog_message, InlineButtonTextLocator("Заказать пиццу"))
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 3
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 2
-    assert len(dialog_message.body.reply_markup.buttons[2]) == 1
+    _assert_keyboard(
+        dialog_message,
+        ("Подтверди заказ пиццы",),
+        ("Передумал", "Точно"),
+        ("К сушам",),
+    )
 
     message_manager.reset_history()
     cancel_id = await client.click(dialog_message, InlineButtonTextLocator("Передумал"))
     on_pizza_cancel_mock.assert_called_once_with(cancel_id)
+    on_pizza_mock.assert_not_called()
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 1
+    _assert_keyboard(dialog_message, ("Заказать пиццу",), ("К сушам",))
 
+    # Проверка подтверждения
     message_manager.reset_history()
     await client.click(dialog_message, InlineButtonTextLocator("Заказать пиццу"))
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 3
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 2
-    assert len(dialog_message.body.reply_markup.buttons[2]) == 1
+    _assert_keyboard(
+        dialog_message,
+        ("Подтверди заказ пиццы",),
+        ("Передумал", "Точно"),
+        ("К сушам",),
+    )
 
     message_manager.reset_history()
     confirm_id = await client.click(dialog_message, InlineButtonTextLocator("Точно"))
     on_pizza_mock.assert_called_once_with(confirm_id)
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 1
+    _assert_keyboard(dialog_message, ("Заказать пиццу",), ("К сушам",))
 
+    # Переходим к сушам
+    message_manager.reset_history()
+    await client.click(dialog_message, InlineButtonTextLocator("К сушам"))
+    dialog_message = message_manager.one_message()
+    assert dialog_message.body.text == "Суши"
+    _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))
+
+    # Проверка отмены
     message_manager.reset_history()
     await client.click(dialog_message, InlineButtonTextLocator("Заказать суши"))
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 2
+    _assert_keyboard(
+        dialog_message,
+        ("Передумал, не суши", "Точно суши"),
+        ("К пиццам",),
+    )
 
     message_manager.reset_history()
     await client.click(dialog_message, InlineButtonTextLocator("Передумал, не суши"))
+    on_sushi_mock.assert_not_called()
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 1
+    _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))
 
+    # Проверка подтверждения
     message_manager.reset_history()
     await client.click(dialog_message, InlineButtonTextLocator("Заказать суши"))
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 2
+    _assert_keyboard(
+        dialog_message,
+        ("Передумал, не суши", "Точно суши"),
+        ("К пиццам",),
+    )
 
     message_manager.reset_history()
     confirm_id = await client.click(
@@ -174,6 +206,24 @@ async def test_click() -> None:
     )
     on_sushi_mock.assert_called_once_with(confirm_id)
     dialog_message = message_manager.one_message()
-    assert len(dialog_message.body.reply_markup.buttons) == 2
-    assert len(dialog_message.body.reply_markup.buttons[0]) == 1
-    assert len(dialog_message.body.reply_markup.buttons[1]) == 1
+    _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))
+
+    # Проверка сброса между свитчами
+    message_manager.reset_history()
+    await client.click(dialog_message, InlineButtonTextLocator("Заказать суши"))
+    dialog_message = message_manager.one_message()
+    _assert_keyboard(
+        dialog_message,
+        ("Передумал, не суши", "Точно суши"),
+        ("К пиццам",),
+    )
+
+    message_manager.reset_history()
+    await client.click(dialog_message, InlineButtonTextLocator("К пиццам"))
+    dialog_message = message_manager.one_message()
+    _assert_keyboard(dialog_message, ("Заказать пиццу",), ("К сушам",))
+
+    message_manager.reset_history()
+    await client.click(dialog_message, InlineButtonTextLocator("К сушам"))
+    dialog_message = message_manager.one_message()
+    _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))

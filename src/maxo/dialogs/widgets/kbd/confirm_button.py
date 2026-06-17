@@ -1,9 +1,9 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
-from maxo.dialogs import DialogManager, DialogProtocol
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.internal.middleware import PAYLOAD_KEY
+from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.utils import remove_intent_id
 from maxo.dialogs.widgets.common import WhenCondition
 from maxo.dialogs.widgets.kbd import Keyboard
@@ -62,7 +62,7 @@ class ConfirmButton(Keyboard):
         payload: str | None = manager.middleware_data.get(PAYLOAD_KEY)
         action = self._get_action(payload)
 
-        # Если кнопка с primary_text
+        # Шаг подтверждения: warning + cancel/confirm
         if action == ACTION_WAIT:
             keyboard = []
             if self.warning_text is not None:
@@ -86,7 +86,7 @@ class ConfirmButton(Keyboard):
                     ),
                 ],
             )
-            return keyboard
+            return cast(RawKeyboard, keyboard)
 
         # Любая другая кнопка, из другого окна или cancel/confirm
         return [
