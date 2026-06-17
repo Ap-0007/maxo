@@ -239,7 +239,7 @@ async def test_confirm_flag() -> None:
         primary_text=Const("Primary"),
         confirm_text=Const("Confirm"),
         cancel_text=Const("Cancel"),
-        confirm_first=True
+        confirm_first=True,
     )
 
     keyboard = await button.render_keyboard({}, manager_mock)
@@ -254,7 +254,7 @@ async def test_confirm_flag() -> None:
         primary_text=Const("Primary"),
         confirm_text=Const("Confirm"),
         cancel_text=Const("Cancel"),
-        confirm_first=False
+        confirm_first=False,
     )
 
     keyboard = await button.render_keyboard({}, manager_mock)
