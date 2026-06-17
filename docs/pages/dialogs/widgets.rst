@@ -192,6 +192,130 @@ Radio
         # В геттере: return {"languages": [("ru", "Русский"), ("en", "English")]}
     )
 
+ConfirmButton
+-------------
+
+Кнопка с двойным подтверждением. При первом нажатии переходит в состояние ожидания - показывает опциональный предупреждающий текст и кнопки «Отмена» / «Подтвердить». При повторном нажатии вызывает соответствующий обработчик.
+
+**Ключевая особенность:** виджет не хранит состояние в данных диалога - оно выводится из payload кнопки. Благодаря этому при переходе в другое окно и обратно кнопка автоматически сбрасывается в исходное (primary) состояние.
+
+Использование
+^^^^^^^^^^^^^
+
+.. code-block:: python
+
+    from maxo.dialogs.api.protocols import DialogManager
+    from maxo.dialogs.widgets.kbd import ConfirmButton
+    from maxo.dialogs.widgets.text import Const
+    from maxo.routing.updates import MessageCallback
+
+    async def on_confirm(
+        callback: MessageCallback,
+        widget: ConfirmButton,
+        manager: DialogManager,
+    ) -> None:
+        await callback.message.answer("Действие подтверждено!")
+
+    async def on_cancel(
+        callback: MessageCallback,
+        widget: ConfirmButton,
+        manager: DialogManager,
+    ) -> None:
+        await callback.message.answer("Действие отменено.")
+
+    # Режим с предупредительным текстом (2 шага):
+    # primary → warning + [Отмена] [Подтвердить] → on_confirm / on_cancel
+    ConfirmButton(
+        id="delete_btn",
+        primary_text=Const("🗑 Удалить"),
+        confirm_text=Const("✅ Да, удалить"),
+        cancel_text=Const("❌ Отмена"),
+        warning_text=Const("⚠️ Вы уверены?"),
+        on_confirm=on_confirm,
+        on_cancel=on_cancel,
+    )
+
+    # Режим без предупредительного текста (1 шаг):
+    # primary → [Отмена] [Подтвердить] (без строки с текстом)
+    ConfirmButton(
+        id="buy_btn",
+        primary_text=Const("🛒 Купить"),
+        confirm_text=Const("✅ Купить"),
+        cancel_text=Const("❌ Нет"),
+        warning_text=None,  # строка-предупреждение не отображается
+        on_confirm=on_confirm,
+        on_cancel=None,    # при отмене просто возвращается primary
+    )
+
+Параметры
+^^^^^^^^^
+
+*   **id** (:py:class:`str`): Уникальный идентификатор виджета. Используется для различения нескольких ``ConfirmButton`` в одном окне.
+*   **primary_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки в исходном состоянии.
+*   **confirm_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки подтверждения в состоянии ожидания.
+*   **cancel_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget`): Текст кнопки отмены в состоянии ожидания.
+*   **warning_text** (:py:class:`~maxo.dialogs.api.internal.TextWidget` | ``None``, optional): Текст предупреждения, отображаемый отдельной строкой над кнопками отмены/подтверждения. Если ``None`` - строка не добавляется, кнопки появляются сразу. По умолчанию ``None``.
+*   **on_confirm** (:py:class:`~maxo.dialogs.widgets.kbd.confirm_button.OnClick` | ``None``, optional): Обработчик, вызываемый при нажатии кнопки подтверждения. По умолчанию ``None`` (no-op).
+*   **on_cancel** (:py:class:`~maxo.dialogs.widgets.kbd.confirm_button.OnClick` | ``None``, optional): Обработчик, вызываемый при нажатии кнопки отмены. По умолчанию ``None`` (no-op, виджет возвращается в primary).
+*   **confirm_first** (:py:class:`bool`, optional): Если ``True`` - кнопка подтверждения отображается левее кнопки отмены. По умолчанию ``False`` (порядок: «Отмена» | «Подтвердить»).
+*   **oneline** (:py:class:`bool`, optional): Если ``True`` - кнопки отмены и подтверждения будут в одном ряду, иначе в двух. По умолчанию ``True``
+*   **when** (:py:class:`~maxo.dialogs.widgets.common.WhenCondition`, optional): Условие, при котором виджет отображается. При ``False`` виджет полностью скрывается.
+
+Поведение при переходах между окнами
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``ConfirmButton`` намеренно не сохраняет состояние ожидания в данных диалога. Это означает, что при переходе в другое окно (``SwitchTo``, ``Next``, ``Back``) и возврате обратно кнопка всегда отрисовывается в исходном (primary) состоянии. Такое поведение позволяет избежать «зависшего» состояния подтверждения при навигации.
+
+.. code-block:: python
+
+    from maxo.dialogs.widgets.kbd import ConfirmButton, SwitchTo
+    from maxo.dialogs.widgets.text import Const
+
+    # В этом примере при возврате из SG.settings обратно в SG.main
+    # кнопка delete_btn будет снова показана как "🗑 Удалить", а не как
+    # "⚠️ Вы уверены? / [Отмена] [Да, удалить]"
+    Window(
+        Const("Главное меню"),
+        ConfirmButton(
+            id="delete_btn",
+            primary_text=Const("🗑 Удалить"),
+            confirm_text=Const("✅ Да, удалить"),
+            cancel_text=Const("❌ Отмена"),
+            warning_text=Const("⚠️ Вы уверены?"),
+            on_confirm=on_confirm,
+        ),
+        SwitchTo(Const("⚙️ Настройки"), id="to_settings", state=SG.settings),
+        state=SG.main,
+    )
+
+Несколько кнопок в одном окне
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+В одном окне можно разместить несколько ``ConfirmButton`` - они не пересекаются по payload-префиксу, поскольку каждый виджет использует свой уникальный ``id``.
+
+.. code-block:: python
+
+    Window(
+        Const("Выберите заказ:"),
+        ConfirmButton(
+            id="pizza",
+            primary_text=Const("🍕 Заказать пиццу"),
+            confirm_text=Const("✅ Точно"),
+            cancel_text=Const("❌ Передумал"),
+            warning_text=Const("🍕 Подтверди заказ пиццы"),
+            on_confirm=on_pizza,
+            on_cancel=on_pizza_cancel,
+        ),
+        ConfirmButton(
+            id="sushi",
+            primary_text=Const("🍣 Заказать суши"),
+            confirm_text=Const("✅ Точно суши"),
+            cancel_text=Const("❌ Передумал, не суши"),
+            on_confirm=on_sushi,
+        ),
+        state=SG.main,
+    )
+
 TimeSelect
 ----------
 
