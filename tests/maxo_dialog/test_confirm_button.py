@@ -230,7 +230,7 @@ async def test_click() -> None:
     _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))
 
 
-async def test_confirm_flag() -> None:
+async def test_render_flags() -> None:
     manager_mock = MagicMock()
     manager_mock.middleware_data = {PAYLOAD_KEY: "id:__wait__"}
 
@@ -239,11 +239,39 @@ async def test_confirm_flag() -> None:
         primary_text=Const("Primary"),
         confirm_text=Const("Confirm"),
         cancel_text=Const("Cancel"),
-        confirm_first=True,
+        confirm_first=False,
+        oneline=True,
     )
-
     keyboard = await button.render_keyboard({}, manager_mock)
+    assert len(keyboard) == 1
+    assert len(keyboard[0]) == 2
+    assert keyboard[0][0].text == "Cancel"
+    assert keyboard[0][1].text == "Confirm"
 
+    button = ConfirmButton(
+        id="id",
+        primary_text=Const("Primary"),
+        confirm_text=Const("Confirm"),
+        cancel_text=Const("Cancel"),
+        confirm_first=False,
+        oneline=False,
+    )
+    keyboard = await button.render_keyboard({}, manager_mock)
+    assert len(keyboard) == 2
+    assert len(keyboard[0]) == 1
+    assert len(keyboard[1]) == 1
+    assert keyboard[0][0].text == "Cancel"
+    assert keyboard[1][0].text == "Confirm"
+
+    button = ConfirmButton(
+        id="id",
+        primary_text=Const("Primary"),
+        confirm_text=Const("Confirm"),
+        cancel_text=Const("Cancel"),
+        confirm_first=True,
+        oneline=True,
+    )
+    keyboard = await button.render_keyboard({}, manager_mock)
     assert len(keyboard) == 1
     assert len(keyboard[0]) == 2
     assert keyboard[0][0].text == "Confirm"
@@ -254,11 +282,12 @@ async def test_confirm_flag() -> None:
         primary_text=Const("Primary"),
         confirm_text=Const("Confirm"),
         cancel_text=Const("Cancel"),
-        confirm_first=False,
+        confirm_first=True,
+        oneline=False,
     )
-
     keyboard = await button.render_keyboard({}, manager_mock)
-    assert len(keyboard) == 1
-    assert len(keyboard[0]) == 2
-    assert keyboard[0][0].text == "Cancel"
-    assert keyboard[0][1].text == "Confirm"
+    assert len(keyboard) == 2
+    assert len(keyboard[0]) == 1
+    assert len(keyboard[1]) == 1
+    assert keyboard[0][0].text == "Confirm"
+    assert keyboard[1][0].text == "Cancel"
