@@ -9,6 +9,7 @@ from maxo.dialogs import (
     Window,
     setup_dialogs,
 )
+from maxo.dialogs.api.internal import PAYLOAD_KEY
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
@@ -227,3 +228,37 @@ async def test_click() -> None:
     await client.click(dialog_message, InlineButtonTextLocator("К сушам"))
     dialog_message = message_manager.one_message()
     _assert_keyboard(dialog_message, ("Заказать суши",), ("К пиццам",))
+
+
+async def test_confirm_flag() -> None:
+    manager_mock = MagicMock()
+    manager_mock.middleware_data = {PAYLOAD_KEY: "id:__wait__"}
+
+    button = ConfirmButton(
+        id="id",
+        primary_text=Const("Primary"),
+        confirm_text=Const("Confirm"),
+        cancel_text=Const("Cancel"),
+        confirm_first=True
+    )
+
+    keyboard = await button.render_keyboard({}, manager_mock)
+
+    assert len(keyboard) == 1
+    assert len(keyboard[0]) == 2
+    assert keyboard[0][0].text == "Confirm"
+    assert keyboard[0][1].text == "Cancel"
+
+    button = ConfirmButton(
+        id="id",
+        primary_text=Const("Primary"),
+        confirm_text=Const("Confirm"),
+        cancel_text=Const("Cancel"),
+        confirm_first=False
+    )
+
+    keyboard = await button.render_keyboard({}, manager_mock)
+    assert len(keyboard) == 1
+    assert len(keyboard[0]) == 2
+    assert keyboard[0][0].text == "Cancel"
+    assert keyboard[0][1].text == "Confirm"

@@ -31,6 +31,7 @@ class ConfirmButton(Keyboard):
         warning_text: TextWidget | None = None,
         on_confirm: OnClick | WidgetEventProcessor | None = None,
         on_cancel: OnClick | WidgetEventProcessor | None = None,
+        confirm_first: bool = False,
         when: WhenCondition = None,
     ) -> None:
         super().__init__(id=id, when=when)
@@ -40,6 +41,7 @@ class ConfirmButton(Keyboard):
         self.warning_text = warning_text
         self.on_confirm = ensure_event_processor(on_confirm)
         self.on_cancel = ensure_event_processor(on_cancel)
+        self.confirm_first = confirm_first
 
     async def _process_item_callback(
         self,
@@ -74,18 +76,18 @@ class ConfirmButton(Keyboard):
                         ),
                     ],
                 )
-            keyboard.append(
-                [
-                    CallbackButton(
-                        text=await self.cancel_text.render_text(data, manager),
-                        payload=self._item_payload(ACTION_CANCEL),
-                    ),
-                    CallbackButton(
-                        text=await self.confirm_text.render_text(data, manager),
-                        payload=self._item_payload(ACTION_CONFIRM),
-                    ),
-                ],
+            cancel = CallbackButton(
+                text=await self.cancel_text.render_text(data, manager),
+                payload=self._item_payload(ACTION_CANCEL),
             )
+            confirm = CallbackButton(
+                text=await self.confirm_text.render_text(data, manager),
+                payload=self._item_payload(ACTION_CONFIRM),
+            )
+            if self.confirm_first:
+                keyboard.append([confirm, cancel])
+            else:
+                keyboard.append([cancel, confirm])
             return cast(RawKeyboard, keyboard)
 
         # Любая другая кнопка, из другого окна или cancel/confirm
