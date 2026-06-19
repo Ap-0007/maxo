@@ -27,7 +27,7 @@ class CallbackMethodsFacade(SubscriptionMethodsFacade):
         Args:
             notification: Заполните это, если хотите просто отправить
                           одноразовое уведомление пользователю.
-            text: Алиас для notification, подражание аиограму.
+            text: Алиас для notification, подражание aiogram.
                   Используется notification или он, преимущество у notification.
             message: Заполните это, если хотите изменить текущее сообщение
 

@@ -3,8 +3,8 @@ from typing import TypeAlias
 from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.mixins import MessageMethodsFacade
 from maxo.routing.mixins.callback import CallbackMethodsFacade
+from maxo.routing.mixins.message import MessageMethodsFacade
 from maxo.routing.updates.base import MaxUpdate
 from maxo.types.callback import Callback
 from maxo.types.message import Message
@@ -61,6 +61,8 @@ class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):
     @property
     def payload(self) -> Omittable[str]:
         return self.callback.payload
+
+    data = payload  # Подражание aiogram
 
     @property
     def user(self) -> User:

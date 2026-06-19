@@ -28,7 +28,7 @@ UPDATE_CONTEXT_KEY: Final = "update_context"
 EVENT_FROM_USER_KEY: Final = "event_from_user"
 EVENT_CHAT_KEY: Final = "event_chat"
 
-# Подражание аиограму
+# Подражание aiogram
 EVENT_CONTEXT_KEY: Final = "event_context"  # same as UPDATE_CONTEXT_KEY
 
 
