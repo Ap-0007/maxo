@@ -1,15 +1,14 @@
-from dataclasses import dataclass
 from typing import Any
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.updates.message_callback import MessageCallback
+from maxo.types import MaxoType
 
 CALLBACK_ANSWER_KEY = "callback_answer"
 
 
-@dataclass(slots=True)
-class CallbackAnswer:
+class CallbackAnswer(MaxoType):
     """
     Управление авто-ответом на колбэк из хендлера.
 
