@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import SyncFilter
@@ -44,3 +46,26 @@ async def test_sync_filter_composes_with_and() -> None:
         lambda _: False,
     )
     assert await f(_update(), Ctx({})) is False
+
+
+def _boom(_: MessageCreated) -> bool:
+    raise ValueError("boom")
+
+
+async def test_sync_filter_exceptions_as_false() -> None:
+    f: SyncFilter[MessageCreated] = SyncFilter(_boom, exceptions_as_false=True)
+    assert await f(_update(), Ctx({})) is False
+
+
+async def test_sync_filter_reraises_by_default() -> None:
+    f: SyncFilter[MessageCreated] = SyncFilter(_boom)
+    with pytest.raises(ValueError, match="boom"):
+        await f(_update(), Ctx({}))
+
+
+async def test_sync_filter_run_in_thread() -> None:
+    f: SyncFilter[MessageCreated] = SyncFilter(
+        lambda u: u.message is not None,
+        run_in_thread=True,
+    )
+    assert await f(_update(), Ctx({})) is True
