@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   tests:
-    name: Tests (${{ matrix.python-version }})
+    name: ${{ matrix.python-version }} ${{ matrix.dependency-resolution }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
