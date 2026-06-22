@@ -34,7 +34,7 @@ class MediaAttachment:
                  потому что в aiogram_dialog используется `file_id`.
                  Приоритет у `media_id`
         """
-        media_id = media_id or file_id
+        media_id = media_id if media_id is not None else file_id
         if not (url or path or media_id):
             raise ValueError("Neither url nor path nor media_id are provided")
         self.type = type
