@@ -75,7 +75,9 @@ class TestSimpleEngine:
         assert call_kwargs["update_types"] == ["message"]
 
     async def test_on_startup(
-        self, engine: SimpleEngine, dispatcher: Dispatcher,
+        self,
+        engine: SimpleEngine,
+        dispatcher: Dispatcher,
     ) -> None:
         feed_signal_mock = AsyncMock()
         dispatcher.feed_signal = feed_signal_mock  # type: ignore[method-assign]
