@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.internal.middleware import PAYLOAD_KEY
@@ -14,7 +14,10 @@ from maxo.dialogs.widgets.widget_event import (
 from maxo.routing.updates import MessageCallback
 from maxo.types import CallbackButton
 
-OnClick = Callable[[MessageCallback, "ConfirmButton", DialogManager], Awaitable[Any]]
+OnClick: TypeAlias = Callable[
+    [MessageCallback, "ConfirmButton", DialogManager],
+    Awaitable[Any],
+]
 
 ACTION_WAIT = "__wait__"
 ACTION_CONFIRM = "__confirm__"

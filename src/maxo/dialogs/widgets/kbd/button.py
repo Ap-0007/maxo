@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TypeAlias
 
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
@@ -14,7 +14,10 @@ from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButto
 
 from .base import Keyboard
 
-OnClick = Callable[[MessageCallback, "Button", DialogManager], Awaitable[Any]]
+OnClick: TypeAlias = Callable[
+    [MessageCallback, "Button", DialogManager],
+    Awaitable[Any],
+]
 
 
 class Button(Keyboard):
