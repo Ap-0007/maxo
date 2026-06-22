@@ -1,16 +1,16 @@
-from maxo.types.share_attachment import ShareAttachment
+from maxo.types.share_attachment_request import ShareAttachmentRequest
 
 
-def hide_link(url: str) -> ShareAttachment:
+def hide_link(url: str) -> ShareAttachmentRequest:
     """
     Превью-ссылка без видимого текста (Max-аналог aiogram hide_link).
 
     В отличие от aiogram возвращает не строку для вставки в текст, а
-    `ShareAttachment` - передайте его в `attachments` при отправке сообщения.
-    Макс отрисует предпросмотр ссылки, не показывая сам URL в тексте.
+    `ShareAttachmentRequest` - передайте его в `attachments` при отправке
+    сообщения. Макс отрисует предпросмотр ссылки, не показывая сам URL в тексте.
 
     Args:
         url: ссылка, для которой нужен предпросмотр.
 
     """
-    return ShareAttachment.factory(url=url)
+    return ShareAttachmentRequest.factory(url=url)
