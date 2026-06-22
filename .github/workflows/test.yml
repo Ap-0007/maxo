@@ -35,7 +35,7 @@ jobs:
 
       - name: Install dependencies with ${{ matrix.dependency-resolution }} resolution
         run: |
-          uv sync --system --all-groups --resolution ${{ matrix.dependency-resolution }}
+          uv sync --all-groups --resolution ${{ matrix.dependency-resolution }}
 
       - name: Run tests with coverage
         id: pytest
