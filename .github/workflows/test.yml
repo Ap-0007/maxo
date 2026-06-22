@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  UV_SYSTEM_PYTHON: "true"
+
 jobs:
   tests:
     name: ${{ matrix.python-version }} ${{ matrix.dependency-resolution }}
