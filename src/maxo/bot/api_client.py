@@ -28,10 +28,11 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import io
 import json
 import pathlib
+import ssl
 from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
 
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
 from aiohttp.http import SERVER_SOFTWARE
 from anyio import open_file
@@ -65,7 +66,7 @@ class MaxApiClient(AiohttpAsyncClient):
         token: str,
         request_dumper: RequestDumper,
         response_loader: ResponseLoader,
-        base_url: str = "https://platform-api.max.ru/",
+        base_url: str = "https://platform-api2.max.ru/",
         middleware: list[AsyncMiddleware] | None = None,
         session: ClientSession | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
@@ -74,7 +75,10 @@ class MaxApiClient(AiohttpAsyncClient):
         self._token = token
 
         if session is None:
-            session = ClientSession()
+            cert = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+            ssl_context = ssl.create_default_context(cafile=cert)
+            connector = TCPConnector(ssl=ssl_context)
+            session = ClientSession(connector=connector)
 
         if AUTHORIZATION not in session.headers:
             session.headers[AUTHORIZATION] = self._token
