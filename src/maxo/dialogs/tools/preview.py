@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import anyio
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -36,12 +36,14 @@ from maxo.dialogs.utils import split_reply_callback
 from maxo.enums import AttachmentType
 from maxo.enums.chat_type import ChatType
 from maxo.fsm import State, StatesGroup
+from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
 from maxo.routing.updates.message_callback import MessageCallback
+from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Callback, CallbackButton, UpdateContext, User
 from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
@@ -113,6 +115,7 @@ class FakeManager(DialogManager):
         }
 
     async def next(self, show_mode: ShowMode | None = None) -> None:
+        assert self._dialog is not None  # noqa: S101
         states = self._dialog.states()
         current_index = states.index(self.current_context().state)
         if current_index + 1 >= len(states):
@@ -126,6 +129,7 @@ class FakeManager(DialogManager):
         await self.switch_to(new_state, show_mode)
 
     async def back(self, show_mode: ShowMode | None = None) -> None:
+        assert self._dialog is not None  # noqa: S101
         states = self._dialog.states()
         current_index = states.index(self.current_context().state)
         if current_index - 1 < 0:
@@ -139,14 +143,14 @@ class FakeManager(DialogManager):
         await self.switch_to(new_state, show_mode)
 
     @property
-    def middleware_data(self) -> dict:
+    def middleware_data(self) -> dict[Any, Any]:
         return self._data
 
     @property
     def event(self) -> ChatEvent:
         return self._event
 
-    async def load_data(self) -> dict:
+    async def load_data(self) -> dict[Any, Any]:
         return {}
 
     async def close_manager(self) -> None:
@@ -166,7 +170,7 @@ class FakeManager(DialogManager):
         return True
 
     @property
-    def dialog_data(self) -> dict:
+    def dialog_data(self) -> dict[Any, Any]:
         return self.current_context().dialog_data
 
     def reset_context(self) -> None:
@@ -191,7 +195,7 @@ class FakeManager(DialogManager):
         state: State,
         data: Data = None,
         mode: StartMode = StartMode.NORMAL,
-        show_mode: ShowMode = ShowMode.AUTO,
+        show_mode: ShowMode | None = ShowMode.AUTO,
         access_settings: AccessSettings | None = None,
     ) -> None:
         self.set_state(state)
@@ -215,6 +219,7 @@ class FakeManager(DialogManager):
         return bool(self._context)
 
     async def show_raw(self) -> NewMessage:
+        assert self._dialog is not None  # noqa: S101
         return await self._dialog.render(self)
 
     async def mark_closed(self) -> None:
@@ -236,14 +241,15 @@ class FakeManager(DialogManager):
         pass
 
     def find(self, widget_id: str) -> Optional["Widget"]:
+        assert self._dialog is not None  # noqa: S101
         widget = self._dialog.find(widget_id)
         if not widget:
             return None
-        return widget.managed(self)
+        return cast("Widget", widget.managed(self))
 
     async def update(
         self,
-        data: dict | None = None,
+        data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
         pass
@@ -288,7 +294,7 @@ async def create_button(
     simulate_events: bool,
 ) -> RenderButton:
     if not simulate_events:
-        return RenderButton(title=title, state=state.state)
+        return RenderButton(title=title, state=state.state or "")
     fake_user = User(
         user_id=1,
         is_bot=False,
@@ -308,13 +314,13 @@ async def create_button(
     try:
         await dialog._callback_handler(
             message_callback,
-            ctx=manager.middleware_data,
+            ctx=cast("Ctx", manager.middleware_data),
             dialog_manager=manager,
         )
     except Exception:
         loggers.dialogs.debug("Click %s", callback)
     state = manager.current_context().state
-    return RenderButton(title=title, state=state.state)
+    return RenderButton(title=title, state=state.state or "")
 
 
 async def render_input(
@@ -330,10 +336,18 @@ async def render_input(
         message = Message(
             timestamp=datetime.now(UTC),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(),
+            body=MessageBody(mid="", seq=0),
+        )
+        message_created = MessageCreated(
+            timestamp=datetime.now(UTC),
+            message=message,
         )
         manager.set_state(state)
-        await dialog._message_handler(message, dialog_manager=manager)
+        await dialog._message_handler(
+            message_created,
+            ctx=cast("Ctx", manager.middleware_data),
+            dialog_manager=manager,
+        )
     except Exception:
         loggers.dialogs.debug("Input %s", content_type)
 
@@ -347,7 +361,7 @@ async def render_input(
     )
     return RenderButton(
         title=content_type,
-        state=manager.current_context().state.state,
+        state=manager.current_context().state.state or "",
     )
 
 
@@ -389,8 +403,8 @@ async def render_reply_keyboard(
             text, data = split_reply_callback(button.text)
             keyboard_row.append(
                 await create_button(
-                    title=text,
-                    callback=data,
+                    title=text or "",
+                    callback=data or "",
                     manager=manager,
                     dialog=dialog,
                     state=state,
@@ -419,16 +433,17 @@ async def create_window(
             dialog,
             simulate_events,
         )
-        reply_keyboard = []
+        reply_keyboard: list[list[RenderButton]] = []
     else:
         keyboard = []
         reply_keyboard = []
 
+    media = message.media[0] if message.media else None
     return RenderWindow(
         message=text.replace("\n", "<br>"),
-        state=state.state,
-        state_name=state._state,
-        photo=create_photo(media=message.media),
+        state=state.state or "",
+        state_name=state._state or "",
+        photo=create_photo(media=media),
         keyboard=keyboard,
         reply_keyboard=reply_keyboard,
         text_input=await render_input(
@@ -481,7 +496,7 @@ async def render_preview_content(
         await render_dialog(
             manager=fake_manager,
             group=dialog.states_group(),
-            dialog=dialog,
+            dialog=cast("Dialog", dialog),
             simulate_events=simulate_events,
         )
         for dialog in collect_dialogs(router)

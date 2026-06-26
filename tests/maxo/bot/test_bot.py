@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -65,7 +66,7 @@ async def test_bot_context(bot: Bot):
 async def test_bot_call_method(bot: Bot):
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(return_value="test_result")
-        result = await bot.call_method(MagicMock())
+        result: Any = await bot.call_method(MagicMock())
         assert result == "test_result"
         mock_state.api_client.call_method.assert_awaited_once()
 
@@ -86,6 +87,6 @@ async def test_bot_download(bot: Bot):
         MagicMock(),
     ) as mock_state:  # Patch private attribute
         mock_state.api_client.download = AsyncMock(return_value="downloaded")
-        result = await bot.download("https://example.com/file")
+        result: Any = await bot.download("https://example.com/file")
         assert result == "downloaded"
         mock_state.api_client.download.assert_awaited_once()

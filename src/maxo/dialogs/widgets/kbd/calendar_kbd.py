@@ -1,12 +1,13 @@
 from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone as dt_timezone
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime, timedelta, timezone as dt_timezone
 from enum import Enum
 from typing import (
     Any,
     Protocol,
     TypeVar,
     TypedDict,
+    cast,
 )
 
 from maxo.dialogs.api.entities import ChatEvent
@@ -18,7 +19,8 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.types import Callback, CallbackButton
+from maxo.routing.updates import MessageCallback
+from maxo.types import CallbackButton
 
 from .base import Keyboard
 
@@ -92,7 +94,7 @@ def get_today(tz: dt_timezone) -> date:
     return datetime.now(tz).date()
 
 
-class CalendarData(TypedDict):
+class CalendarData(TypedDict, total=False):
     current_scope: str
     current_offset: str
 
@@ -129,10 +131,17 @@ def _coalesce(a: T | None, b: T) -> T:
     return a
 
 
+def _local_timezone() -> dt_timezone:
+    tz = datetime.now().astimezone().tzinfo
+    if not isinstance(tz, dt_timezone):
+        return UTC
+    return tz
+
+
 @dataclass(frozen=True)
 class CalendarConfig:
     firstweekday: int = 0
-    timezone: dt_timezone = datetime.now().astimezone().tzinfo
+    timezone: dt_timezone = field(default_factory=_local_timezone)
     min_date: date = date(1900, 1, 1)
     max_date: date = date(2100, 12, 31)
     month_columns: int = 3
@@ -246,10 +255,10 @@ class CalendarDaysView(CalendarScopeView):
         end_date += timedelta(days=days_till_week_end)
         # add days
         today = get_today(config.timezone)
-        for offset in range(0, (end_date - start_date).days, 7):
+        for week_offset in range(0, (end_date - start_date).days, 7):
             row = []
             for row_offset in range(7):
-                days_offset = timedelta(days=(offset + row_offset))
+                days_offset = timedelta(days=(week_offset + row_offset))
                 current_date = start_date + days_offset
                 if min_date <= current_date <= max_date:
                     row.append(
@@ -788,7 +797,7 @@ class Calendar(Keyboard):
         if offset is None:
             offset = get_today(config.timezone)
             self.set_offset(offset, manager)
-        return await view.render(config, offset, data, manager)
+        return cast("RawKeyboard", await view.render(config, offset, data, manager))
 
     def get_scope(self, manager: DialogManager) -> CalendarScope:
         calendar_data: CalendarData = self.get_widget_data(manager, {})
@@ -808,12 +817,18 @@ class Calendar(Keyboard):
             return None
         return date.fromisoformat(current_offset)
 
+    def _require_offset(self, manager: DialogManager) -> date:
+        return _coalesce(
+            self.get_offset(manager),
+            get_today(self.config.timezone),
+        )
+
     def set_offset(self, new_offset: date, manager: DialogManager) -> None:
-        data = self.get_widget_data(manager, {})
+        data: dict[str, Any] = self.get_widget_data(manager, {})
         data["current_offset"] = new_offset.isoformat()
 
     def set_scope(self, new_scope: CalendarScope, manager: DialogManager) -> None:
-        data = self.get_widget_data(manager, {})
+        data: dict[str, Any] = self.get_widget_data(manager, {})
         data["current_scope"] = new_scope.value
 
     def managed(self, manager: DialogManager) -> "ManagedCalendar":
@@ -838,7 +853,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = month_begin(month_begin(offset) - timedelta(days=1))
         self.set_offset(offset, manager)
 
@@ -847,7 +862,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = next_month_begin(offset)
         self.set_offset(offset, manager)
 
@@ -856,7 +871,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = offset.replace(offset.year - 1)
         self.set_offset(offset, manager)
 
@@ -865,7 +880,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = offset.replace(offset.year + 1)
         self.set_offset(offset, manager)
 
@@ -874,7 +889,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = offset.replace(offset.year - self.config.years_per_page)
         self.set_offset(offset, manager)
 
@@ -883,7 +898,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         offset = offset.replace(offset.year + self.config.years_per_page)
         self.set_offset(offset, manager)
 
@@ -892,7 +907,7 @@ class Calendar(Keyboard):
         data: str,
         manager: DialogManager,
     ) -> None:
-        offset = self.get_offset(manager)
+        offset = self._require_offset(manager)
         month = int(data[len(CALLBACK_PREFIX_MONTH) :])
         offset = date(offset.year, month, 1)
         self.set_offset(offset, manager)
@@ -922,7 +937,7 @@ class Calendar(Keyboard):
 
     async def _process_item_callback(
         self,
-        callback: Callback,
+        callback: MessageCallback,
         data: str,
         dialog: DialogProtocol,
         manager: DialogManager,

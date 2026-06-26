@@ -1,5 +1,6 @@
 import warnings
 from collections.abc import Sequence
+from typing import Any, cast
 
 from maxo import Bot, loggers
 from maxo.dialogs.api.entities import MediaAttachment, NewMessage, OldMessage, ShowMode
@@ -14,6 +15,7 @@ from maxo.errors import MaxBotApiError, MaxBotBadRequestError
 from maxo.omit import Omitted
 from maxo.routing.mixins import MediaInput
 from maxo.types import (
+    Attachments,
     AttachmentsRequests,
     AudioAttachmentRequest,
     Callback,
@@ -34,7 +36,7 @@ SEND_METHODS = {
     AttachmentType.STICKER: "send_sticker",
 }
 
-INPUT_MEDIA_TYPES = {}
+INPUT_MEDIA_TYPES: dict[Any, Any] = {}
 
 _INVALID_QUERY_ID_MSG = (
     "query is too old and response timeout expired or query id is invalid"
@@ -179,7 +181,10 @@ class MessageManager(MessageManagerProtocol):
             ]
             await bot.edit_message(
                 message_id=old_message.message_id,
-                attachments=new_attachments,
+                attachments=cast(
+                    "list[AttachmentsRequests | Attachments]",
+                    new_attachments,
+                ),
             )
         except MaxBotBadRequestError as err:
             if "message is not modified" in err.message:
@@ -243,7 +248,10 @@ class MessageManager(MessageManagerProtocol):
             link=new_message.link_to,
             message_id=old_message.message_id,
             text=new_message.text,
-            attachments=attachments,
+            attachments=cast(
+                "list[AttachmentsRequests | Attachments]",
+                attachments,
+            ),
             format=new_message.parse_mode,
         )
         return await bot.get_message_by_id(message_id=old_message.message_id)
@@ -260,12 +268,15 @@ class MessageManager(MessageManagerProtocol):
             new_message.media,
         )
         result = await bot.send_message(
-            chat_id=new_message.recipient.chat_id,
-            user_id=new_message.recipient.user_id,
+            chat_id=new_message.recipient.chat_id or Omitted(),
+            user_id=new_message.recipient.user_id or Omitted(),
             text=new_message.text,
             link=new_message.link_to,
             notify=True,
-            attachments=attachments,
+            attachments=cast(
+                "list[AttachmentsRequests | Attachments]",
+                attachments,
+            ),
             format=new_message.parse_mode,
             disable_link_preview=disable_link_preview,
         )
@@ -314,6 +325,7 @@ class MessageManager(MessageManagerProtocol):
 
         if media.type == AttachmentType.IMAGE:
             return PhotoAttachmentRequest.factory(token=token, url=url)
+        assert token is not None  # noqa: S101
         if media.type == AttachmentType.VIDEO:
             return VideoAttachmentRequest.factory(token=token)
         if media.type == AttachmentType.AUDIO:

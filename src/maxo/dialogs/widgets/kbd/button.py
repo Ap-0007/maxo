@@ -14,7 +14,7 @@ from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButto
 
 from .base import Keyboard
 
-OnClick = Callable[[MessageCallback, "Button", DialogManager], Awaitable]
+OnClick = Callable[[MessageCallback, "Button", DialogManager], Awaitable[Any]]
 
 
 class Button(Keyboard):
@@ -47,7 +47,7 @@ class Button(Keyboard):
             [
                 CallbackButton(
                     text=await self.text.render_text(data, manager),
-                    payload=self._own_payload(),
+                    payload=self._own_payload() or "",
                 ),
             ],
         ]

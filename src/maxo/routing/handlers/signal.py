@@ -14,7 +14,7 @@ _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 
 
 @runtime_checkable
-class SignalHandlerFn(Protocol[_SignalT, _ReturnT_co]):
+class SignalHandlerFn(Protocol[_SignalT, _ReturnT_co]):  # type: ignore[misc]
     async def __call__(
         self,
         *args: Any,
@@ -67,4 +67,5 @@ class SignalHandler(Handler[_SignalT, _ReturnT_co], Generic[_SignalT, _ReturnT_c
         wrapped = partial(self._handler_fn, **self._prepare_kwargs(ctx))
         if self._awaitable:
             return await wrapped()
-        return await asyncio.to_thread(wrapped)
+        # В этой ветке хендлер синхронный, несмотря на async-сигнатуру протокола.
+        return await asyncio.to_thread(wrapped)  # type: ignore[arg-type]

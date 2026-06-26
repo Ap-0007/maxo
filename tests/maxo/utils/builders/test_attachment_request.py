@@ -42,7 +42,9 @@ def test_attachment_request_builder_add_image_token_with_photos():
     assert len(attachments) == 1
     assert isinstance(attachments[0], PhotoAttachmentRequest)
     assert attachments[0].payload.token == "photo_token_456"
-    assert attachments[0].payload.photos[0].token == "id1"
+    photos = attachments[0].payload.photos
+    assert isinstance(photos, list)
+    assert photos[0].token == "id1"
 
 
 def test_attachment_request_builder_add_video():

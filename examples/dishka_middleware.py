@@ -47,7 +47,7 @@ class GreetingMiddleware(BaseMiddleware[MessageCreated]):
         ctx: Ctx,
         next: NextMiddleware[MessageCreated],
     ) -> Any:
-        container = ctx.get(CONTAINER_NAME)
+        container: AsyncContainer = ctx[CONTAINER_NAME]
         greeter = await container.get(GreeterService)
         name = "гость"
         ctx["greeting"] = greeter.greet(name)

@@ -36,6 +36,6 @@ class ChatsIterator(AsyncIterator[Chat]):
                 raise StopAsyncIteration
 
             self._chats.extend(result.chats)
-            self._marker = result.marker
+            self._marker = result.marker if result.marker is not None else Omitted()
 
             return self._chats.popleft()

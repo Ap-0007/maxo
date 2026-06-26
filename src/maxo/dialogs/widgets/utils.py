@@ -1,5 +1,5 @@
-from collections.abc import Callable, Sequence
-from typing import TypeAlias
+from collections.abc import Sequence
+from typing import Any, TypeAlias, cast
 
 from maxo.dialogs.api.exceptions import InvalidWidgetType
 from maxo.dialogs.api.internal import DataGetter, LinkPreviewWidget, TextWidget
@@ -22,7 +22,7 @@ WidgetSrc: TypeAlias = (
     | LinkPreviewBase
 )
 
-SingleGetterBase: TypeAlias = DataGetter | dict
+SingleGetterBase: TypeAlias = DataGetter | dict[Any, Any]
 GetterVariant: TypeAlias = (
     SingleGetterBase | list[SingleGetterBase] | tuple[SingleGetterBase, ...] | None
 )
@@ -33,7 +33,7 @@ def ensure_text(widget: str | TextWidget | Sequence[TextWidget]) -> TextWidget:
         return Format(widget)
     if isinstance(widget, Sequence):
         if len(widget) == 1:
-            return widget[0]
+            return cast("TextWidget", widget[0])
         return MultiText(*widget)
     return widget
 
@@ -102,7 +102,7 @@ def ensure_widgets(
             texts.append(ensure_text(w))
         elif isinstance(w, Keyboard):
             keyboards.append(ensure_keyboard(w))
-        elif isinstance(w, (BaseInput, Callable)):
+        elif isinstance(w, BaseInput) or callable(w):
             inputs.append(ensure_input(w))
         elif isinstance(w, Media):
             media.append(ensure_media(w))
@@ -117,14 +117,14 @@ def ensure_widgets(
     return (
         ensure_text(texts),
         ensure_keyboard(keyboards),
-        ensure_input(inputs),
+        ensure_input(cast("Sequence[BaseInput]", inputs)),
         ensure_media(media),
-        ensure_link_preview(link_preview),
+        ensure_link_preview(cast("Sequence[LinkPreviewWidget]", link_preview)),
     )
 
 
 def ensure_data_getter(getter: GetterVariant) -> DataGetter:
-    if isinstance(getter, Callable):
+    if callable(getter):
         return getter
     if isinstance(getter, dict):
         return StaticGetter(getter)

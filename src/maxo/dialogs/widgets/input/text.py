@@ -52,12 +52,13 @@ class TextInput(BaseInput, Generic[T]):
     def __init__(
         self,
         id: str,
-        type_factory: TypeFactory[T] = str,
+        type_factory: TypeFactory[T] = str,  # type: ignore[assignment]
         on_success: OnSuccess[T] | WidgetEventProcessor | None = None,
-        on_error: OnError | WidgetEventProcessor | None = None,
+        on_error: OnError[T] | WidgetEventProcessor | None = None,
         filter: Callable[..., Any] | None = None,
     ) -> None:
         super().__init__(id=id)
+        self.filter: FilterObject | None
         if filter is not None:
             self.filter = FilterObject(filter)
         else:
@@ -72,12 +73,10 @@ class TextInput(BaseInput, Generic[T]):
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
-        if message.message.body is None:
-            return False
         if not message.message.body.text:
             return False
 
-        if self.filter and not await self.filter.call(
+        if self.filter is not None and not await self.filter.call(
             manager.event,
             **manager.middleware_data,
         ):

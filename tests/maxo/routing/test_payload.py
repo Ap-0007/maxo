@@ -1,7 +1,7 @@
 import dataclasses
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import Enum, auto
+from enum import Enum, StrEnum, auto
 from fractions import Fraction
 from typing import Any, Optional, Union
 from uuid import UUID, uuid4
@@ -18,7 +18,7 @@ class MyIntEnum(Enum):
     FOO = auto()
 
 
-class MyStringEnum(str, Enum):
+class MyStringEnum(StrEnum):
     FOO = "FOO"
 
 

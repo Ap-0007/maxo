@@ -120,19 +120,19 @@ class TimeSelect(Keyboard):
         data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
-        rows = []
+        rows: RawKeyboard = []
         old_hour, old_minute = self.get_widget_data(manager, (None, None))
 
         rows.append(
             [
                 CallbackButton(
                     text=await self.hour_header.render_text(data, manager),
-                    payload=self._own_payload(),
+                    payload=self._own_payload() or "",
                 ),
             ],
         )
         for hour_row in self._rows(0, 24, 1, self.hour_width):
-            rows.append(  # noqa: PERF401
+            rows.append(
                 [
                     await self._render_button(
                         data=data,
@@ -149,13 +149,13 @@ class TimeSelect(Keyboard):
             [
                 CallbackButton(
                     text=await self.minute_header.render_text(data, manager),
-                    payload=self._own_payload(),
+                    payload=self._own_payload() or "",
                 ),
             ],
         )
 
         for minute_row in self._rows(0, 60, self.minute_precision, self.minute_width):
-            rows.append(  # noqa: PERF401
+            rows.append(
                 [
                     await self._render_button(
                         data=data,
@@ -186,7 +186,7 @@ class TimeSelect(Keyboard):
         )
 
     def _rows(self, start: int, stop: int, step: int, width: int) -> list[list[int]]:
-        rows = [[]]
+        rows: list[list[int]] = [[]]
         for i in range(start, stop, step):
             if len(rows[-1]) >= width:
                 rows.append([])

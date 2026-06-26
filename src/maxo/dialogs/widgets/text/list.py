@@ -9,7 +9,7 @@ from maxo.dialogs.widgets.common.items import ItemsGetterVariant, get_items_gett
 from .base import Text
 
 
-class List(Text, BaseScroll):
+class List(Text, BaseScroll):  # type: ignore[misc]
     def __init__(
         self,
         field: TextWidget,
@@ -21,7 +21,7 @@ class List(Text, BaseScroll):
         on_page_changed: OnPageChangedVariants = None,
     ) -> None:
         Text.__init__(self, when=when)
-        BaseScroll.__init__(self, id=id, on_page_changed=on_page_changed)
+        BaseScroll.__init__(self, id=id or "", on_page_changed=on_page_changed)
         self.field = field
         self.sep = sep
         self.items_getter = get_items_getter(items)

@@ -60,7 +60,7 @@ class BgManager(BaseDialogManager):
         ):
             return self._event_context.user
         return FakeUser(
-            user_id=user_id,
+            user_id=user_id or 0,
             is_bot=False,
             first_name="",
             last_activity_time=datetime.now(UTC),
@@ -94,23 +94,25 @@ class BgManager(BaseDialogManager):
             intent_id = None
 
         return BgManager(
-            user=new_event_context.user,
+            user=user,
             chat_id=new_event_context.chat_id,
             bot=new_event_context.bot,
             dp=self._router,
             intent_id=intent_id,
             stack_id=stack_id,
             load=load,
-            chat_type=new_event_context.chat_type,
+            chat_type=new_event_context.chat_type or ChatType.CHAT,
         )
 
     def _base_event_params(self) -> dict[str, Any]:
+        user = self._event_context.user
+        assert user is not None  # noqa: S101
         return {
-            "user": self._event_context.user,
+            "user": user,
             "recipient": Recipient(
-                user_id=self._event_context.user.id,
+                user_id=user.id,
                 chat_id=self._event_context.chat_id,
-                chat_type=self._event_context.chat_type,
+                chat_type=self._event_context.chat_type or ChatType.CHAT,
             ),
             "bot": self._event_context.bot,
             "intent_id": self.intent_id,
@@ -122,20 +124,26 @@ class BgManager(BaseDialogManager):
         await self._updater.notify(bot=bot, update=event)
 
     async def _load(self) -> None:
-        if self.load:
-            bot = self._event_context.bot
-            if not is_user_loaded(self._event_context.user):
-                loggers.dialogs.debug(
-                    "load user %s from chat %s",
-                    self._event_context.user_id,
-                    self._event_context.chat_id,
-                )
-                chat_members = await bot.get_members(
-                    chat_id=self._event_context.chat_id,
-                    user_ids=[self._event_context.user_id],
-                )
-                if chat_members:
-                    self._event_context.user = chat_members[0]
+        if not self.load:
+            return
+        user = self._event_context.user
+        chat_id = self._event_context.chat_id
+        user_id = self._event_context.user_id
+        if user is None or chat_id is None or user_id is None:
+            return
+        bot = self._event_context.bot
+        if not is_user_loaded(user):
+            loggers.dialogs.debug(
+                "load user %s from chat %s",
+                user_id,
+                chat_id,
+            )
+            chat_members = await bot.get_members(
+                chat_id=chat_id,
+                user_ids=[user_id],
+            )
+            if chat_members.members:
+                self._event_context.user = chat_members.members[0]
 
     async def done(
         self,
@@ -191,7 +199,7 @@ class BgManager(BaseDialogManager):
 
     async def update(
         self,
-        data: dict | None = None,
+        data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
         await self._load()

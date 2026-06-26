@@ -30,26 +30,28 @@ class AttachmentFilter(BaseFilter[MessageCreated]):
 @dp.message_created(AttachmentFilter(AttachmentType.AUDIO))
 async def audio_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил голосовое сообщение")
-    await update.send_message(
-        media=[update.message.body.audio.to_request()],
-    )
+    audio = update.message.body.audio
+    if audio is not None:
+        await update.send_message(media=[audio.to_request()])
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.CONTACT))
 async def contact_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил сообщение с контактом")
-    await update.bot.send_message(
-        chat_id=update.chat_id,
-        attachments=[update.message.body.contact],
-    )
+    contact = update.message.body.contact
+    if contact is not None:
+        await update.bot.send_message(
+            chat_id=update.chat_id,
+            attachments=[contact],
+        )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.FILE))
 async def file_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил сообщение с файлом")
-    await update.send_message(
-        media=[update.message.body.file.to_request()],
-    )
+    file = update.message.body.file
+    if file is not None:
+        await update.send_message(media=[file.to_request()])
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.IMAGE))
@@ -63,28 +65,34 @@ async def image_handler(update: MessageCreated) -> None:
 @dp.message_created(AttachmentFilter(AttachmentType.LOCATION))
 async def location_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил сообщение с геопозицией")
-    await update.bot.send_message(
-        chat_id=update.chat_id,
-        attachments=[update.message.body.location],
-    )
+    location = update.message.body.location
+    if location is not None:
+        await update.bot.send_message(
+            chat_id=update.chat_id,
+            attachments=[location],
+        )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.SHARE))
 async def share_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил сообщение с предпросмотром ссылки")
-    await update.bot.send_message(
-        chat_id=update.chat_id,
-        attachments=[update.message.body.share],
-    )
+    share = update.message.body.share
+    if share is not None:
+        await update.bot.send_message(
+            chat_id=update.chat_id,
+            attachments=[share],
+        )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.STICKER))
 async def sticker_handler(update: MessageCreated) -> None:
     await update.answer_text("Получил сообщение со стикером")
-    await update.bot.send_message(
-        chat_id=update.chat_id,
-        attachments=[update.message.body.sticker],
-    )
+    sticker = update.message.body.sticker
+    if sticker is not None:
+        await update.bot.send_message(
+            chat_id=update.chat_id,
+            attachments=[sticker],
+        )
 
 
 @dp.message_created(AttachmentFilter(AttachmentType.VIDEO))

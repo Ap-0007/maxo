@@ -1,7 +1,8 @@
 import json
 from collections import defaultdict
+from collections.abc import MutableMapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from maxo.fsm import State
 from maxo.fsm.key_builder import StorageKey
@@ -36,8 +37,12 @@ class JsonMemoryStorage(BaseStorage):
     async def get_state(self, key: StorageKey) -> str | None:
         return self.storage[key].state
 
-    async def set_data(self, key: StorageKey, data: dict[str, Any]) -> None:
-        self.storage[key].data = json.dumps(data)
+    async def set_data(
+        self,
+        key: StorageKey,
+        data: MutableMapping[str, Any],
+    ) -> None:
+        self.storage[key].data = json.dumps(dict(data))
 
     async def get_data(self, key: StorageKey) -> dict[str, Any]:
-        return json.loads(self.storage[key].data)
+        return cast("dict[str, Any]", json.loads(self.storage[key].data))

@@ -25,6 +25,6 @@ def new_magic_selector(f: DialogMagic) -> Selector[T]:
         widget: T,
         manager: DialogManager,
     ) -> bool:
-        return f.resolve(data)
+        return bool(f.resolve(data))
 
     return when_magic

@@ -13,7 +13,7 @@ from ..user_repo import ExternalType, UserRepo
 class CurrentUserMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
     async def __call__(
         self,
-        update: MaxoUpdate,
+        update: MaxoUpdate[Any],
         ctx: Ctx,
         next: NextMiddleware[MaxoUpdate[Any]],
     ) -> Any:

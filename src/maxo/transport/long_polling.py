@@ -70,7 +70,9 @@ class LongPolling:
         **workflow_data: Any,
     ) -> None:
         dispatcher = self._dispatcher
-        types = list(types or collect_used_updates(self._dispatcher))
+        types = list(
+            types if is_defined(types) else collect_used_updates(self._dispatcher),
+        )
 
         async with self._lock:
             dispatcher.workflow_data.update(bot=bot, **workflow_data)
@@ -98,7 +100,10 @@ class LongPolling:
                 with contextlib.suppress(KeyboardInterrupt):
                     async with asyncio.TaskGroup() as tg:
                         async for update in updates_poller:
-                            tg.create_task(dispatcher.feed_max_update(update, bot))
+                            # Задача отслеживается TaskGroup, ссылка не нужна.
+                            tg.create_task(  # type: ignore[unused-awaitable]
+                                dispatcher.feed_max_update(update, bot),
+                            )
 
                 await dispatcher.feed_signal(BeforeShutdown(), bot)
 

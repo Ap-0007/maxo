@@ -1,9 +1,11 @@
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
+from maxo.transport.webhook.adapters.base_adapter import BoundRequest
 from maxo.transport.webhook.adapters.fastapi.adapter import (
     FastApiBoundRequest,
     FastApiWebAdapter,
@@ -55,7 +57,7 @@ async def test_register_and_handle(
         return_value=adapter.create_json_response(status=200, payload={"ok": True}),
     )
 
-    async def handler(request: FastApiBoundRequest):
+    async def handler(request: BoundRequest[Any]) -> Any:
         return await handler_mock(request)
 
     adapter.register(app=app, path="/webhook", handler=handler)

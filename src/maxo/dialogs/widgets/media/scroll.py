@@ -15,7 +15,7 @@ from maxo.dialogs.widgets.common.items import (
 from .base import Media
 
 
-class MediaScroll(Media, BaseScroll):
+class MediaScroll(Media, BaseScroll):  # type: ignore[misc]
     def __init__(
         self,
         media: Media,

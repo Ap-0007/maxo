@@ -1,7 +1,7 @@
 import dataclasses
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.entities import (
     AccessSettings,
@@ -35,12 +35,12 @@ class SubManager(DialogManager):
         return self.manager.event
 
     @property
-    def middleware_data(self) -> dict:
+    def middleware_data(self) -> dict[Any, Any]:
         """Middleware data."""
         return self.manager.middleware_data
 
     @property
-    def dialog_data(self) -> dict:
+    def dialog_data(self) -> dict[Any, Any]:
         """Dialog data for current context."""
         return self.current_context().dialog_data
 
@@ -51,7 +51,10 @@ class SubManager(DialogManager):
 
     def current_context(self) -> Context:
         context = self.manager.current_context()
-        data = context.widget_data.setdefault(self.widget_id, {})
+        data = cast(
+            "dict[Any, Any]",
+            context.widget_data.setdefault(self.widget_id, {}),
+        )
         row_data = data.setdefault(self.item_id, {})
         return dataclasses.replace(context, widget_data=row_data)
 
@@ -76,14 +79,14 @@ class SubManager(DialogManager):
     async def reset_stack(self, remove_keyboard: bool = True) -> None:
         return await self.manager.reset_stack(remove_keyboard)
 
-    async def load_data(self) -> dict:
+    async def load_data(self) -> dict[Any, Any]:
         return await self.manager.load_data()
 
     def find(self, widget_id: str) -> Widget | None:
         widget = self.widget.find(widget_id)
         if not widget:
             return None
-        return widget.managed(self)
+        return cast("Widget", widget.managed(self))
 
     def find_in_parent(self, widget_id: str) -> Widget | None:
         return self.manager.find(widget_id)
@@ -133,7 +136,7 @@ class SubManager(DialogManager):
 
     async def update(
         self,
-        data: dict | None = None,
+        data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
         if data:

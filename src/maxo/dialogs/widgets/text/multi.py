@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.internal import TextWidget
 from maxo.dialogs.api.protocols import DialogManager
@@ -22,6 +22,7 @@ class Case(Text):
     ) -> None:
         super().__init__(when=when)
         self.texts = texts
+        self.selector: Selector[Any]
         if isinstance(selector, str):
             self.selector = new_case_field(selector)
         elif isinstance(selector, DialogMagic):
@@ -42,5 +43,5 @@ class Case(Text):
     def find(self, widget_id: str) -> TextWidget | None:
         for text in self.texts.values():
             if found := text.find(widget_id):
-                return found
+                return cast("TextWidget", found)
         return None

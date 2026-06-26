@@ -48,7 +48,7 @@ class FilterObject(CallableObject):
 
     def __post_init__(self) -> None:
         if isinstance(self.callback, DialogMagic):
-            self.magic = self.callback
+            self.magic = self.callback  # type: ignore[unreachable]
             self.callback = self.callback.resolve
 
         super().__post_init__()

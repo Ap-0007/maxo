@@ -18,7 +18,7 @@ def create_message(text: str, user_id: int | None = 1) -> Message:
             last_activity_time=datetime.now(UTC),
         )
         if user_id is not None
-        else None
+        else Omitted()
     )
     return Message(
         body=MessageBody(seq=1, mid="1", text=text),

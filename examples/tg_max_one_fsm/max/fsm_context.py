@@ -53,4 +53,4 @@ class SharedFSMContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
         self,
         user: DbUser,
     ) -> StorageKey:
-        return StorageKey(bot_id=None, chat_id=user.shared_id, user_id=user.shared_id)
+        return StorageKey(bot_id=0, chat_id=user.shared_id, user_id=user.shared_id)

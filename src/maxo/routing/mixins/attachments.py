@@ -4,7 +4,6 @@ from typing import TypeAlias
 
 from unihttp.http import UploadFile
 
-from maxo import loggers
 from maxo.enums import UploadType
 from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
@@ -42,7 +41,9 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         if keyboard is not None:
             attachments.append(
                 InlineKeyboardAttachmentRequest(
-                    payload=InlineKeyboardAttachmentRequestPayload(buttons=keyboard),
+                    payload=InlineKeyboardAttachmentRequestPayload(
+                        buttons=[list(row) for row in keyboard],
+                    ),
                 ),
             )
 
@@ -97,8 +98,6 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                     attachments.append(VideoAttachmentRequest.factory(token))
                 case UploadType.IMAGE:
                     attachments.append(PhotoAttachmentRequest.factory(token=token))
-                case _:
-                    loggers.utils.warning("Received unknown attachment type: %s", type_)
 
         return attachments
 

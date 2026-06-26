@@ -64,8 +64,8 @@ async def handle_set_age(message: MessageCreated) -> None:
     if not age.isdigit():
         msg = "Возраст должен быть числом"
         raise InvalidAge(msg)
-    age = int(age)
-    await message.reply_text(text=f"Твой возраст: {age}")
+    age_value = int(age)
+    await message.reply_text(text=f"Твой возраст: {age_value}")
 
 
 @dp.message_created(Command("name"))

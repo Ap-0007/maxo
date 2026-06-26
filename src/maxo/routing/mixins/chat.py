@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from collections.abc import Sequence
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from maxo.enums import TextFormat
 from maxo.omit import Omittable, Omitted
 from maxo.routing.mixins.attachments import AttachmentsFacade, MediaInput
-from maxo.types.attachments import AttachmentsRequests
+from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.types.buttons import InlineButtons
 from maxo.types.chat_members_list import ChatMembersList
 from maxo.types.new_message_link import NewMessageLink
@@ -46,7 +46,10 @@ class ChatMethodsFacade(AttachmentsFacade):
         result = await self.bot.send_message(
             chat_id=self.chat_id,
             text=text,
-            attachments=prepared_attachments,
+            attachments=cast(
+                "list[AttachmentsRequests | Attachments]",
+                prepared_attachments,
+            ),
             link=link,
             notify=notify,
             format=format,

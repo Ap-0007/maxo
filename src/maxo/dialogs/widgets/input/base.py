@@ -20,7 +20,7 @@ from maxo.routing.updates import MessageCreated
 
 MessageHandlerFunc = Callable[
     [MessageCreated, "MessageInput", DialogManager],
-    Awaitable,
+    Awaitable[Any],
 ]
 
 

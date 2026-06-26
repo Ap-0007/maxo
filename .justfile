@@ -28,10 +28,10 @@ slots:
     $env:PYTHONPATH="src"; slotscheck -m maxo
 
 bandit:
-    bandit src -r
+    bandit -c pyproject.toml src -r
 
 mypy:
-    mypy
+    uv run mypy
 
 test:
     pytest --cov src

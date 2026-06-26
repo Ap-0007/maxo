@@ -12,14 +12,7 @@ from maxo.dialogs.api.entities import MarkupVariant, MediaAttachment
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.dialogs.api.protocols import DialogProtocol
 from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.types import (
-    CallbackButton,
-    LinkButton,
-    MessageButton,
-    RequestContactButton,
-    RequestGeoLocationButton,
-)
-from maxo.types.open_app_button import OpenAppButton
+from maxo.types.buttons import InlineButtons
 
 
 @runtime_checkable
@@ -57,14 +50,7 @@ class LinkPreviewWidget(Widget, Protocol):
         raise NotImplementedError
 
 
-ButtonVariant = (
-    CallbackButton
-    | MessageButton
-    | LinkButton
-    | OpenAppButton
-    | RequestContactButton
-    | RequestGeoLocationButton
-)
+ButtonVariant = InlineButtons
 RawKeyboard = list[list[ButtonVariant]]
 
 
@@ -127,7 +113,7 @@ class InputWidget(Widget, Protocol):
         raise NotImplementedError
 
 
-DataGetter = Callable[..., Awaitable[dict]]
+DataGetter = Callable[..., Awaitable[dict[Any, Any]]]
 
 
 @runtime_checkable

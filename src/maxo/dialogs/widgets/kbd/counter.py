@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Any, Protocol
 
 from maxo.dialogs.api.entities import ChatEvent
-from maxo.dialogs.api.internal import RawKeyboard, TextWidget
+from maxo.dialogs.api.internal import ButtonVariant, RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedWidget, WhenCondition
 from maxo.dialogs.widgets.kbd.base import Keyboard
@@ -106,7 +106,7 @@ class Counter(Keyboard):
         data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
-        row = []
+        row: list[ButtonVariant] = []
         if self.minus:
             minus = await self.minus.render_text(data, manager)
             row.append(

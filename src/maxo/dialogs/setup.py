@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from typing import Any, cast
 
 from maxo import Ctx, Dispatcher, Router
 from maxo.dialogs.api.entities import (
@@ -42,14 +43,17 @@ from maxo.routing.observers import UpdateObserver
 
 
 def _setup_event_observer(router: Router) -> None:
-    dialog_events_observer = UpdateObserver()
+    dialog_events_observer: UpdateObserver[DialogUpdateEvent] = UpdateObserver()
     router.observers[DialogUpdateEvent] = dialog_events_observer
     router.observers[DialogStartEvent] = dialog_events_observer
     router.observers[DialogSwitchEvent] = dialog_events_observer
     router.observers[DialogFgEvent] = dialog_events_observer
 
 
-def _register_event_handler(router: Router, callback: Callable) -> None:
+def _register_event_handler(
+    router: Router,
+    callback: Callable[..., Any],
+) -> None:
     router.observers[DialogUpdateEvent].handler(callback)
 
 
@@ -57,8 +61,8 @@ class DialogRegistry(DialogRegistryProtocol):
     def __init__(self, router: Router) -> None:
         self.router = router
         self._loaded = False
-        self._dialogs = {}
-        self._states_groups = {}
+        self._dialogs: dict[type[StatesGroup], DialogProtocol] = {}
+        self._states_groups: dict[str, type[StatesGroup]] = {}
 
     def _ensure_loaded(self) -> None:
         if not self._loaded:
@@ -66,11 +70,12 @@ class DialogRegistry(DialogRegistryProtocol):
 
     def find_dialog(self, state: State | str) -> DialogProtocol:
         self._ensure_loaded()
+        group = cast("State", state).group
         try:
-            return self._dialogs[state.group]
+            return self._dialogs[group]
         except KeyError as e:
             raise UnregisteredDialogError(
-                f"No dialog found for `{state.group}` (looking by state `{state}`)",
+                f"No dialog found for `{group}` (looking by state `{state}`)",
             ) from e
 
     def states_groups(self) -> dict[str, type[StatesGroup]]:
@@ -97,7 +102,7 @@ class DialogRegistry(DialogRegistryProtocol):
 
 def _startup_callback(
     registry: DialogRegistry,
-) -> Callable:
+) -> Callable[..., Any]:
     async def _setup_dialogs(ctx: Ctx) -> None:
         registry.refresh()
 
@@ -170,7 +175,7 @@ def _register_middleware(
     router.user_removed_from_chat.middleware.inner(manager_middleware)
     router.bot_added_to_chat.middleware.inner(manager_middleware)
     router.bot_removed_from_chat.middleware.inner(manager_middleware)
-    router.exception.middleware.inner(manager_middleware)
+    router.exception.middleware.inner(manager_middleware)  # type: ignore[arg-type]
     dialog_updates_handler.middleware.inner(manager_middleware)
 
     router.message_created.middleware.inner(context_saver_middleware)

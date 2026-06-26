@@ -13,7 +13,7 @@ class MediaId(MaxoType):
             return False
         return self.token == other.token
 
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment]
 
 
 class MediaAttachment:
@@ -49,4 +49,4 @@ class MediaAttachment:
             and self.kwargs == other.kwargs,
         )
 
-    __hash__ = None
+    __hash__ = None  # type: ignore[assignment]

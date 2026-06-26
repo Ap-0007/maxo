@@ -1,7 +1,7 @@
 import contextlib
 import dataclasses
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.api.internal import RawKeyboard, Widget
@@ -85,7 +85,7 @@ class ListGroup(Keyboard, BaseScroll):
         sub_manager = SubManager(
             widget=self,
             manager=manager,
-            widget_id=self.widget_id,
+            widget_id=self.widget_id or "",
             item_id=item_id,
         )
         for b in self.buttons:
@@ -97,7 +97,7 @@ class ListGroup(Keyboard, BaseScroll):
             kbd.extend(b_kbd)
         return kbd
 
-    def find(self, widget_id: str) -> Widget | None:
+    def find(self, widget_id: str) -> Widget | None:  # type: ignore[override]
         if widget_id == self.widget_id:
             return self
         for btn in self.buttons:
@@ -128,7 +128,7 @@ class ListGroup(Keyboard, BaseScroll):
         sub_manager = SubManager(
             widget=self,
             manager=manager,
-            widget_id=self.widget_id,
+            widget_id=self.widget_id or "",
             item_id=item_id,
         )
         for b in self.buttons:
@@ -143,7 +143,7 @@ class ListGroup(Keyboard, BaseScroll):
         sub_manager = SubManager(
             widget=self,
             manager=manager,
-            widget_id=self.widget_id,
+            widget_id=self.widget_id or "",
             item_id="",
         )
         return self.get_widget_data(sub_manager, 0)
@@ -157,7 +157,7 @@ class ListGroup(Keyboard, BaseScroll):
         sub_manager = SubManager(
             widget=self,
             manager=manager,
-            widget_id=self.widget_id,
+            widget_id=self.widget_id or "",
             item_id="",
         )
         self.set_widget_data(sub_manager, page)
@@ -173,12 +173,13 @@ class ManagedListGroup(ManagedScroll, ManagedWidget[ListGroup]):
         """Find widget for specific item_id."""
         widget = self.widget.find(widget_id)
         if widget:
-            return widget.managed(
+            managed = widget.managed(
                 SubManager(
                     widget=self.widget,
                     manager=self.manager,
-                    widget_id=self.widget.widget_id,
+                    widget_id=cast("ListGroup", self.widget).widget_id or "",
                     item_id=item_id,
                 ),
             )
+            return cast("Widget", managed)
         return None

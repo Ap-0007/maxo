@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.internal import RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager
@@ -8,7 +8,7 @@ from maxo.dialogs.widgets.common.scroll import BaseScroll, OnPageChangedVariants
 
 from .base import Keyboard
 
-PagesGetter = Callable[[dict, "StubScroll", DialogManager], int]
+PagesGetter = Callable[[dict[Any, Any], "StubScroll", DialogManager], int]
 
 
 def new_pages_field(fieldname: str) -> PagesGetter:
@@ -17,7 +17,7 @@ def new_pages_field(fieldname: str) -> PagesGetter:
         widget: "StubScroll",
         manager: DialogManager,
     ) -> int:
-        return data.get(fieldname)
+        return cast("int", data.get(fieldname))
 
     return pages_field
 
@@ -28,7 +28,7 @@ def new_pages_magic(f: DialogMagic) -> PagesGetter:
         widget: "StubScroll",
         manager: DialogManager,
     ) -> int:
-        return f.resolve(data)
+        return cast("int", f.resolve(data))
 
     return pages_magic
 
@@ -57,8 +57,10 @@ class StubScroll(Keyboard, BaseScroll):
             self._pages = new_pages_field(pages)
         elif isinstance(pages, DialogMagic):
             self._pages = new_pages_magic(pages)
-        else:
+        elif isinstance(pages, int):
             self._pages = new_pages_fixed(pages)
+        else:
+            self._pages = pages
 
     async def _render_keyboard(
         self,

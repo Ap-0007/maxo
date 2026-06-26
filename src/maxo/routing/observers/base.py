@@ -1,6 +1,6 @@
 from abc import ABC
 from collections.abc import Callable, Coroutine, MutableSequence, Sequence
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import AlwaysTrueFilter
@@ -16,10 +16,6 @@ _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 
 _HandlerT = TypeVar("_HandlerT", bound=Handler[Any, Any])
 _HandlerFnT = TypeVar("_HandlerFnT", bound=Callable[..., Coroutine[Any, Any, Any]])
-
-_Params = ParamSpec("_Params")
-_ReturnType = TypeVar("_ReturnType")
-_HandlerFunc = Callable[[_Params], _ReturnType]
 
 
 class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):

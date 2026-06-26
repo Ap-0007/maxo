@@ -1,5 +1,6 @@
 import random
 from datetime import UTC, datetime
+from typing import cast
 from uuid import uuid4
 
 from maxo import Bot
@@ -11,6 +12,7 @@ from maxo.dialogs.api.protocols import (
 )
 from maxo.enums import AttachmentType
 from maxo.types import (
+    Attachments,
     Callback,
     InlineKeyboardAttachment,
     Keyboard,
@@ -25,7 +27,7 @@ from maxo.types import (
 class MockMessageManager(MessageManagerProtocol):
     def __init__(self) -> None:
         self.answered_callbacks: set[str] = set()
-        self.sent_messages = []
+        self.sent_messages: list[Message] = []
         self.last_message_id = 0
 
     def reset_history(self) -> None:
@@ -50,11 +52,11 @@ class MockMessageManager(MessageManagerProtocol):
         bot: Bot,
         show_mode: ShowMode,
         old_message: OldMessage | None,
-    ) -> Message | None:
+    ) -> None:
         if not old_message:
-            return None
+            return
         if show_mode in (ShowMode.DELETE_AND_SEND, ShowMode.NO_UPDATE):
-            return None
+            return
         assert isinstance(old_message, OldMessage)
 
         new_attachments = [
@@ -73,12 +75,11 @@ class MockMessageManager(MessageManagerProtocol):
             body=MessageBody(
                 mid=old_message.message_id,
                 seq=old_message.sequence_id,
-                text=old_message.text,
+                text=cast("str | None", old_message.text),
                 attachments=new_attachments,
             ),
         )
         self.sent_messages.append(message)
-        return message
 
     async def answer_callback(
         self,
@@ -104,7 +105,7 @@ class MockMessageManager(MessageManagerProtocol):
         message_id = self.last_message_id + 1
         self.last_message_id = message_id
 
-        converted_attachments = []
+        converted_attachments: list[Attachments] = []
         for media in new_message.media:
             if media.type == AttachmentType.IMAGE:
                 converted_attachments.append(
@@ -114,7 +115,7 @@ class MockMessageManager(MessageManagerProtocol):
                             token=(
                                 media.media_id.token if media.media_id else str(uuid4())
                             ),
-                            url=media.url,
+                            url=media.url or "",
                         ),
                     ),
                 )

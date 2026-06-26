@@ -1,11 +1,12 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
 from maxo import Bot, Dispatcher
 from maxo.bot.state import RunningBotState
 from maxo.enums import ChatStatus, ChatType, MessageLinkType
+from maxo.omit import Omitted
 from maxo.routing.signals import MaxoUpdate
 from maxo.routing.updates import (
     BotAddedToChat,
@@ -43,7 +44,11 @@ class FakeBot(Bot):
         )
         self._state = RunningBotState(info=info, api_client=AsyncMock())
 
-    async def answer_on_callback(self, *_: Any, **__: Any) -> None:
+    async def answer_on_callback(  # type: ignore[override]
+        self,
+        *_: Any,
+        **__: Any,
+    ) -> None:
         pass
 
     def __hash__(self) -> int:
@@ -107,7 +112,7 @@ class BotClient:
                 LinkedMessage(
                     type=MessageLinkType.REPLY,
                     sender=reply_to.sender,
-                    chat_id=reply_to.recipient.chat_id,
+                    chat_id=reply_to.recipient.chat_id or Omitted(),
                     message=reply_to.body,
                 )
                 if reply_to
@@ -227,7 +232,7 @@ class BotClient:
                 f"No button matching {locator} found",
             )
 
-        callback = self._new_callback(button)
+        callback = self._new_callback(cast("CallbackButton", button))
         await self.dp.feed_update(
             MaxoUpdate(
                 update=MessageCallback(

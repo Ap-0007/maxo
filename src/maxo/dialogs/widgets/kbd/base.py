@@ -1,10 +1,11 @@
 from abc import abstractmethod
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from maxo.dialogs.api.internal import KeyboardWidget, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.utils import add_exception_note
 from maxo.dialogs.widgets.common import Actionable, WhenCondition, Whenable
+from maxo.omit import is_defined
 from maxo.routing.updates import MessageCallback
 
 
@@ -72,10 +73,11 @@ class Keyboard(Actionable, Whenable, KeyboardWidget):
                 manager,
             )
         prefix = self.callback_prefix()
-        if prefix and callback.payload.startswith(prefix):
+        payload = callback.payload
+        if prefix and is_defined(payload) and payload.startswith(prefix):
             return await self._process_item_callback(
                 callback,
-                callback.payload[len(prefix) :],
+                payload[len(prefix) :],
                 dialog,
                 manager,
             )
@@ -166,5 +168,5 @@ class Or(Keyboard):
     def find(self, widget_id: str) -> Keyboard | None:
         for text in self.widgets:
             if found := text.find(widget_id):
-                return found
+                return cast("Keyboard", found)
         return None

@@ -3,7 +3,7 @@ from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from unittest.mock import ANY, AsyncMock, call, patch
 
 import pytest
@@ -16,6 +16,7 @@ from maxo.bot.state import RunningBotState
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
+from maxo.routing.updates.updates import Updates
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
 
@@ -82,7 +83,10 @@ async def test_handles_load_error_and_skips_update(
     initial_marker = 10
     mock_api_client.call_method.side_effect = [
         LoadError("Test LoadError"),
-        UpdateList(updates=[MockUpdate(timestamp=100)], marker=initial_marker + 2),
+        UpdateList(
+            updates=cast("list[Updates]", [MockUpdate(timestamp=100)]),
+            marker=initial_marker + 2,
+        ),
         CancelledError,
     ]
 

@@ -1,5 +1,3 @@
-from typing import assert_never
-
 from maxo.enums import ChatType
 from maxo.omit import Omittable, Omitted
 
@@ -19,4 +17,7 @@ def calculate_chat_id_and_user_id(
     if chat_type is ChatType.CHANNEL:
         # То же, что ChatType.CHAT
         return chat_id or Omitted(), Omitted()
-    assert_never(chat_type)
+    # ChatType.PRIVATE/GROUP/SUPERGROUP - алиасы значений выше,
+    # поэтому сюда исполнение не доходит.
+    msg = f"Неизвестный тип чата: {chat_type}"
+    raise AssertionError(msg)

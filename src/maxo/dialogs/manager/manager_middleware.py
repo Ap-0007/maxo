@@ -1,5 +1,6 @@
-from typing import Any
+from typing import Any, cast
 
+from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.api.internal import STORAGE_KEY, DialogManagerFactory
 from maxo.dialogs.api.protocols import (
     BgManagerFactory,
@@ -34,7 +35,7 @@ class ManagerMiddleware(BaseMiddleware[MaxUpdate]):
     ) -> Any:
         if self._is_event_supported(ctx):
             dialog_manager = self.dialog_manager_factory(
-                event=update,
+                event=cast("ChatEvent", update),
                 ctx=ctx,
                 registry=self.registry,
                 router=self.router,

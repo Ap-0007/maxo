@@ -45,7 +45,7 @@ def new_when_magic(f: DialogMagic) -> Predicate:
         widget: "Whenable",
         manager: DialogManager,
     ) -> bool:
-        return f.resolve(data)
+        return bool(f.resolve(data))
 
     return when_magic
 

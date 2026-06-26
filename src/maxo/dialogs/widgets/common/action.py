@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 from maxo.dialogs.api.exceptions import InvalidWidgetIdError
 from maxo.dialogs.api.protocols import DialogManager
@@ -30,18 +30,25 @@ class Actionable(BaseWidget):
         default: T,
     ) -> Any | T:
         """Get data for current widget id, setting default if needed."""
-        return manager.current_context().widget_data.setdefault(
-            self.widget_id,
-            default,
+        assert self.widget_id is not None  # noqa: S101
+        widget_data = cast(
+            "dict[str, Any]",
+            manager.current_context().widget_data,
         )
+        return widget_data.setdefault(self.widget_id, default)
 
     def set_widget_data(
         self,
         manager: DialogManager,
         value: T,
-    ) -> T:
+    ) -> None:
         """Set data for current widget id."""
-        manager.current_context().widget_data[self.widget_id] = value
+        assert self.widget_id is not None  # noqa: S101
+        widget_data = cast(
+            "dict[str, Any]",
+            manager.current_context().widget_data,
+        )
+        widget_data[self.widget_id] = value
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} id={self.widget_id}>"

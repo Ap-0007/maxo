@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from maxo.enums import MessageLinkType, TextFormat
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.mixins.attachments import MediaInput
 from maxo.routing.mixins.chat import ChatMethodsFacade
-from maxo.types.attachments import AttachmentsRequests
+from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.types.buttons import InlineButtons
 from maxo.types.new_message_link import NewMessageLink
 from maxo.types.simple_query_result import SimpleQueryResult
@@ -61,7 +61,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             chat_id=chat_id,
             user_id=user_id,
             text=text,
-            attachments=attachments,
+            attachments=cast("list[AttachmentsRequests | Attachments]", attachments),
             link=link,
             notify=notify,
             format=format,
@@ -177,7 +177,10 @@ class MessageMethodsFacade(ChatMethodsFacade):
         return await self.bot.edit_message(
             message_id=message_id,
             text=text,
-            attachments=prepared_attachments,
+            attachments=cast(
+                "list[AttachmentsRequests | Attachments] | None",
+                prepared_attachments,
+            ),
             link=link,
             notify=notify,
             format=format,

@@ -6,7 +6,7 @@ from maxo.routing.filters.logic import AndFilter, InvertFilter, OrFilter
 from maxo.routing.updates.base import BaseUpdate
 
 
-class MyTestFilter(BaseFilter):
+class MyTestFilter(BaseFilter[BaseUpdate]):
     async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
         return True
 
