@@ -76,7 +76,8 @@ class MaxApiClient(AiohttpAsyncClient):
 
         if session is None:
             cert = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
-            ssl_context = ssl.create_default_context(cafile=cert)
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_verify_locations(cafile=cert)
             connector = TCPConnector(ssl=ssl_context)
             session = ClientSession(connector=connector)
 
