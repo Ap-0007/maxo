@@ -134,7 +134,7 @@ class KeyboardBuilder:
         return deepcopy(self._keyboard)
 
     def add(self, *buttons: InlineButtons) -> Self:
-        self._validator.validate_row(buttons)
+        # self._validator.validate_row(buttons)
         keyboard = self.build()
 
         if keyboard and len(keyboard[-1]) < self._validator.max_width:
