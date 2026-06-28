@@ -9,7 +9,7 @@ from itertools import chain, cycle
 from typing import ClassVar, Self, TypeVar
 
 from maxo.omit import Omittable, Omitted
-from maxo.types import ClipboardButton
+from maxo.types import ClipboardButton, OpenAppButton
 from maxo.types.buttons import InlineButtons
 from maxo.types.callback_button import CallbackButton
 from maxo.types.link_button import LinkButton
@@ -89,32 +89,42 @@ class KeyboardBuilder:
         self._validator = validator
 
     def add_callback(self, text: str, payload: str) -> Self:
-        self.add(CallbackButton(text=text, payload=payload))
-        return self
+        return self.add(CallbackButton(text=text, payload=payload))
 
     def add_link(self, text: str, url: str) -> Self:
-        self.add(LinkButton(text=text, url=url))
-        return self
+        return self.add(LinkButton(text=text, url=url))
 
     def add_request_contact(self, text: str) -> Self:
-        self.add(RequestContactButton(text=text))
-        return self
+        return self.add(RequestContactButton(text=text))
 
     def add_request_geo_location(
         self,
         text: str,
         quick: Omittable[bool] = Omitted(),
     ) -> Self:
-        self.add(RequestGeoLocationButton(text=text, quick=quick))
-        return self
+        return self.add(RequestGeoLocationButton(text=text, quick=quick))
 
     def add_message(self, text: str) -> Self:
-        self.add(MessageButton(text=text))
-        return self
+        return self.add(MessageButton(text=text))
 
     def add_clipboard(self, text: str, payload: str) -> Self:
-        self.add(ClipboardButton(text=text, payload=payload))
-        return self
+        return self.add(ClipboardButton(text=text, payload=payload))
+
+    def add_open_app(
+        self,
+        text: str,
+        contact_id: Omittable[int] = Omitted(),
+        payload: Omittable[str] = Omitted(),
+        web_app: Omittable[str] = Omitted(),
+    ) -> Self:
+        return self.add(
+            OpenAppButton(
+                text=text,
+                contact_id=contact_id,
+                payload=payload,
+                web_app=web_app,
+            ),
+        )
 
     @property
     def buttons(self) -> Generator[InlineButtons, None, None]:
