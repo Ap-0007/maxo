@@ -118,9 +118,10 @@ def test_build_returns_copy(keyboard_builder: KeyboardBuilder) -> None:
     keyboard_builder.add_callback("Test", "payload")
 
     keyboard = keyboard_builder.build()
-    keyboard.append([])
+    keyboard[0].append(CallbackButton(text="Other", payload="other"))
 
     assert len(keyboard_builder.build()) == 1
+    assert len(keyboard_builder.build()[0]) == 1
 
 
 def test_buttons_property(keyboard_builder: KeyboardBuilder) -> None:
