@@ -167,3 +167,19 @@ def test_constructor_invalid_keyboard() -> None:
         KeyboardBuilder(
             keyboard=[[CallbackButton(text=str(i), payload=str(i)) for i in range(8)]],
         )
+
+
+def test_return_self(keyboard_builder) -> None:
+    assert keyboard_builder.add() is keyboard_builder
+    assert keyboard_builder.row() is keyboard_builder
+    assert keyboard_builder.adjust(1) is keyboard_builder
+    assert keyboard_builder.add_callback("1", "1") is keyboard_builder
+    assert keyboard_builder.add_message("1") is keyboard_builder
+    assert keyboard_builder.add_link("1", "1") is keyboard_builder
+    assert keyboard_builder.add_open_app("1") is keyboard_builder
+    assert keyboard_builder.add_request_geo_location("1") is keyboard_builder
+    assert keyboard_builder.add_request_contact("1") is keyboard_builder
+    assert keyboard_builder.add_clipboard("1", "1") is keyboard_builder
+
+    another_builder = KeyboardBuilder()
+    assert keyboard_builder.attach(another_builder) is keyboard_builder
