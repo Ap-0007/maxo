@@ -52,13 +52,13 @@ def _boom(_: MessageCreated) -> bool:
     raise ValueError("boom")
 
 
-async def test_sync_filter_exceptions_as_false() -> None:
-    f: SyncFilter[MessageCreated] = SyncFilter(_boom, exceptions_as_false=True)
+async def test_sync_filter_suppresses_exceptions_by_default() -> None:
+    f: SyncFilter[MessageCreated] = SyncFilter(_boom)
     assert await f(_update(), Ctx({})) is False
 
 
-async def test_sync_filter_reraises_by_default() -> None:
-    f: SyncFilter[MessageCreated] = SyncFilter(_boom)
+async def test_sync_filter_reraises_when_disabled() -> None:
+    f: SyncFilter[MessageCreated] = SyncFilter(_boom, exceptions_as_false=False)
     with pytest.raises(ValueError, match="boom"):
         await f(_update(), Ctx({}))
 

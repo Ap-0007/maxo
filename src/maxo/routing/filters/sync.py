@@ -15,8 +15,9 @@ class SyncFilter(BaseFilter[_UpdateT]):
 
     Принимает синк-функцию, которая по апдейту возвращает bool. По умолчанию
     зовёт её напрямую: фильтры - hot-path предикаты на каждый апдейт, а лямбды
-    тривиальны. Для блокирующих функций есть флаг `run_in_thread`, для
-    подавления ошибок предиката - `exceptions_as_false`.
+    тривиальны. По умолчанию любая ошибка предиката трактуется как `False`
+    (`exceptions_as_false`), чтобы битый предикат не ронял обработку апдейта;
+    отключается флагом. Для блокирующих функций есть флаг `run_in_thread`.
     """
 
     __slots__ = ("_exceptions_as_false", "_func", "_run_in_thread")
@@ -26,7 +27,7 @@ class SyncFilter(BaseFilter[_UpdateT]):
         func: Callable[[_UpdateT], bool],
         *,
         run_in_thread: bool = False,
-        exceptions_as_false: bool = False,
+        exceptions_as_false: bool = True,
     ) -> None:
         """
         Создать фильтр-обёртку над синхронным предикатом.
@@ -36,7 +37,8 @@ class SyncFilter(BaseFilter[_UpdateT]):
             run_in_thread: выполнять `func` в отдельном потоке через
                 `asyncio.to_thread` (для блокирующих функций).
             exceptions_as_false: ловить любую ошибку `func` и возвращать `False`
-                вместо проброса исключения.
+                вместо проброса исключения. По умолчанию включено; выключите,
+                чтобы ошибки предиката всплывали наверх.
 
         """
         self._func = func
