@@ -90,12 +90,14 @@ class WebApp(Keyboard):
         self,
         text: TextWidget,
         web_app: TextWidget,
+        payload: Omittable[str] = Omitted(),
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)
         self.text = text
         self.web_app = web_app
+        self.payload = payload
         self.contact_id = contact_id
 
     async def _render_keyboard(
@@ -111,6 +113,7 @@ class WebApp(Keyboard):
                 OpenAppButton(
                     text=text,
                     web_app=web_app,
+                    payload=self.payload,
                     contact_id=self.contact_id,
                 ),
             ],
