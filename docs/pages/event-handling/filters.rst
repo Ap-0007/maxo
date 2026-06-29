@@ -22,6 +22,7 @@
 - ``Command`` - проверяет команду (например, ``/start`` или ``/help``).
 - ``StateFilter`` - фильтрует по текущему состоянию FSM (например, ``StateFilter(MyStates.waiting_name)``).
 - ``MagicFilter`` - инструмент для создания условий на лету (см. ниже).
+- ``SyncFilter`` - оборачивает синхронную функцию-предикат, чтобы её можно было использовать как фильтр (см. ниже).
 
 Комбинирование (Логические операции)
 ------------------------------------
@@ -62,6 +63,25 @@ Magic Filter
     @dispatcher.message_created(MagicFilter(F.message.sender.first_name == "Kirill"))
     async def kirill_handler(update: MessageCreated, ctx: Ctx):
         ...
+
+SyncFilter (синхронные предикаты)
+---------------------------------
+
+Фильтры в **maxo** асинхронные, поэтому обычную синхронную функцию или лямбду нельзя передать в декоратор напрямую.
+``SyncFilter`` оборачивает синхронный предикат ``Callable[[Update], bool]`` и зовёт его в асинхронном ``__call__``.
+
+.. code-block:: python
+
+    from maxo.routing.filters import SyncFilter
+    from maxo.routing.updates import MessageCreated
+
+    @dispatcher.message_created(SyncFilter(lambda u: u.message.body.text == "ping"))
+    async def ping(update: MessageCreated):
+        ...
+
+По умолчанию ошибка предиката трактуется как ``False`` (флаг ``exceptions_as_false``), чтобы битый предикат не ронял обработку апдейта.
+Для блокирующих функций передайте ``run_in_thread=True`` - вызов уйдёт в ``asyncio.to_thread``.
+Операторы ``& | ~`` наследуются от ``BaseFilter``.
 
 Создание своих фильтров
 -----------------------
