@@ -1,4 +1,5 @@
 import pytest
+from adaptix.load_error import LoadError
 
 from maxo import Bot
 from maxo.bot.defaults import BotDefaults
@@ -7,7 +8,7 @@ from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort, create_retort_with_bot
-from maxo.types import NewMessageBody
+from maxo.types import NewMessageBody, UpdateList
 from maxo.types.base import MaxoType
 
 
@@ -103,3 +104,45 @@ def test_retort_without_bot_no_load_bot() -> None:
 
     dump = retort.dump(my, MyType)
     assert dump == data
+
+
+def test_retort_empty_message() -> None:
+    retort = create_retort(warming_up=False)
+
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "user_locale": "ru",
+            },
+        ],
+    }
+
+    with pytest.raises(LoadError):
+        _ = retort.load(data, UpdateList)
+
+
+def test_retort_full_message_created_loads_ok() -> None:
+    retort = create_retort(warming_up=False)
+
+    # Полный валидный message_created - убеждаемся, что регрессия не сломала happy path
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "user_locale": "ru",
+                "message": {
+                    "body": {"seq": 1, "mid": "msg-1", "text": "hello"},
+                    "recipient": {"chat_id": 1, "chat_type": "dialog"},
+                    "timestamp": 1234567890,
+                },
+            },
+        ],
+    }
+
+    result = retort.load(data, UpdateList)
+    assert len(result.updates) == 1
