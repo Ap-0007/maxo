@@ -107,7 +107,10 @@ class WebApp(Keyboard):
     ) -> RawKeyboard:
         text = await self.text.render_text(data, manager)
         web_app = await self.web_app.render_text(data, manager)
-        payload = await self.payload.render_text(data, manager)
+        
+        payload = Omitted()
+        if is_defined(self.payload):
+            payload = await self.payload.render_text(data, manager)
 
         return [
             [
