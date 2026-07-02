@@ -114,7 +114,7 @@ class WebApp(Keyboard):
                 OpenAppButton(
                     text=text,
                     web_app=web_app,
-                    payload=self.payload,
+                    payload=payload,
                     contact_id=self.contact_id,
                 ),
             ],
