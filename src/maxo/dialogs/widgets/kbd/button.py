@@ -90,7 +90,7 @@ class WebApp(Keyboard):
         self,
         text: TextWidget,
         web_app: TextWidget,
-        payload: Omittable[str] = Omitted(),
+        payload:  Omittable[TextWidget] = Omitted(),
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
@@ -107,6 +107,7 @@ class WebApp(Keyboard):
     ) -> RawKeyboard:
         text = await self.text.render_text(data, manager)
         web_app = await self.web_app.render_text(data, manager)
+        payload = await self.payload.render_text(data, manager)
 
         return [
             [
