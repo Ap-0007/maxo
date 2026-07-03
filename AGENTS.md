@@ -25,10 +25,15 @@
 
 ## Рабочие команды
 
-В текущем дереве есть `justfile`, поэтому полагайся на `just`, Используй команды через `just` или прямые команды через `uv`:
+Проект использует `uv`. Сначала синхронизируй окружение:
 
 ```bash
 uv sync --all-groups
+```
+
+Для CI-паритета используй прямые команды через `uv`:
+
+```bash
 uv run ruff check --no-fix .
 uv run mypy --config-file pyproject.toml
 uv run pytest tests/ --cov=src --cov-report=term
@@ -42,13 +47,30 @@ uv run pytest tests/path/test_file.py::test_name -v
 uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
 ```
 
+В дереве есть оба файла `Justfile` и `justfile`. Они должны оставаться
+одинаковыми, иначе поведение на разных платформах разъедется. Если `just`
+установлен и dev-окружение активно, его можно использовать как локальный
+shortcut:
+
+```bash
+just lint
+just mypy
+just test
+just test-all
+just all
+```
+
 Полезно помнить:
 
 - `pyproject.toml` задает `ruff` c `fix = true`, поэтому для проверки без
   изменений используй `--no-fix`.
+- Рецепт `just ruff` запускает `ruff check --fix .` и может менять файлы.
+  Для проверки без правок используй `uv run ruff check --no-fix .`.
 - `pytest` в проекте работает с `asyncio_mode = auto`.
 - CI проверяет lint на Python `3.14` и тесты на Python `3.12`, `3.13`, `3.14`
   с разрешением зависимостей `lowest-direct` и `highest`.
+- `uv.lock` игнорируется в этом репозитории. Не добавляй его в коммит без
+  отдельного решения мейнтейнера.
 
 ## Архитектура проекта
 
@@ -63,6 +85,7 @@ uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
 | `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                            |
 | `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools. |
 | `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                |
+| `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                         |
 | `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                   |
 | `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers, facades.                                   |
 | `docs/`                  | Sphinx-документация на русском языке.                                                                   |
@@ -93,6 +116,9 @@ Long polling / webhook
 - Facade и update-модели умеют отвечать через mixins после привязки бота.
 - Для webhook используй `collect_used_updates(dispatcher)`, чтобы подписывать
   только реально используемые update types.
+- Long polling находится в `maxo.transport.long_polling`.
+- Webhook находится в `maxo.transport.webhook`: engines, adapters, routing,
+  security и per-bot config.
 
 ## Публичный API
 
@@ -118,6 +144,9 @@ Long polling / webhook
   `src/maxo`, `tests` и `examples`.
 - Публичный код должен быть полностью аннотирован. В тестах аннотации тоже
   проверяются `mypy`, хотя ruff-правила `ANN` для тестов отключены.
+- Не добавляй `Any`, `cast`, `type: ignore` и отключение lint-правил без
+  локального объяснения причины.
+- Если `type: ignore` неизбежен, указывай конкретный код ошибки.
 - Для внутренних путей используй `pathlib.Path`, если работа идет с файлами.
 - Не добавляй top-level side effects, кроме декларативной регистрации,
   ожидаемой текущими API.
@@ -126,6 +155,10 @@ Long polling / webhook
 - Для новых data-моделей используй существующий стиль: `MaxoType` для
   API-моделей, `@dataclass(slots=True)` там, где в подсистеме уже принят
   dataclass-подход.
+- Не добавляй сетевые вызовы, чтение env-переменных, запуск процессов и
+  работу с файловой системой при импорте модулей.
+- Не коммить локальные артефакты: `__pycache__`, `.DS_Store`, `.pytest_cache`,
+  `.ruff_cache`, `.mypy_cache`, `coverage.xml`, `htmlcov/`, `docs/_build/`.
 - Не редактируй сгенерированные типы, enum и методы Bot API вручную как
   изолированную правку. Если меняется контракт API, синхронизируй методы,
   типы, сериализацию, тесты и документацию.
@@ -176,6 +209,18 @@ Long polling / webhook
   update-модель, facade/mixin при пользовательском удобстве, сериализацию,
   тесты и документацию.
 
+## Зависимости и optional extras
+
+- Runtime-зависимости задаются в `pyproject.toml`; не добавляй новые
+  зависимости без необходимости и проверки минимальных версий.
+- Optional extras: `maxo[magic_filter]`, `maxo[dishka]`, `maxo[redis]`,
+  `maxo[fastapi]`, `maxo[preview]`.
+- Dev-группа подтягивает lint, tests, docs и основные extras. Для разработки
+  используй `uv sync --all-groups`, чтобы тесты optional-интеграций не падали
+  из-за отсутствующих зависимостей.
+- Для новых optional-интеграций обновляй `pyproject.toml`, документацию,
+  примеры и тесты импорта/поведения без обязательного внешнего сервиса.
+
 ## Тесты
 
 - Используй `pytest`, `pytest-asyncio` в `auto` mode и `unittest.mock`.
@@ -200,6 +245,11 @@ Long polling / webhook
   где меняется контракт хранения.
 - При изменении dialogs проверяй старт, закрытие, переходы между окнами,
   callback widgets, dialog data, фоновые менеджеры и стабильность widget `id`.
+- Для внешних HTTP-интеграций используй mock/stub транспорта. Тесты не должны
+  зависеть от реального MAX API, Telegram, Redis, FastAPI-сервера в интернете
+  или других внешних сервисов.
+- Если меняешь безопасность webhook, покрывай положительный и отрицательный
+  сценарии проверки секрета, routing и adapter mapping.
 
 ## Документация и примеры
 
@@ -224,29 +274,61 @@ Long polling / webhook
 - Для webhook показывай `SimpleEngine`, `AiohttpWebAdapter` или
   `FastApiWebAdapter`, `StaticRouting`, `Security`, `StaticSecretToken`,
   `collect_used_updates`.
+- Локальная сборка документации:
+
+```bash
+uv run sphinx-build -b html docs docs/_build/html
+```
+
+- При изменении docs не коммить `docs/_build/`; это локальный build output.
+- При изменении `docs/conf.py`, `_static`, `_extra/llms.txt` или sitemap
+  проверяй, что сборка Sphinx проходит.
+
+## CI и качество
+
+- `.github/workflows/lint.yml` запускает Python `3.14`, установку через
+  `uv pip install -e . --group=dev --system`, `ruff check --no-fix .` и
+  `mypy --config-file pyproject.toml`.
+- `.github/workflows/test.yml` запускает Python `3.12`, `3.13`, `3.14` с
+  dependency resolution `lowest-direct` и `highest`, затем pytest с coverage.
+- `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
+  Telegram через закрепленный action `reagento/relator`.
+- Локальный `just lint` дополнительно запускает `codespell`, `slotscheck` и
+  `bandit`. Учитывай их при изменении пользовательского текста, `__slots__`,
+  dataclass-моделей и security-sensitive кода.
+- `black` есть в lint-группе, но форматирование проекта задает `ruff format`.
+  Не переформатируй весь репозиторий без отдельной задачи.
 
 ## Что важно помнить о текущем проекте
 
 - Проект на `uv`, не на `pip` как основном инструменте для разработки.
-- Используется `justfile` для запуска команд
+- Используются `Justfile` и `justfile` для локальных команд. Поддерживай их
+  синхронными.
 - `pyproject.toml` содержит строгие правила `ruff` и `mypy`.
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
   фактически являются generated API surface.
+- `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
+  surface и требуют синхронизации с типами, enum и сериализацией.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
   `aiogram_dialog` и `aiogram-webhook`, поэтому рядом с изменениями нужно
   проверять совместимость паттернов.
 - Для hook- и transport-изменений обязательно смотреть на тесты в
   `tests/maxo_webhook`.
+- `.agents/skills` и `.claude/skills` не используются как источник правил.
+  Обязательные инструкции держи в `AGENTS.md` или во вложенных `AGENTS.md`.
 
 ## Перед PR
 
 - Проверь рабочее дерево и не перезаписывай чужие изменения.
 - Добавь тесты к измененному поведению.
 - Обнови docs/examples при изменении пользовательского API.
+- Если меняешь команды разработки, обновляй `Justfile`, `justfile`,
+  `AGENTS.md` и при необходимости CI workflows вместе.
 - В PR-шаблоне честно отметь использование ИИ: код может быть написан ИИ, но
   должен пройти полный контроль человека.
 - Не добавляй `Co-Authored-By`.
-- Сообщения могут быть на русском, но должны оставаться понятными.
+- Сообщения коммитов могут быть на русском, но должны оставаться понятными и
+  следовать conventional commits.
 
 ## Перед завершением задачи
 
