@@ -225,6 +225,7 @@ async def test_build_media_attachments_skips_unknown_upload_type(
     facade: DummyFacade,
 ) -> None:
     with patch.object(facade, "upload_media", new_callable=AsyncMock) as upload_mock:
+        # cast нужен, чтобы смоделировать неизвестный UploadType, не входящий в enum
         upload_mock.return_value = (cast(UploadType, "unknown"), "token")
 
         result = await facade.build_media_attachments(

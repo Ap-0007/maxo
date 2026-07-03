@@ -151,7 +151,7 @@ enable_error_code = [
 ]
 
 [tool.ruff]
-src = ["src", "examples"]
+src = ["src", "examples", "tests"]
 fix = true
 line-length = 88
 indent-width = 4
