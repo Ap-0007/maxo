@@ -33,7 +33,11 @@ def test_base_message_button_and_chat_button_accessors() -> None:
 
 def test_button_accessors_raise_for_omitted_values() -> None:
     message_button = MessageButton()
-    chat_button = ChatButton(text="Create chat", type=ButtonType.MESSAGE, chat_title="Chat")
+    chat_button = ChatButton(
+        text="Create chat",
+        type=ButtonType.MESSAGE,
+        chat_title="Chat",
+    )
     open_app_button = OpenAppButton(text="Open")
 
     with pytest.raises(AttributeIsEmptyError):

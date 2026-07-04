@@ -5,38 +5,45 @@ import pytest
 from maxo.enums import ChatAdminPermission, ChatStatus, ChatType
 from maxo.enums.markup_element_type import MarkupElementType
 from maxo.errors import AttributeIsEmptyError
-from maxo.types.bot_command import BotCommand
-from maxo.types.chat import Chat
-from maxo.types.chat_admin import ChatAdmin
-from maxo.types.chat_admins_list import ChatAdminsList
-from maxo.types.chat_list import ChatList
-from maxo.types.chat_member import ChatMember
-from maxo.types.contact_attachment import ContactAttachment
-from maxo.types.contact_attachment_payload import ContactAttachmentPayload
-from maxo.types.get_pinned_message_result import GetPinnedMessageResult
-from maxo.types.markup_element import MarkupElement
+from maxo.types import (
+    ChatButton,
+    ContactAttachmentRequest,
+    FailedUserDetails,
+    MessageStat,
+    ModifyMembersResult,
+)
+from maxo.types import BotCommand
+from maxo.types import Chat
+from maxo.types import ChatAdmin
+from maxo.types import ChatAdminsList
+from maxo.types import ChatList
+from maxo.types import ChatMember
+from maxo.types import ContactAttachment
+from maxo.types import ContactAttachmentPayload
+from maxo.types import GetPinnedMessageResult
+from maxo.types import MarkupElement
 from maxo.types.media_attachment_payload import MediaAttachmentPayload
+from maxo.types import Message
+from maxo.types.message_body import MessageBody
 from maxo.types.new_message_body import NewMessageBody
+from maxo.types.open_app_button import OpenAppButton
 from maxo.types.photo_attachment_request import PhotoAttachmentRequest
 from maxo.types.photo_attachment_request_payload import PhotoAttachmentRequestPayload
 from maxo.types.photo_token import PhotoToken
-from maxo.types.message import Message
-from maxo.types.message_body import MessageBody
-from maxo.types.request_geo_location_button import RequestGeoLocationButton
-from maxo.types.open_app_button import OpenAppButton
-from maxo.types.share_attachment import ShareAttachment
-from maxo.types.share_attachment_payload import ShareAttachmentPayload
 from maxo.types.recipient import Recipient
-from maxo.types.subscription import Subscription
-from maxo.types.update_context import UpdateContext
-from maxo.types.upload_endpoint import UploadEndpoint
+from maxo.types.request_geo_location_button import RequestGeoLocationButton
+from maxo.types import ShareAttachment
+from maxo.types.share_attachment_payload import ShareAttachmentPayload
+from maxo.types import Subscription
+from maxo.types import UpdateContext
+from maxo.types import UploadEndpoint
 from maxo.types.uploaded_info import UploadedInfo
-from maxo.types.user import User
-from maxo.types.user_mention_markup import UserMentionMarkup
-from maxo.types.user_with_photo import UserWithPhoto
-from maxo.types.video_attachment import VideoAttachment
-from maxo.types.video_attachment_details import VideoAttachmentDetails
-from maxo.types.video_urls import VideoUrls
+from maxo.types import User
+from maxo.types import UserMentionMarkup
+from maxo.types import UserWithPhoto
+from maxo.types import VideoAttachment
+from maxo.types import VideoAttachmentDetails
+from maxo.types import VideoUrls
 
 PHOTO_ID = "photo-token"
 PHOTO_ATTACHMENT_ID = "photo-attachment"
@@ -45,6 +52,7 @@ UPLOAD_ID = "upload-token"
 UPLOADED_ID = "uploaded-token"
 VIDEO_ID = "video-token"
 DETAILS_ID = "details-token"
+
 
 def make_user() -> User:
     return User(
@@ -64,8 +72,7 @@ def test_maxo_type_bot_accessors() -> None:
     user.bot = None
     assert user._bot is None
 
-    class DummyBot:
-        ...
+    class DummyBot: ...
 
     bot = DummyBot()
     assert user.as_(bot) is user

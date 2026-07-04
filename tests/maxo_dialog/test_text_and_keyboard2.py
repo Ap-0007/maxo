@@ -1,8 +1,6 @@
 from datetime import UTC, datetime
 from typing import Any
 
-import pytest
-
 from maxo.dialogs.widgets.kbd import Button, Clipboard, Group, Keyboard, Url, WebApp
 from maxo.dialogs.widgets.text import Const, Format, Multi
 from maxo.routing.updates import MessageCallback
@@ -36,7 +34,6 @@ class DummyButton(Keyboard):
         return [[CallbackButton(text="stub", payload=self.widget_id or "stub")]]
 
 
-@pytest.mark.asyncio
 async def test_text_rendering_and_combinators() -> None:
     manager = DummyManager()
 
@@ -48,13 +45,15 @@ async def test_text_rendering_and_combinators() -> None:
         "Hello world"
     )
     assert await (Const("A") | Const("B")).render_text({}, manager) == "A"
-    assert await Multi(Const("A"), Const(""), Const("B"), sep=" ").render_text(
-        {},
-        manager,
-    ) == "A B"
+    assert (
+        await Multi(Const("A"), Const(""), Const("B"), sep=" ").render_text(
+            {},
+            manager,
+        )
+        == "A B"
+    )
 
 
-@pytest.mark.asyncio
 async def test_format_preview_mode_uses_stub_data() -> None:
     manager = DummyManager(preview=True)
 
@@ -63,7 +62,6 @@ async def test_format_preview_mode_uses_stub_data() -> None:
     )
 
 
-@pytest.mark.asyncio
 async def test_keyboard_rendering_and_callback_routing() -> None:
     manager = DummyManager()
     dialog = DummyDialog()

@@ -1,0 +1,113 @@
+import pytest
+
+from maxo import Dispatcher
+from maxo.dialogs import (
+    Dialog,
+    DialogManager,
+    StartMode,
+    Window,
+    setup_dialogs,
+)
+from maxo.dialogs.test_tools import BotClient, MockMessageManager
+from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
+from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
+from maxo.dialogs.widgets.kbd import Cancel
+from maxo.dialogs.widgets.text import Const, Format
+from maxo.fsm import State, StatesGroup
+from maxo.types import Message
+
+
+class MainSG(StatesGroup):
+    start = State()
+
+
+class SecondarySG(StatesGroup):
+    start = State()
+
+
+class ThirdSG(StatesGroup):
+    start = State()
+
+
+async def start(message: Message, dialog_manager: DialogManager) -> None:
+    await dialog_manager.start(MainSG.start, mode=StartMode.RESET_STACK)
+
+
+async def on_start_main(data, dialog_manager: DialogManager) -> None:
+    await dialog_manager.start(SecondarySG.start)
+
+
+async def on_start_sub(_, dialog_manager: DialogManager) -> None:
+    await dialog_manager.start(ThirdSG.start)
+
+
+async def on_process_result_sub(_, __, dialog_manager: DialogManager) -> None:
+    await dialog_manager.done()
+
+
+async def _is_start(event: object, *_: object) -> bool:
+    message = getattr(event, "message", event)
+    body = getattr(message, "body", None)
+    return getattr(body, "text", None) == "/start"
+
+
+@pytest.fixture
+def message_manager() -> MockMessageManager:
+    return MockMessageManager()
+
+
+@pytest.fixture
+def client(dp) -> BotClient:
+    return BotClient(dp)
+
+
+@pytest.fixture
+def dp(message_manager: MockMessageManager):
+    dp = Dispatcher(storage=JsonMemoryStorage())
+    dp.message.register(start, _is_start)
+
+    dp.include_router(
+        Dialog(
+            Window(
+                Const("First"),
+                state=MainSG.start,
+            ),
+            on_start=on_start_main,
+        ),
+    )
+    dp.include_router(
+        Dialog(
+            Window(
+                Format("Subdialog"),
+                Cancel(),
+                state=SecondarySG.start,
+            ),
+            on_process_result=on_process_result_sub,
+            on_start=on_start_sub,
+        ),
+    )
+    dp.include_router(
+        Dialog(
+            Window(
+                Format("Third"),
+                Cancel(),
+                state=ThirdSG.start,
+            ),
+        ),
+    )
+    setup_dialogs(dp, message_manager=message_manager)
+    return dp
+
+
+async def test_start(dp, message_manager, client):
+    # start
+    await client.send("/start")
+    first_message = message_manager.one_message()
+    assert first_message.body.text == "Third"
+    assert first_message.reply_markup
+
+    message_manager.reset_history()
+    await client.click(first_message, InlineButtonTextLocator("Cancel"))
+    second_message = message_manager.one_message()
+    assert second_message.body.text == "First"
+    assert second_message.reply_markup
