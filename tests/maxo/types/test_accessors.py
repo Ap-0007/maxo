@@ -73,6 +73,13 @@ from maxo.types import (
 )
 
 TOKEN = "attachment-token"  # noqa: S105
+PHOTO_ID = "photo-token"
+PHOTO_ATTACHMENT_ID = "photo-attachment"
+SHARE_ID = "share-token"
+UPLOAD_ID = "upload-token"
+UPLOADED_ID = "uploaded-token"
+VIDEO_ID = "video-token"
+DETAILS_ID = "details-token"
 
 
 def make_user() -> User:
@@ -870,24 +877,6 @@ def test_message_generated_url_requires_chat_id() -> None:
     assert message.generated_url is None
 
 
-PHOTO_ID = "photo-token"
-PHOTO_ATTACHMENT_ID = "photo-attachment"
-SHARE_ID = "share-token"
-UPLOAD_ID = "upload-token"
-UPLOADED_ID = "uploaded-token"
-VIDEO_ID = "video-token"
-DETAILS_ID = "details-token"
-
-
-def make_user() -> User:
-    return User(
-        user_id=1,
-        first_name="Alice",
-        is_bot=False,
-        last_activity_time=datetime.now(UTC),
-    )
-
-
 def test_maxo_type_bot_accessors() -> None:
     user = make_user()
 
@@ -939,7 +928,7 @@ def test_user_and_chat_related_accessors() -> None:
     assert member.unsafe_alias == "Admin"
     assert member.unsafe_permissions == [ChatAdminPermission.READ_ALL_MESSAGES]
     assert chat.id == 1
-    assert make_user().full_name == "Alice"
+    assert make_user().full_name == "Alice Tester"
 
 
 def test_list_and_result_accessors() -> None:
@@ -1073,7 +1062,7 @@ def test_remaining_optional_branches() -> None:
     open_app = OpenAppButton(text="open")
     chat_button = ChatButton(
         text="create",
-        type=ChatType.CHAT,
+        type=ButtonType.MESSAGE,
         chat_title="Room",
         chat_description="desc",
         start_payload="start",
@@ -1081,7 +1070,7 @@ def test_remaining_optional_branches() -> None:
     )
     new_message = NewMessageBody(
         attachments=[],
-        format="plain",
+        format=TextFormat.HTML,
         link=None,
         notify=True,
         text="hello",
@@ -1094,12 +1083,12 @@ def test_remaining_optional_branches() -> None:
     modify = ModifyMembersResult(
         success=False,
         message="failed",
-        failed_user_details=[FailedUserDetails(user_ids=[1], reason="bad")],
+        failed_user_details=[FailedUserDetails(user_ids=[1], error_code="bad")],
         failed_user_ids=[1],
     )
     photo_payload = PhotoAttachmentRequestPayload(
-        photos=[PhotoToken(token="p")],
-        token="t",
+        photos=[PhotoToken(token=PHOTO_ID)],
+        token=TOKEN,
         url="https://example.com",
     )
     contact_request = ContactAttachmentRequest.factory(vcf_info="BEGIN:VCARD")
@@ -1108,24 +1097,36 @@ def test_remaining_optional_branches() -> None:
     assert message.unsafe_sender.user_id == 1
     assert message.unsafe_stat.views == 1
     assert message.unsafe_url == "https://example.com"
-    assert open_app.unsafe_contact_id is pytest.raises
+    with pytest.raises(
+        AttributeIsEmptyError,
+        match=r"OpenAppButton.contact_id is empty \(<Omitted>\)",
+    ):
+        _ = open_app.unsafe_contact_id
     assert chat_button.unsafe_chat_description == "desc"
     assert chat_button.unsafe_start_payload == "start"
     assert chat_button.unsafe_uuid == 1
     assert new_message.unsafe_attachments == []
-    assert new_message.unsafe_format == "plain"
-    assert new_message.unsafe_link is None
+    assert new_message.unsafe_format == TextFormat.HTML
+    with pytest.raises(
+        AttributeIsEmptyError,
+        match=r"NewMessageBody.link is empty \(None\)",
+    ):
+        _ = new_message.unsafe_link
     assert new_message.unsafe_notify is True
     assert share.unsafe_description == "Desc"
     assert share.unsafe_image_url == "https://example.com/image.png"
     assert share.unsafe_title == "Title"
-    assert modify.unsafe_failed_user_details[0].user_id == 1
+    assert modify.unsafe_failed_user_details[0].user_ids == [1]
     assert modify.unsafe_failed_user_ids == [1]
-    assert photo_payload.unsafe_photos[0].token == "p"
-    assert photo_payload.unsafe_token == "t"
+    assert photo_payload.unsafe_photos[0].token == PHOTO_ID
+    assert photo_payload.unsafe_token == TOKEN
     assert photo_payload.unsafe_url == "https://example.com"
     assert contact_request.payload.unsafe_vcf_info == "BEGIN:VCARD"
-    assert subscription.unsafe_update_types is pytest.raises
+    with pytest.raises(
+        AttributeIsEmptyError,
+        match=r"Subscription.update_types is empty \(None\)",
+    ):
+        _ = subscription.unsafe_update_types
 
 
 def test_additional_type_edges() -> None:
@@ -1147,7 +1148,12 @@ def test_additional_type_edges() -> None:
 
 
 def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
-    user = make_user()
+    user = User(
+        user_id=1,
+        first_name="Alice",
+        is_bot=False,
+        last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
+    )
     chat_admin = ChatAdmin(user_id=1, permissions=[])
     member = UserWithPhoto(
         user_id=1,
@@ -1176,10 +1182,11 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         length=5,
         type=MarkupElementType.USER_MENTION,
     )
-    message = NewMessageBody()
-    share = ShareAttachment()
     video = VideoAttachment(
-        payload=MediaAttachmentPayload(url="https://example.com/video.mp4", token="v"),
+        payload=MediaAttachmentPayload(
+            url="https://example.com/video.mp4",
+            token=VIDEO_ID,
+        ),
     )
     details = VideoAttachmentDetails(
         duration=33,
