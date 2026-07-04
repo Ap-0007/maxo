@@ -98,6 +98,7 @@ ogp_custom_meta_tags = [
     '<meta name="twitter:title" content="maxo - асинхронный Python-фреймворк для ботов MAX (max.ru)" />',
     '<meta name="twitter:description" content="Асинхронный Python-фреймворк для ботов мессенджера MAX (max.ru): long-polling, вебхуки, FSM, диалоги, фильтры, DI." />',
     '<meta name="twitter:image" content="https://raw.githubusercontent.com/K1rL3s/maxo/master/docs/_static/maxo-logo.png" />',
+    '<meta name="google-site-verification" content="gPFGk4DRJfpg-2xVsJl4y56gTzpLHRWQWBz6MtRRkkA" />',
 ]
 
 rst_prolog = """
