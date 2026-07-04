@@ -121,7 +121,7 @@ dev = [
     { include-group = "lint" },
     { include-group = "tests" },
     { include-group = "docs" },
-    "maxo[magic_filter,dishka,redis,fastapi]"
+    "maxo[magic_filter,dishka,redis,fastapi,preview]"
 ]
 
 [project.urls]
