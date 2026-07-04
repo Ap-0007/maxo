@@ -224,6 +224,8 @@ Long polling / webhook
 
 ## Тесты
 
+### Общие правила
+
 - Используй `pytest`, `pytest-asyncio` в `auto` mode и `unittest.mock`.
 - Для async-кода тесты тоже async. Не запускай event loop вручную без причины.
 - Новая функциональность требует узких тестов рядом с соответствующей
@@ -234,23 +236,258 @@ Long polling / webhook
 - Не добавляй тесты, которые требуют реального MAX API или сетевого доступа.
 - Тест должен фиксировать поведение, а не внутреннюю реализацию, если только
   задача не касается внутреннего контракта.
-- Для сложной логики роутинга, FSM и Bot API проверяй не только happy path, но
-  и edge cases: `Omitted()`, `None`, `UNHANDLED`, `SkipHandler`, invalid states
-  и ошибки API.
-- При изменении Bot API и сериализации покрывай request markers, dump defaults,
-  `Omitted()`, `None`, загрузку ответа/update, polymorphic dispatch и маппинг
-  ошибок API.
-- При изменении routing проверяй порядок обработки, `Router.include`,
-  observers, middlewares, `UNHANDLED` и `SkipHandler`.
-- При изменении FSM проверяй state, data, key builder и event isolation там,
-  где меняется контракт хранения.
-- При изменении dialogs проверяй старт, закрытие, переходы между окнами,
-  callback widgets, dialog data, фоновые менеджеры и стабильность widget `id`.
-- Для внешних HTTP-интеграций используй mock/stub транспорта. Тесты не должны
-  зависеть от реального MAX API, Telegram, Redis, FastAPI-сервера в интернете
-  или других внешних сервисов.
-- Если меняешь безопасность webhook, покрывай положительный и отрицательный
-  сценарии проверки секрета, routing и adapter mapping.
+- Цель проекта - покрытие тестами на уровне 90%+. Текущее покрытие смотри через
+  `uv run pytest tests/ --cov=src --cov-report=term`.
+
+### Структура тестов и conftest.py
+
+Тесты организованы по подсистемам в зеркальной структуре к `src/`:
+
+```text
+tests/
+├── maxo/              # тесты для src/maxo (routing, fsm, bot)
+├── maxo_dialog/       # тесты для src/maxo/dialogs
+│   └── widgets/
+│       ├── conftest.py          # фикстура mock_manager
+│       ├── input/
+│       │   ├── conftest.py      # хелперы для input-виджетов
+│       │   ├── test_text.py
+│       │   ├── test_combined.py
+│       │   └── test_base.py
+│       └── kbd/
+└── maxo_webhook/      # тесты для src/maxo/transport/webhook
+```
+
+**Правила использования conftest.py:**
+
+- Создавай `conftest.py` рядом с группой связанных тестов для shared fixtures
+- Выноси дублирующиеся хелперы (создание сообщений, моков) в ближайший conftest
+- Не дублируй код между тестовыми файлами - используй относительные импорты
+  из conftest: `from .conftest import create_text_message`
+- Каждая директория с тестами должна иметь `__init__.py` (требование ruff INP001)
+
+### Хелперы для тестирования dialogs
+
+**Фикстура mock_manager** (`tests/maxo_dialog/widgets/conftest.py`):
+
+```python
+@pytest.fixture
+def mock_manager() -> DialogManager:
+    manager = MagicMock()
+    context = Context(
+        dialog_data={},
+        start_data={},
+        widget_data={},
+        state=State(),
+        _stack_id="_stack_id",
+        _intent_id="_intent_id",
+    )
+    manager.current_context = Mock(side_effect=lambda: context)
+    manager.is_preview = MagicMock(return_value=False)
+    return manager
+```
+
+**Хелперы для создания сообщений** (`tests/maxo_dialog/widgets/input/conftest.py`):
+
+```python
+def create_text_message(text: str) -> MessageCreated:
+    """Создает текстовое сообщение для тестов."""
+    return MessageCreated(
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        message=Message(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
+            body=MessageBody(mid="test_mid", seq=1, text=text),
+        ),
+    )
+
+def create_photo_message() -> MessageCreated:
+    """Создает сообщение с фото-вложением."""
+    photo = PhotoAttachment(
+        type=AttachmentType.IMAGE,
+        payload=PhotoAttachmentPayload(
+            photo_id=123,
+            token="test_token",  # noqa: S106
+            url="https://example.com/photo.jpg",
+        ),
+    )
+    return MessageCreated(
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        message=Message(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
+            body=MessageBody(mid="test_mid", seq=1, text=None, attachments=[photo]),
+        ),
+    )
+
+def setup_mock_manager(
+    mock_manager: DialogManager,
+    event: MessageCreated | None = None,
+) -> None:
+    """Настраивает mock_manager для работы с фильтрами."""
+    mock_manager.middleware_data = {"ctx": {}}
+    if event:
+        mock_manager.event = event
+```
+
+### Паттерны тестирования widgets
+
+**Базовый тест widget:**
+
+```python
+async def test_text_input_basic(mock_manager: DialogManager) -> None:
+    on_success = AsyncMock()
+    text_input = TextInput(id="text", on_success=on_success)
+
+    message = create_text_message("Hello World")
+    result = await text_input.process_message(message, None, mock_manager)
+
+    assert result is True
+    on_success.assert_called_once()
+    assert text_input.get_value(mock_manager) == "Hello World"
+```
+
+**Тестирование с type factory:**
+
+```python
+async def test_text_input_with_type_factory(mock_manager: DialogManager) -> None:
+    on_success = AsyncMock()
+    text_input = TextInput(id="number", type_factory=int, on_success=on_success)
+
+    message = create_text_message("42")
+    result = await text_input.process_message(message, None, mock_manager)
+
+    assert result is True
+    call_args = on_success.call_args
+    assert call_args[0][3] == 42  # data parameter (converted value)
+```
+
+**Тестирование фильтров:**
+
+```python
+async def test_message_input_with_content_type(
+    mock_manager: DialogManager,
+) -> None:
+    message = create_photo_message()
+    setup_mock_manager(mock_manager, message)  # важно: передать event
+
+    handler = AsyncMock()
+    message_input = MessageInput(
+        func=handler,
+        content_types=AttachmentType.PHOTO,
+        id="input",
+    )
+
+    result = await message_input.process_message(message, None, mock_manager)
+
+    assert result is True
+    handler.assert_called_once()
+```
+
+**Тестирование managed widgets:**
+
+```python
+async def test_counter_managed(mock_manager: DialogManager) -> None:
+    counter = Counter(id="counter")
+    await counter.set_value(mock_manager, 5)
+
+    managed = counter.managed(mock_manager)
+    assert managed.get_value() == 5
+```
+
+### Edge cases для dialogs
+
+Всегда тестируй:
+
+- Пустые сообщения (`create_text_message("")`)
+- Сообщения без body (`body=None`)
+- Фильтры, возвращающие `False`
+- Обработчики ошибок (`on_error` callbacks)
+- Граничные значения для pagination (`page=0`, `page > max`)
+- Пустые списки items в `ListGroup`
+
+### Тестирование с AsyncMock
+
+Для async callbacks используй `AsyncMock`:
+
+```python
+on_success = AsyncMock()
+on_error = AsyncMock()
+filter_func = AsyncMock(return_value=True)
+
+# Проверка вызовов
+on_success.assert_called_once()
+on_success.assert_not_called()
+assert filter_func.call_count == 2
+
+# Проверка аргументов
+call_args = on_success.call_args
+assert call_args[0][3] == expected_value  # позиционный аргумент
+```
+
+### Coverage и работа с непокрытым кодом
+
+Проверка текущего покрытия:
+
+```bash
+uv run pytest tests/ --cov=src --cov-report=term
+uv run pytest tests/ --cov=src --cov-report=html  # для детального отчета
+```
+
+При добавлении тестов для увеличения покрытия:
+
+1. Найди файлы с низким покрытием в coverage report
+2. Изучи непокрытые строки (coverage.xml или htmlcov/)
+3. Посмотри на существующие тесты в aiogram_dialog submodule для паттернов
+4. Создай тесты, покрывающие happy path и edge cases
+5. Используй shared helpers из conftest.py
+6. Проверь, что новые тесты увеличили покрытие
+
+### Специфичные проверки для подсистем
+
+**Для Bot API и сериализации:**
+
+- Request markers, dump defaults, `Omitted()`, `None`
+- Загрузка ответа/update
+- Polymorphic dispatch
+- Маппинг ошибок API
+
+**Для routing:**
+
+- Порядок обработки `Router.include`
+- Observers, middlewares
+- `UNHANDLED`, `SkipHandler`
+
+**Для FSM:**
+
+- State transitions
+- Data persistence
+- Key builder
+- Event isolation
+
+**Для dialogs:**
+
+- Старт, закрытие, переходы между окнами
+- Callback widgets
+- Dialog data
+- Фоновые менеджеры
+- Стабильность widget `id`
+
+**Для webhook:**
+
+- Положительный и отрицательный сценарии проверки секрета
+- Routing и adapter mapping
+- Mock/stub транспорта
+
+### Рефакторинг тестов
+
+При обнаружении дублирования:
+
+1. Создай `conftest.py` в директории с тестами
+2. Вынеси общие хелперы (create_*, setup_*)
+3. Обнови импорты в тестах: `from .conftest import helper_name`
+4. Убедись, что все тесты проходят после рефакторинга
+5. Запусти `uv run ruff check --fix tests/` для проверки стиля
 
 ## Документация и примеры
 
