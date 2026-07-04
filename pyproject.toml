@@ -11,24 +11,33 @@ license = { file = "LICENSE" }
 keywords = [
     "max",
     "max.ru",
+    "max-ru",
     "max-messenger",
+    "max-messenger-api",
     "max-bot",
     "max-bot-api",
     "max-api",
+    "max-api-python",
     "maxapi",
     "maxo",
     "messenger",
+    "MAX Bot API",
+    "python",
+    "python-bot",
     "bot",
     "bots",
+    "chatbot",
     "chat-bot",
     "bot-framework",
     "framework",
     "async",
+    "chatbot-framework",
     "asyncio",
     "aiohttp",
     "unihttp",
     "long-polling",
     "webhook",
+    "webhooks",
     "fsm",
     "dialogs",
     "dispatcher",
@@ -127,6 +136,10 @@ dev = [
 [project.urls]
 Documentation = "https://maxo.readthedocs.io"
 Repository = "https://github.com/K1rL3s/maxo"
+Homepage = "https://github.com/K1rL3s/maxo"
+Changelog = "https://maxo.readthedocs.io/ru/latest/pages/changelog.html"
+Issues = "https://github.com/K1rL3s/maxo/issues"
+Source = "https://github.com/K1rL3s/maxo"
 
 [tool.mypy]
 files = ["src/maxo", "tests", "examples"]

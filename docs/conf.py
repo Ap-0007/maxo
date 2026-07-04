@@ -57,7 +57,10 @@ extensions = [
 
 # ----- SEO / canonical / sitemap / Open Graph -----
 
-html_baseurl = "https://maxo.readthedocs.io/ru/latest/"
+html_baseurl = os.environ.get(
+    "READTHEDOCS_CANONICAL_URL",
+    "https://maxo.readthedocs.io/ru/latest/",
+)
 sitemap_url_scheme = "{link}"
 sitemap_excludes = [
     "search.html",
@@ -65,6 +68,8 @@ sitemap_excludes = [
     "py-modindex.html",
     "_modules/index.html",
 ]
+html_title = "maxo - Python-фреймворк для ботов MAX Bot API (max.ru)"
+html_short_title = "maxo"
 
 
 def _strip_modules_from_sitemap(app, exception):
@@ -82,7 +87,7 @@ def _strip_modules_from_sitemap(app, exception):
     )
     sitemap_path.write_text(text, encoding="utf-8")
 
-ogp_site_url = "https://maxo.readthedocs.io/ru/latest/"
+ogp_site_url = html_baseurl
 ogp_site_name = "maxo"
 ogp_image = "https://raw.githubusercontent.com/K1rL3s/maxo/master/docs/_static/maxo-logo.png"
 ogp_type = "website"
