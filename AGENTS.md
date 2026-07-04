@@ -120,6 +120,349 @@ Long polling / webhook
 - Webhook находится в `maxo.transport.webhook`: engines, adapters, routing,
   security и per-bot config.
 
+## Неочевидные паттерны и архитектурные решения
+
+Эта секция описывает внутренние механизмы, которые нельзя понять, читая один
+файл. Знание этих паттернов критично для правильной работы с проектом.
+
+### Система типов MaxoType
+
+**Метакласс автоматически применяет `@dataclass`**
+
+`src/maxo/types/base.py` содержит `_MaxoTypeMetaClass`, который автоматически
+превращает все классы, наследующие `MaxoType`, в dataclass:
+
+```python
+class Message(MaxoType):
+    body: MessageBody  # автоматически становится kw_only полем
+    recipient: Recipient
+```
+
+Эквивалентно:
+```python
+@dataclass(slots=True, frozen=False, kw_only=True)
+class Message:
+    ...
+```
+
+**Важно**: Если явно указать `__slots__`, метакласс не применит `@dataclass`.
+
+**Автопривязка бота через BotMixin**
+
+Все `MaxoType` получают метод `as_(bot)` для привязки бота. В
+`serialization.py` есть специальный loader, который автоматически привязывает
+бот ко всем загруженным типам через `retort.extend(loader(...))`.
+
+Это позволяет:
+```python
+message = update.message
+await message.send_message(text="Reply")  # вместо bot.send_message(...)
+```
+
+**Паттерн `unsafe_*` для Omittable полей**
+
+Для всех `Omittable[T]` полей должен быть `unsafe_*` property:
+
+```python
+class Message(MaxoType):
+    sender: Omittable[User] = Omitted()
+
+    @property
+    def unsafe_sender(self) -> User:
+        if is_defined(self.sender):
+            return self.sender
+        raise AttributeIsEmptyError(obj=self, attr="sender")
+```
+
+Используй `unsafe_*`, когда уверен, что поле присутствует. Это защищает от
+`None`/`Omitted()` на уровне типов.
+
+### Сериализация и полиморфизм
+
+**TAG_PROVIDERS для union-типов**
+
+`src/maxo/serialization.py` содержит `TAG_PROVIDERS` - список провайдеров для
+полиморфной (де)сериализации:
+
+```python
+TAG_PROVIDERS = concat_provider(
+    has_tag_provider(MessageCreated, "update_type", UpdateType.MESSAGE_CREATED),
+    has_tag_provider(PhotoAttachment, "type", AttachmentType.IMAGE),
+    # ...
+)
+```
+
+При добавлении нового варианта в union-тип (новый update, attachment, button):
+
+1. Создай класс, наследующий базовый тип
+2. Добавь `has_tag_provider` в `TAG_PROVIDERS` с уникальным тегом
+3. Обнови union-тип (например, `Updates = MessageCreated | BotStarted | ...`)
+
+**Warming up retort**
+
+`src/maxo/bot/warming_up.py` предзагружает все типы в retort при создании
+бота, чтобы первый запрос не тратил время на генерацию сериализаторов. Adaptix
+генерирует код на лету - warming_up делает это заранее.
+
+**Различие `Omitted()` vs `None`**
+
+- `Omitted()` - не отправлять поле в JSON
+- `None` - отправить `{"field": null}`
+- `Omittable[T] = Omitted()` для optional query/body параметров
+- `Omittable[T | None]` для полей, которые могут быть `null`
+
+### Observer Pattern и роутинг
+
+**Иерархия фильтров**
+
+В routing есть несколько уровней фильтров:
+
+1. Фильтр на уровне observer'а (применяется ко всем handler'ам)
+2. Фильтр на уровне каждого handler'а
+3. Outer middleware (до фильтров)
+4. Inner middleware (после фильтров, перед handler'ом)
+
+**UNHANDLED vs SkipHandler**
+
+- `UNHANDLED` - возвращается, если ни один handler не подошел. Update
+  передается дочерним роутерам через `Router.include()`.
+- `SkipHandler` (exception) - пропускает текущий handler, но продолжает искать
+  следующий handler в том же observer'е. Update не идет к дочерним роутерам.
+
+**Observer State Pattern**
+
+После вызова startup-сигналов observer переходит в состояние, запрещающее
+добавление новых handler'ов и фильтров. Это защита от изменения роутинга во
+время работы бота.
+
+**Алиасы для aiogram-совместимости**
+
+```python
+router.message = router.message_created  # алиас
+router.callback_query = router.message_callback  # алиас
+```
+
+Используй явные имена (`message_created`) в новом коде. Алиасы нужны для
+миграции с aiogram.
+
+**Конфликт метаклассов: BaseMethodsFacade = BotMixin**
+
+`src/maxo/routing/mixins/base.py` содержит комментарий-исповедь:
+
+```python
+"""
+Класс должен наследоваться от ABC для работы @abstractmethod,
+но MaxoType сделан через метакласс, который конфликтует с ABC.
+Из-за этого фасады не наследуются от ABC.
+"""
+BaseMethodsFacade = BotMixin
+```
+
+Это технический долг. Не пытайся использовать ABC с MaxoType - будут ошибки
+инициализации.
+
+### Bot API и unihttp
+
+**Marker-based declarative API**
+
+Bot API методы используют marker-типы для декларативного указания, куда идут
+параметры:
+
+```python
+class SendMessage(MaxoMethod[SendMessageResult]):
+    __url__ = "messages"
+    __method__ = "post"
+
+    chat_id: Query[Omittable[int]] = Omitted()  # -> query string
+    text: Body[str | None] = None  # -> JSON body
+```
+
+`bind_method` из `unihttp` анализирует маркеры и автоматически создает метод:
+
+```python
+send_message = bind_method(SendMessage)  # в Bot классе
+```
+
+**Generic-параметр = тип результата**
+
+`MaxoMethod[SendMessageResult]` указывает, что метод вернет
+`SendMessageResult` после десериализации ответа API.
+
+**Патчинг success=false**
+
+`src/maxo/bot/api_client.py` содержит специальную логику:
+
+```python
+if response.ok and response.data.get("success", None) is False:
+    if isinstance(method, AddMembers):
+        return  # Особый случай
+    response.status_code = 400
+```
+
+MAX API иногда возвращает HTTP 200 с `"success": false`. Для большинства
+методов это патчится на 400, но для `AddMembers` остается как есть, т.к. там
+детальная информация в результате.
+
+### FSM и изоляция
+
+**DefaultKeyBuilder с destiny**
+
+Для dialogs **обязательно** использовать `DefaultKeyBuilder(with_destiny=True)`:
+
+```python
+# Правильно для dialogs
+isolation = SimpleEventIsolation(DefaultKeyBuilder(with_destiny=True))
+
+# Неправильно - будут коллизии ключей в multiple stacks
+isolation = SimpleEventIsolation(DefaultKeyBuilder())
+```
+
+`destiny` - дополнительный параметр для изоляции стейта. Dialogs используют
+его для работы с несколькими стеками диалогов одновременно.
+
+**Ключи FSM формата: `{bot_id}:{chat_id}:{user_id}:{destiny}`**
+
+При `with_destiny=False` попытка использовать `destiny != "default"` вызовет
+`ValueError` - это защита от случайных коллизий.
+
+### Dialogs и widgets
+
+**Dialog наследует Router, но запрещает include()**
+
+```python
+class Dialog(Router, DialogProtocol):
+    def include(self, *routers: BaseRouter) -> None:
+        raise TypeError("Dialog cannot include routers")
+```
+
+Dialog использует observers от Router, но управляет ими самостоятельно. У
+диалога автоматически настраиваются фильтры через `IntentFilter` для
+перехвата только своих update'ов.
+
+**Intent ID в callback payload**
+
+Когда widget создает callback button, в payload добавляется intent_id:
+
+```python
+payload = f"{intent_id}:{widget_id}:{data}"
+```
+
+При обработке callback intent_id извлекается и используется для загрузки
+правильного контекста. Это позволяет работать с multiple stacks - одна кнопка
+может открывать диалог в новом стеке.
+
+**ManagedWidget pattern**
+
+`manager.find(widget_id)` возвращает `ManagedWidget`, а не сам виджет:
+
+```python
+class ManagedWidget(Generic[W]):
+    def __init__(self, widget: W, manager: DialogManager):
+        self.widget = widget
+        self.manager = manager
+
+    def __getattr__(self, item: str):
+        return getattr(self.widget, item)  # проксирует атрибуты
+```
+
+Это позволяет виджету иметь доступ к `manager` без явной передачи. Виджеты
+определяют метод `managed(self, manager)` для создания специфичного
+managed-варианта с дополнительными методами.
+
+**Stack ограничен 100 вложенными диалогами**
+
+`src/maxo/dialogs/api/entities/stack.py` защищает от бесконечной рекурсии.
+Если попытаться открыть 101-й диалог в одном стеке, будет ошибка.
+
+**ID генерация на основе timestamp + random**
+
+```python
+def new_int_id() -> int:
+    return int(time.time() * 1000) % 100_000_000 + random.randint(0, 99) * 100_000_000
+```
+
+ID конвертируются в короткую base62-подобную строку для использования в
+callback payload. Это позволяет уместить ID в ограничения MAX API на длину
+payload.
+
+### Webhook и collect_used_updates
+
+**Подписка только на используемые update'ы**
+
+MAX API требует явную подписку на типы update'ов для webhook.
+`collect_used_updates(dispatcher)` рекурсивно обходит все роутеры и собирает
+типы update'ов, на которые есть handlers:
+
+```python
+used_types = collect_used_updates(dp)
+# Результат: [UpdateType.MESSAGE_CREATED, UpdateType.MESSAGE_CALLBACK, ...]
+```
+
+Это оптимизация - webhook не получает лишние update'ы, на которые нет
+handlers.
+
+### Частые ошибки и gotchas
+
+**❌ Нельзя**: Использовать ABC с MaxoType
+
+```python
+# Ошибка - конфликт метаклассов
+class MyType(MaxoType, ABC):
+    pass
+```
+
+**❌ Нельзя**: Добавлять handlers после startup
+
+```python
+async def startup():
+    router.message_created(handler)  # TypeError - observer в финальном состоянии
+```
+
+**❌ Нельзя**: Использовать dialogs без `with_destiny=True`
+
+```python
+# Будут коллизии ключей FSM
+isolation = SimpleEventIsolation(DefaultKeyBuilder())  # неправильно для dialogs
+setup_dialogs(dp, events_isolation=isolation)
+```
+
+**❌ Нельзя**: Вручную редактировать сгенерированные типы без синхронизации
+
+При изменении контракта Bot API нужно синхронизировать: методы, типы, enum,
+сериализацию, тесты, документацию.
+
+**❌ Нельзя**: Путать `Omitted()` и `None`
+
+```python
+# Разное поведение:
+SendMessage(text=Omitted())  # поле не отправляется
+SendMessage(text=None)  # отправляется {"text": null}
+```
+
+**✅ Можно**: Вызывать методы на update'ах после привязки бота
+
+```python
+message = update.message.as_(bot)
+await message.send_message(text="Reply")  # работает через BotMixin
+```
+
+**✅ Можно**: Использовать `unsafe_*` для гарантированно присутствующих полей
+
+```python
+# Если уверен, что sender есть:
+user = message.unsafe_sender  # User, не Omittable[User]
+```
+
+**✅ Можно**: Расширять TAG_PROVIDERS для новых полиморфных типов
+
+```python
+# В serialization.py добавь:
+TAG_PROVIDERS = concat_provider(
+    existing_providers,
+    has_tag_provider(MyNewType, "type", MyEnum.VALUE),
+)
+```
+
 ## Публичный API
 
 - Top-level `maxo` экспортирует только самые частые объекты:
