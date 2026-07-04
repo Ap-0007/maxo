@@ -6,6 +6,7 @@ from yarl import URL
 from maxo import Bot
 from maxo.transport.webhook.routing import PathRouting, QueryRouting, StaticRouting
 
+from .conftest import make_bot
 from .fixtures import DummyBoundRequest, DummyRequest
 
 
@@ -75,7 +76,7 @@ def test_path_routing(
     expected_token: str | None,
 ) -> None:
     routing = PathRouting(url=url, param=param)
-    assert routing.webhook_point(Bot(token)) == expected_url
+    assert routing.webhook_point(make_bot(token)) == expected_url
     req = DummyBoundRequest(DummyRequest(path_params=path_params))
     assert routing.extract_token(req) == expected_token
 
@@ -168,7 +169,7 @@ def test_query_routing(
     expected_token: str | None,
 ) -> None:
     routing = QueryRouting(url=url, param=param)
-    webhook_url = routing.webhook_point(Bot(token))
+    webhook_url = routing.webhook_point(make_bot(token))
 
     # Parse both URLs to compare query params (order may differ)
     expected = URL(expected_url)

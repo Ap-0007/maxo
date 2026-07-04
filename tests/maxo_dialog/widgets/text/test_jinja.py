@@ -6,7 +6,7 @@ from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Jinja, setup_jinja
 from maxo.dialogs.widgets.text.jinja import JINJA_ENV_FIELD, StubLoader
 
-BOT_ID = "bot-id"
+TOKEN = "f9LHod"  # noqa: S105
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def test_setup_jinja_for_dispatcher_with_filters() -> None:
 
 
 def test_setup_jinja_for_bot_is_deprecated() -> None:
-    bot = Bot(BOT_ID, warming_up=False)
+    bot = Bot(TOKEN, warming_up=False)
 
     with pytest.warns(DeprecationWarning, match="Passing `Bot` to setup_jinja"):
         env = setup_jinja(bot)

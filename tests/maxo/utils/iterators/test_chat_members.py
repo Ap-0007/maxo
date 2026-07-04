@@ -1,12 +1,18 @@
 from datetime import UTC, datetime
 from unittest.mock import ANY, AsyncMock
 
+import pytest
+
 from maxo.bot import Bot
+from maxo.dialogs.test_tools.bot_client import FakeBot
 from maxo.types.chat_member import ChatMember
 from maxo.types.chat_members_list import ChatMembersList
 from maxo.utils.iterators.chat_members import ChatMembersIterator
 
-TOKEN = "f9LHod"  # noqa: S105
+
+@pytest.fixture
+def bot() -> Bot:
+    return FakeBot()
 
 
 def create_chat_member(user_id: int) -> ChatMember:
@@ -22,8 +28,7 @@ def create_chat_member(user_id: int) -> ChatMember:
     )
 
 
-async def test_chat_members_iterator_single_page() -> None:
-    bot = Bot(token=TOKEN)
+async def test_chat_members_iterator_single_page(bot: Bot) -> None:
     bot.get_members = AsyncMock(
         side_effect=[
             ChatMembersList(
@@ -43,8 +48,7 @@ async def test_chat_members_iterator_single_page() -> None:
     assert bot.get_members.await_count == 2
 
 
-async def test_chat_members_iterator_multiple_pages() -> None:
-    bot = Bot(token=TOKEN)
+async def test_chat_members_iterator_multiple_pages(bot: Bot) -> None:
     bot.get_members = AsyncMock(
         side_effect=[
             ChatMembersList(
@@ -70,8 +74,7 @@ async def test_chat_members_iterator_multiple_pages() -> None:
     assert bot.get_members.await_count == 3
 
 
-async def test_chat_members_iterator_no_members() -> None:
-    bot = Bot(token=TOKEN)
+async def test_chat_members_iterator_no_members(bot: Bot) -> None:
     bot.get_members = AsyncMock(return_value=ChatMembersList(members=[], marker=None))
 
     iterator = ChatMembersIterator(bot=bot, chat_id=1)
@@ -81,8 +84,7 @@ async def test_chat_members_iterator_no_members() -> None:
     bot.get_members.assert_awaited_once()
 
 
-async def test_chat_members_iterator_with_user_ids() -> None:
-    bot = Bot(token=TOKEN)
+async def test_chat_members_iterator_with_user_ids(bot: Bot) -> None:
     bot.get_members = AsyncMock(
         side_effect=[
             ChatMembersList(members=[create_chat_member(1)], marker=None),

@@ -4,10 +4,16 @@ import pytest
 
 from maxo import Bot
 
+TOKEN = "f9LHod"  # noqa: S105
+
+
+def make_bot(token: str = TOKEN) -> Bot:
+    return Bot(token=token, warming_up=False)
+
 
 @pytest.fixture
 def bot() -> Bot:
-    return Bot("42:TEST")
+    return Bot(token=TOKEN, warming_up=False)
 
 
 @pytest.fixture
