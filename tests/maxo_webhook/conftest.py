@@ -3,8 +3,7 @@ from ipaddress import IPv4Address
 import pytest
 
 from maxo import Bot
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import TOKEN
 
 
 def make_bot(token: str = TOKEN) -> Bot:
@@ -13,7 +12,7 @@ def make_bot(token: str = TOKEN) -> Bot:
 
 @pytest.fixture
 def bot() -> Bot:
-    return Bot(token=TOKEN, warming_up=False)
+    return make_bot()
 
 
 @pytest.fixture

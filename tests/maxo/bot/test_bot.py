@@ -7,8 +7,7 @@ from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import TOKEN
 
 
 class MockMaxBotApiError(MaxBotApiError):

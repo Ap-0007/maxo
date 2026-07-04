@@ -18,8 +18,7 @@ from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import TOKEN
 
 
 @dataclass

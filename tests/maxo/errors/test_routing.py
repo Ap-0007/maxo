@@ -1,11 +1,25 @@
+from typing import cast
 from unittest.mock import MagicMock
 
 from maxo.errors.routing import CycleRoutersError
+from maxo.routing.interfaces import BaseRouter
+
+
+class NamedRouter:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __str__(self) -> str:
+        return self.name
+
+
+def router(name: str) -> BaseRouter:
+    # cast нужен: CycleRoutersError в этих тестах использует только str(router).
+    return cast(BaseRouter, NamedRouter(name))
 
 
 def test_cycle_routers_error_single_router() -> None:
-    mock_router = MagicMock()
-    mock_router.__str__ = lambda _: "Router1"
+    mock_router = router("Router1")
 
     error = CycleRoutersError([mock_router])
 
@@ -15,12 +29,9 @@ def test_cycle_routers_error_single_router() -> None:
 
 
 def test_cycle_routers_error_multiple_routers() -> None:
-    router1 = MagicMock()
-    router1.__str__ = lambda _: "Router1"
-    router2 = MagicMock()
-    router2.__str__ = lambda _: "Router2"
-    router3 = MagicMock()
-    router3.__str__ = lambda _: "Router3"
+    router1 = router("Router1")
+    router2 = router("Router2")
+    router3 = router("Router3")
 
     error = CycleRoutersError([router1, router2, router3])
 
@@ -32,32 +43,6 @@ def test_cycle_routers_error_multiple_routers() -> None:
     assert "Router3" in result
     assert "│   ▼" in result
     assert "╰─<─╯" in result
-
-
-def test_cycle_routers_error_render_details_single() -> None:
-    mock_router = MagicMock()
-    mock_router.__str__ = lambda _: "SingleRouter"
-
-    error = CycleRoutersError([mock_router])
-    details = error._render_details()
-
-    assert details == "⥁ SingleRouter"
-
-
-def test_cycle_routers_error_render_details_multiple() -> None:
-    router1 = MagicMock()
-    router1.__str__ = lambda _: "R1"
-    router2 = MagicMock()
-    router2.__str__ = lambda _: "R2"
-
-    error = CycleRoutersError([router1, router2])
-    details = error._render_details()
-
-    assert "╭─>─╮" in details
-    assert "│ R1" in details
-    assert "│   ▼" in details
-    assert "│ R2" in details
-    assert "╰─<─╯" in details
 
 
 def test_cycle_routers_error_has_routers_attribute() -> None:
