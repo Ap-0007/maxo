@@ -140,6 +140,7 @@ Homepage = "https://github.com/K1rL3s/maxo"
 Changelog = "https://maxo.readthedocs.io/ru/latest/pages/changelog.html"
 Issues = "https://github.com/K1rL3s/maxo/issues"
 Source = "https://github.com/K1rL3s/maxo"
+Chat = "https://t.me/maxo_py"
 
 [tool.mypy]
 files = ["src/maxo", "tests", "examples"]
