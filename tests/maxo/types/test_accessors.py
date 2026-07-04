@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 
+from maxo import Bot
 from maxo.enums import (
     AttachmentType,
     ButtonType,
@@ -48,6 +50,7 @@ from maxo.types import (
     NewMessageLink,
     OpenAppButton,
     PhotoAttachment,
+    PhotoAttachmentPayload,
     PhotoAttachmentRequest,
     PhotoAttachmentRequestPayload,
     PhotoToken,
@@ -888,7 +891,8 @@ def test_maxo_type_bot_accessors() -> None:
 
     class DummyBot: ...
 
-    bot = DummyBot()
+    # cast нужен для проверки BotMixin без создания реального Bot с сетевым клиентом.
+    bot = cast(Bot, DummyBot())
     assert user.as_(bot) is user
     assert user.bot is bot
 
@@ -1018,7 +1022,7 @@ def test_attachment_factories_and_unsafe_fields() -> None:
 def test_media_and_message_models() -> None:
     message = NewMessageBody(
         attachments=[],
-        format="plain",
+        format=TextFormat.HTML,
         link=None,
         notify=True,
         text="hello",
@@ -1036,7 +1040,11 @@ def test_media_and_message_models() -> None:
         height=1080,
         token=DETAILS_ID,
         width=1920,
-        thumbnail=ContactAttachmentPayload(vcf_info="BEGIN:VCARD"),
+        thumbnail=PhotoAttachmentPayload(
+            photo_id=1,
+            token=PHOTO_ATTACHMENT_ID,
+            url="https://example.com/video.png",
+        ),
         urls=VideoUrls(mp4_720="https://example.com/720.mp4"),
     )
     video_urls = VideoUrls(mp4_720="https://example.com/720.mp4")

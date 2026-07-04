@@ -8,21 +8,7 @@ from maxo.dialogs.api.entities import MediaId
 from maxo.dialogs.api.protocols import MediaIdStorageProtocol
 from maxo.dialogs.manager.attachment_facade import DialogAttachmentsFacade
 from maxo.enums import AttachmentType, UploadType
-from maxo.utils.upload_media import FSInputFile
-
-
-class MockInputFile:
-    """Mock InputFile, который не является FSInputFile."""
-
-    def __init__(self) -> None:
-        self.type = UploadType.IMAGE
-
-    @property
-    def file_name(self) -> str:
-        return "mock_file.jpg"
-
-    async def read(self) -> bytes:
-        return b"mock data"
+from maxo.utils.upload_media import BufferedInputFile, FSInputFile
 
 
 @pytest.fixture
@@ -31,7 +17,7 @@ def mock_bot() -> Bot:
 
 
 @pytest.fixture
-def mock_media_storage() -> MediaIdStorageProtocol:
+def mock_media_storage() -> MagicMock:
     storage = MagicMock(spec=MediaIdStorageProtocol)
     storage.save_media_id = AsyncMock()
     return storage
@@ -39,7 +25,7 @@ def mock_media_storage() -> MediaIdStorageProtocol:
 
 async def test_upload_media_with_fs_input_file(
     mock_bot: Bot,
-    mock_media_storage: MediaIdStorageProtocol,
+    mock_media_storage: MagicMock,
 ) -> None:
     facade = DialogAttachmentsFacade(bot=mock_bot, media_id_storage=mock_media_storage)
 
@@ -65,11 +51,11 @@ async def test_upload_media_with_fs_input_file(
 
 async def test_upload_media_with_non_fs_input_file(
     mock_bot: Bot,
-    mock_media_storage: MediaIdStorageProtocol,
+    mock_media_storage: MagicMock,
 ) -> None:
     facade = DialogAttachmentsFacade(bot=mock_bot, media_id_storage=mock_media_storage)
 
-    file = MockInputFile()
+    file = BufferedInputFile.image(b"mock data", "mock_file.jpg")
 
     with patch(
         "maxo.routing.mixins.attachments.AttachmentsFacade.upload_media",
@@ -86,7 +72,7 @@ async def test_upload_media_with_non_fs_input_file(
 
 async def test_init(
     mock_bot: Bot,
-    mock_media_storage: MediaIdStorageProtocol,
+    mock_media_storage: MagicMock,
 ) -> None:
     facade = DialogAttachmentsFacade(bot=mock_bot, media_id_storage=mock_media_storage)
 

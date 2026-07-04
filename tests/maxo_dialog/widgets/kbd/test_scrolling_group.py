@@ -136,7 +136,7 @@ async def test_scrolling_group_process_item_callback(
     result = await scrolling._process_item_callback(
         callback.callback,
         "1",
-        None,
+        Mock(),
         mock_manager,
     )
 

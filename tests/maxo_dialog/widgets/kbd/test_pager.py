@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from typing import cast
 from unittest.mock import MagicMock, Mock
 
 from maxo.dialogs import DialogManager
+from maxo.dialogs.api.protocols import DialogProtocol
 from maxo.dialogs.widgets.kbd import ListGroup
 from maxo.dialogs.widgets.kbd.button import Button
 from maxo.dialogs.widgets.kbd.pager import (
@@ -262,7 +264,12 @@ async def test_process_item_callback(mock_manager: DialogManager) -> None:
     )
 
     await list_group.set_page(Mock(), 2, mock_manager)
-    await pager._process_item_callback(callback.callback, "1", None, mock_manager)
+    await pager._process_item_callback(
+        callback.callback,
+        "1",
+        cast(DialogProtocol, Mock()),
+        mock_manager,
+    )
 
     assert await list_group.get_page(mock_manager) == 1
 
@@ -276,13 +283,13 @@ async def test_find_scroll_by_id(mock_manager: DialogManager) -> None:
         page_size=1,
     )
 
-    mock_manager.find = MagicMock(return_value=list_group.managed(mock_manager))
+    cast(MagicMock, mock_manager.find).return_value = list_group.managed(mock_manager)
 
     pager = FirstPage("list")
     scroll = pager._find_scroll(mock_manager)
 
     assert scroll is not None
-    mock_manager.find.assert_called_once_with("list")
+    cast(MagicMock, mock_manager.find).assert_called_once_with("list")
 
 
 async def test_numbered_pager_custom_text(mock_manager: DialogManager) -> None:

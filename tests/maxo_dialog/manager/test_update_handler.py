@@ -25,7 +25,7 @@ class TestStates(StatesGroup):
 
 
 @pytest.fixture
-def mock_dialog_manager() -> DialogManager:
+def mock_dialog_manager() -> MagicMock:
     manager = MagicMock(spec=DialogManager)
     manager.start = AsyncMock()
     manager.switch_to = AsyncMock()
@@ -46,7 +46,7 @@ def mock_dialog_manager() -> DialogManager:
     return manager
 
 
-async def test_handle_dialog_start_event(mock_dialog_manager: DialogManager) -> None:
+async def test_handle_dialog_start_event(mock_dialog_manager: MagicMock) -> None:
     event = DialogStartEvent(
         user=MagicMock(),
         recipient=MagicMock(),
@@ -73,7 +73,7 @@ async def test_handle_dialog_start_event(mock_dialog_manager: DialogManager) -> 
     assert mock_dialog_manager.show_mode == ShowMode.EDIT
 
 
-async def test_handle_dialog_switch_event(mock_dialog_manager: DialogManager) -> None:
+async def test_handle_dialog_switch_event(mock_dialog_manager: MagicMock) -> None:
     event = DialogSwitchEvent(
         user=MagicMock(),
         recipient=MagicMock(),
@@ -93,9 +93,9 @@ async def test_handle_dialog_switch_event(mock_dialog_manager: DialogManager) ->
     assert mock_dialog_manager.show_mode == ShowMode.AUTO
 
 
-async def test_handle_dialog_fg_event(mock_dialog_manager: DialogManager) -> None:
-    entered = Future()
-    exited = Future()
+async def test_handle_dialog_fg_event(mock_dialog_manager: MagicMock) -> None:
+    entered: Future[DialogManager] = Future()
+    exited: Future[None] = Future()
 
     event = DialogFgEvent(
         user=MagicMock(),
@@ -119,7 +119,7 @@ async def test_handle_dialog_fg_event(mock_dialog_manager: DialogManager) -> Non
 
 
 async def test_handle_dialog_update_event_with_context(
-    mock_dialog_manager: DialogManager,
+    mock_dialog_manager: MagicMock,
 ) -> None:
     event = DialogUpdateEvent(
         user=MagicMock(),
@@ -140,7 +140,7 @@ async def test_handle_dialog_update_event_with_context(
 
 
 async def test_handle_dialog_update_event_without_data(
-    mock_dialog_manager: DialogManager,
+    mock_dialog_manager: MagicMock,
 ) -> None:
     event = DialogUpdateEvent(
         user=MagicMock(),
@@ -158,9 +158,9 @@ async def test_handle_dialog_update_event_without_data(
 
 
 async def test_handle_dialog_update_event_without_context(
-    mock_dialog_manager: DialogManager,
+    mock_dialog_manager: MagicMock,
 ) -> None:
-    mock_dialog_manager.has_context = Mock(return_value=False)
+    mock_dialog_manager.has_context.return_value = False
 
     event = DialogUpdateEvent(
         user=MagicMock(),
@@ -178,7 +178,7 @@ async def test_handle_dialog_update_event_without_context(
     mock_dialog_manager.show.assert_not_called()
 
 
-async def test_handle_dialog_done_event(mock_dialog_manager: DialogManager) -> None:
+async def test_handle_dialog_done_event(mock_dialog_manager: MagicMock) -> None:
     event = DialogUpdateEvent(
         user=MagicMock(),
         recipient=MagicMock(),
@@ -195,7 +195,7 @@ async def test_handle_dialog_done_event(mock_dialog_manager: DialogManager) -> N
 
 
 async def test_handle_dialog_start_event_with_none_show_mode(
-    mock_dialog_manager: DialogManager,
+    mock_dialog_manager: MagicMock,
 ) -> None:
     event = DialogStartEvent(
         user=MagicMock(),

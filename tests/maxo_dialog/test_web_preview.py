@@ -13,10 +13,10 @@ class DummyRouter:
     pass
 
 
-def install_module(name: str, value: Any) -> None:
+def install_module(monkeypatch: pytest.MonkeyPatch, name: str, value: Any) -> None:
     module = ModuleType(name)
     module.__dict__["dialogs_router"] = value
-    sys.modules[name] = module
+    monkeypatch.setitem(sys.modules, name, module)
 
 
 def test_removesuffix() -> None:
@@ -24,29 +24,33 @@ def test_removesuffix() -> None:
     assert removesuffix("diagram.svg", ".png") == "diagram.svg"
 
 
-async def test_renderer_get_router_from_object() -> None:
+async def test_renderer_get_router_from_object(monkeypatch: pytest.MonkeyPatch) -> None:
     router = cast(BaseRouter, DummyRouter())
-    install_module("test_preview_object", router)
+    install_module(monkeypatch, "test_preview_object", router)
 
     assert (
         await Renderer("test_preview_object", "dialogs_router")._get_router() is router
     )
 
 
-async def test_renderer_get_router_from_sync_factory() -> None:
+async def test_renderer_get_router_from_sync_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     router = cast(BaseRouter, DummyRouter())
-    install_module("test_preview_sync", lambda: router)
+    install_module(monkeypatch, "test_preview_sync", lambda: router)
 
     assert await Renderer("test_preview_sync", "dialogs_router")._get_router() is router
 
 
-async def test_renderer_get_router_from_async_factory() -> None:
+async def test_renderer_get_router_from_async_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     router = cast(BaseRouter, DummyRouter())
 
     async def factory() -> BaseRouter:
         return router
 
-    install_module("test_preview_async", factory)
+    install_module(monkeypatch, "test_preview_async", factory)
 
     assert (
         await Renderer("test_preview_async", "dialogs_router")._get_router() is router
@@ -55,7 +59,7 @@ async def test_renderer_get_router_from_async_factory() -> None:
 
 async def test_renderer_load_preview(monkeypatch: pytest.MonkeyPatch) -> None:
     router = cast(BaseRouter, DummyRouter())
-    install_module("test_preview_load", router)
+    install_module(monkeypatch, "test_preview_load", router)
 
     async def render_preview_content(
         loaded_router: BaseRouter,
@@ -75,7 +79,7 @@ async def test_renderer_load_preview(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_renderer_load_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
     router = cast(BaseRouter, DummyRouter())
     called: dict[str, Any] = {}
-    install_module("test_preview_transitions", router)
+    install_module(monkeypatch, "test_preview_transitions", router)
 
     def render_transitions(loaded_router: BaseRouter, filename: str) -> None:
         called["router"] = loaded_router

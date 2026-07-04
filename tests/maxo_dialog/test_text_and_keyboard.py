@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
+from maxo.dialogs.api.internal import RawKeyboard
+from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.kbd import Button, Clipboard, Group, Keyboard, Url, WebApp
 from maxo.dialogs.widgets.text import Const, Format, Multi
 from maxo.routing.updates import MessageCallback
@@ -30,12 +32,12 @@ class DummyButton(Keyboard):
         self,
         data: dict[Any, Any],
         manager: Any,
-    ) -> list[list[CallbackButton]]:
+    ) -> RawKeyboard:
         return [[CallbackButton(text="stub", payload=self.widget_id or "stub")]]
 
 
 async def test_text_rendering_and_combinators() -> None:
-    manager = DummyManager()
+    manager = dialog_manager()
 
     assert await Const("Hello").render_text({}, manager) == "Hello"
     assert await Format("Hello, {name}!").render_text({"name": "Tishka"}, manager) == (
@@ -55,7 +57,7 @@ async def test_text_rendering_and_combinators() -> None:
 
 
 async def test_format_preview_mode_uses_stub_data() -> None:
-    manager = DummyManager(preview=True)
+    manager = dialog_manager(preview=True)
 
     assert await Format("Hello, {name:>5}!").render_text({"name": "X"}, manager) == (
         "Hello,     X!"
@@ -63,8 +65,8 @@ async def test_format_preview_mode_uses_stub_data() -> None:
 
 
 async def test_keyboard_rendering_and_callback_routing() -> None:
-    manager = DummyManager()
-    dialog = DummyDialog()
+    manager = dialog_manager()
+    dialog = dialog_protocol()
     button = Button(Const("Click"), id="btn")
     url = Url(Const("Open"), Const("https://example.com"))
     web_app = WebApp(Const("App"), Const("bot"))
@@ -73,6 +75,7 @@ async def test_keyboard_rendering_and_callback_routing() -> None:
     custom = DummyButton(id="custom")
 
     keyboard = await button.render_keyboard({}, manager)
+    assert isinstance(keyboard[0][0], CallbackButton)
     assert keyboard[0][0].payload == "btn"
 
     url_keyboard = await url.render_keyboard({}, manager)
@@ -103,3 +106,13 @@ async def test_keyboard_rendering_and_callback_routing() -> None:
         timestamp=datetime.now(UTC),
     )
     assert await custom.process_callback(callback, dialog, manager) is False
+
+
+def dialog_manager(*, preview: bool = False) -> DialogManager:
+    # cast нужен для легковесного объекта с минимальным набором полей протокола.
+    return cast(DialogManager, DummyManager(preview=preview))
+
+
+def dialog_protocol() -> DialogProtocol:
+    # cast нужен, чтобы не создавать полноценный Dialog для проверки callback.
+    return cast(DialogProtocol, DummyDialog())

@@ -1,7 +1,9 @@
-from typing import Any
+from typing import Any, cast
 
+from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.kbd import Button, Column, Group, Row, Url
 from maxo.dialogs.widgets.text import Case, Const, Format, Jinja, Multi
+from maxo.types import LinkButton
 
 
 class DummyManager:
@@ -37,7 +39,7 @@ class DummyEnv:
 
 
 async def test_const_and_multi_render() -> None:
-    manager = DummyManager()
+    manager = dialog_manager()
     text = Const("Hello") + " " + Const("world")
     multi = Multi(Const("Hello"), Const("world"), sep=" ")
 
@@ -46,8 +48,8 @@ async def test_const_and_multi_render() -> None:
 
 
 async def test_format_render_and_preview() -> None:
-    manager = DummyManager()
-    preview_manager = DummyManager(preview=True)
+    manager = dialog_manager()
+    preview_manager = dialog_manager(preview=True)
 
     assert await Format("Hello, {name}!").render_text({"name": "Alice"}, manager) == (
         "Hello, Alice!"
@@ -67,20 +69,20 @@ async def test_case_render_and_find() -> None:
         selector=lambda data, _widget, _manager: data["value"] % 2,
     )
 
-    assert await case.render_text({"value": 2}, DummyManager()) == "zero"
-    assert await case.render_text({"value": 3}, DummyManager()) == "one"
+    assert await case.render_text({"value": 2}, dialog_manager()) == "zero"
+    assert await case.render_text({"value": 3}, dialog_manager()) == "one"
     assert case.find("missing") is None
 
 
 async def test_jinja_render_with_direct_environment() -> None:
-    manager = DummyManager(middleware_data={"DialogsJinjaEnvironment": DummyEnv()})
+    manager = dialog_manager(middleware_data={"DialogsJinjaEnvironment": DummyEnv()})
     widget = Jinja("Hello, {name}!")
 
     assert await widget.render_text({"name": "Alice"}, manager) == "Hello, Alice!"
 
 
 async def test_keyboard_row_column_group_url() -> None:
-    manager = DummyManager()
+    manager = dialog_manager()
     row = Row(Button(Const("1"), id="a"), Button(Const("2"), id="b"))
     column = Column(Button(Const("1"), id="a"), Button(Const("2"), id="b"))
     group = Group(Button(Const("1"), id="a"), Button(Const("2"), id="b"), width=2)
@@ -94,4 +96,17 @@ async def test_keyboard_row_column_group_url() -> None:
     assert len(row_keyboard) == 1
     assert len(column_keyboard) == 2
     assert len(group_keyboard) == 1
+    assert isinstance(url_keyboard[0][0], LinkButton)
     assert url_keyboard[0][0].url == "https://example.com"
+
+
+def dialog_manager(
+    *,
+    preview: bool = False,
+    middleware_data: dict[str, Any] | None = None,
+) -> DialogManager:
+    # cast нужен для легковесного объекта с минимальным набором полей протокола.
+    return cast(
+        DialogManager,
+        DummyManager(preview=preview, middleware_data=middleware_data),
+    )

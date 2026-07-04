@@ -1,8 +1,11 @@
 """Shared fixtures and helpers for input widget tests."""
 
 from datetime import UTC, datetime
+from typing import cast
+from unittest.mock import MagicMock, Mock
 
-from maxo.dialogs import DialogManager
+from maxo import Ctx
+from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.enums import AttachmentType, ChatType
 from maxo.routing.updates import MessageCreated
 from maxo.types import Message, MessageBody, PhotoAttachment, Recipient
@@ -48,7 +51,8 @@ def create_message_no_body() -> MessageCreated:
         message=Message(
             timestamp=datetime(2024, 1, 1, tzinfo=UTC),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=None,
+            # cast нужен, чтобы проверить runtime-ветку TextInput для body=None.
+            body=cast(MessageBody, None),
         ),
     )
 
@@ -58,6 +62,16 @@ def setup_mock_manager(
     event: MessageCreated | None = None,
 ) -> None:
     """Set up mock manager with middleware_data and optional event."""
-    mock_manager.middleware_data = {"ctx": {}}
+    manager_mock = cast(MagicMock, mock_manager)
+    manager_mock.middleware_data = {"ctx": {}}
     if event:
-        mock_manager.event = event
+        manager_mock.event = event
+
+
+def dialog_protocol() -> DialogProtocol:
+    # cast нужен, чтобы не создавать полноценный Dialog для input widget тестов.
+    return cast(DialogProtocol, Mock())
+
+
+def empty_ctx() -> Ctx:
+    return Ctx({})

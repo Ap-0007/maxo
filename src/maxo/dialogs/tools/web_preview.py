@@ -5,7 +5,7 @@ import os.path
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from tempfile import NamedTemporaryFile
-from typing import Any
+from typing import Any, cast
 
 from aiohttp import web
 
@@ -34,7 +34,7 @@ class Renderer:
             router = raw_router()
         else:
             router = raw_router
-        return router
+        return cast(BaseRouter, router)
 
     async def _load_preview(self) -> str:
         router = await self._get_router()
