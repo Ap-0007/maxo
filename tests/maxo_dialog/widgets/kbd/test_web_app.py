@@ -33,6 +33,7 @@ async def test_render_web_app_with_payload(mock_manager: DialogManager) -> None:
     button = keyboard[0][0]
     assert isinstance(button, OpenAppButton)
     assert button.payload == "some_payload"
+    assert button.contact_id == Omitted()
 
 
 async def test_render_web_app_with_contact_id(mock_manager: DialogManager) -> None:
