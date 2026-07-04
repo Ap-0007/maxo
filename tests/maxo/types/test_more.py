@@ -6,24 +6,34 @@ from maxo.enums import ChatAdminPermission, ChatStatus, ChatType
 from maxo.enums.markup_element_type import MarkupElementType
 from maxo.errors import AttributeIsEmptyError
 from maxo.types import (
+    BotCommand,
+    Chat,
+    ChatAdmin,
+    ChatAdminsList,
     ChatButton,
+    ChatList,
+    ChatMember,
+    ContactAttachment,
+    ContactAttachmentPayload,
     ContactAttachmentRequest,
     FailedUserDetails,
+    GetPinnedMessageResult,
+    MarkupElement,
+    Message,
     MessageStat,
     ModifyMembersResult,
+    ShareAttachment,
+    Subscription,
+    UpdateContext,
+    UploadEndpoint,
+    User,
+    UserMentionMarkup,
+    UserWithPhoto,
+    VideoAttachment,
+    VideoAttachmentDetails,
+    VideoUrls,
 )
-from maxo.types import BotCommand
-from maxo.types import Chat
-from maxo.types import ChatAdmin
-from maxo.types import ChatAdminsList
-from maxo.types import ChatList
-from maxo.types import ChatMember
-from maxo.types import ContactAttachment
-from maxo.types import ContactAttachmentPayload
-from maxo.types import GetPinnedMessageResult
-from maxo.types import MarkupElement
 from maxo.types.media_attachment_payload import MediaAttachmentPayload
-from maxo.types import Message
 from maxo.types.message_body import MessageBody
 from maxo.types.new_message_body import NewMessageBody
 from maxo.types.open_app_button import OpenAppButton
@@ -32,18 +42,8 @@ from maxo.types.photo_attachment_request_payload import PhotoAttachmentRequestPa
 from maxo.types.photo_token import PhotoToken
 from maxo.types.recipient import Recipient
 from maxo.types.request_geo_location_button import RequestGeoLocationButton
-from maxo.types import ShareAttachment
 from maxo.types.share_attachment_payload import ShareAttachmentPayload
-from maxo.types import Subscription
-from maxo.types import UpdateContext
-from maxo.types import UploadEndpoint
 from maxo.types.uploaded_info import UploadedInfo
-from maxo.types import User
-from maxo.types import UserMentionMarkup
-from maxo.types import UserWithPhoto
-from maxo.types import VideoAttachment
-from maxo.types import VideoAttachmentDetails
-from maxo.types import VideoUrls
 
 PHOTO_ID = "photo-token"
 PHOTO_ATTACHMENT_ID = "photo-attachment"
@@ -269,7 +269,7 @@ def test_remaining_optional_branches() -> None:
     modify = ModifyMembersResult(
         success=False,
         message="failed",
-        failed_user_details=[FailedUserDetails(user_id=1, reason="bad")],
+        failed_user_details=[FailedUserDetails(user_ids=[1], reason="bad")],
         failed_user_ids=[1],
     )
     photo_payload = PhotoAttachmentRequestPayload(

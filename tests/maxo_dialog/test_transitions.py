@@ -18,7 +18,7 @@ from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.bot_client import FakeBot
 from maxo.dialogs.test_tools.keyboard import InlineButtonTextLocator
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
-from maxo.dialogs.widgets.kbd import Back, Cancel, Next, Start
+from maxo.dialogs.widgets.kbd import Back, Cancel, Group, Next, Start
 from maxo.dialogs.widgets.text import Const, Format
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
@@ -305,8 +305,12 @@ def test_render_transitions_with_fake_diagrams(
         Dialog(
             Window(
                 Const("First"),
-                Start(Const("Start"), id="start", state=ToolsChildSG.start),
-                Cancel(),
+                Group(
+                    Next(),
+                    Start(Const("Start"), id="start", state=ToolsChildSG.start),
+                    Cancel(),
+                    id="group",
+                ),
                 state=ToolsMainSG.start,
             ),
             Window(Const("Second"), Back(), state=ToolsMainSG.next),
