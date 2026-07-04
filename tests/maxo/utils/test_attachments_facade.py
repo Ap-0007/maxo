@@ -1,11 +1,22 @@
 from collections.abc import Sequence
+from typing import cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from maxo.bot.bot import Bot
+from maxo.enums import UploadType
+from maxo.errors.api import RetvalReturnedServerException
 from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
-from maxo.types import Message, PhotoAttachmentRequest, VideoAttachmentRequest
+from maxo.types import (
+    AudioAttachmentRequest,
+    FileAttachmentRequest,
+    Message,
+    PhotoAttachmentRequest,
+    UploadEndpoint,
+    UploadMediaResult,
+    VideoAttachmentRequest,
+)
 from maxo.utils.upload_media import BufferedInputFile
 
 
@@ -182,3 +193,96 @@ async def test_send_media_single_media_attachments_request(
 
         send_message_mock.assert_called_once()
         assert send_message_mock.call_args[1]["media"] == (request,)
+
+
+async def test_build_media_attachments_for_all_known_upload_types(
+    facade: DummyFacade,
+) -> None:
+    files = [
+        BufferedInputFile.file(b"file", "file.bin"),
+        BufferedInputFile.audio(b"audio", "audio.mp3"),
+        BufferedInputFile.video(b"video", "video.mp4"),
+        BufferedInputFile.image(b"image", "image.png"),
+    ]
+
+    with patch.object(facade, "upload_media", new_callable=AsyncMock) as upload_mock:
+        upload_mock.side_effect = [
+            (UploadType.FILE, "file-token"),
+            (UploadType.AUDIO, "audio-token"),
+            (UploadType.VIDEO, "video-token"),
+            (UploadType.IMAGE, "image-token"),
+        ]
+
+        result = await facade.build_media_attachments(files)
+
+    assert isinstance(result[0], FileAttachmentRequest)
+    assert isinstance(result[1], AudioAttachmentRequest)
+    assert isinstance(result[2], VideoAttachmentRequest)
+    assert isinstance(result[3], PhotoAttachmentRequest)
+
+
+async def test_build_media_attachments_skips_unknown_upload_type(
+    facade: DummyFacade,
+) -> None:
+    with patch.object(facade, "upload_media", new_callable=AsyncMock) as upload_mock:
+        # cast нужен, чтобы смоделировать неизвестный UploadType, не входящий в enum
+        upload_mock.return_value = (cast(UploadType, "unknown"), "token")
+
+        result = await facade.build_media_attachments(
+            [BufferedInputFile.file(b"file", "file.bin")],
+        )
+
+    assert result == []
+
+
+async def test_upload_media_uses_token_from_upload_endpoint(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.image(b"image", "image.png")
+    bot_mock.get_upload_url.return_value = UploadEndpoint(
+        url="https://example.com/upload",
+        token="endpoint-token",  # noqa: S106
+    )
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=bot_mock.get_upload_url.return_value,
+    )
+    bot_mock.upload_media.return_value = UploadMediaResult(
+        token="result-token",  # noqa: S106
+    )
+    bot_mock.upload_media = AsyncMock(return_value=bot_mock.upload_media.return_value)
+
+    assert await facade.upload_media(file) == (UploadType.IMAGE, "endpoint-token")
+    bot_mock.upload_media.assert_awaited_once()
+
+
+async def test_upload_media_falls_back_to_upload_result_token(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.video(b"video", "video.mp4")
+    bot_mock.get_upload_url.return_value = UploadEndpoint(url="https://example.com")
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=bot_mock.get_upload_url.return_value,
+    )
+    bot_mock.upload_media.return_value = UploadMediaResult(
+        token="result-token",  # noqa: S106
+    )
+    bot_mock.upload_media = AsyncMock(return_value=bot_mock.upload_media.return_value)
+
+    assert await facade.upload_media(file) == (UploadType.VIDEO, "result-token")
+
+
+async def test_upload_media_raises_without_any_token(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.audio(b"audio", "audio.mp3")
+    bot_mock.get_upload_url.return_value = UploadEndpoint(url="https://example.com")
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=bot_mock.get_upload_url.return_value,
+    )
+    bot_mock.upload_media = AsyncMock(side_effect=RetvalReturnedServerException())
+
+    with pytest.raises(RuntimeError, match="Could not get upload token"):
+        await facade.upload_media(file)

@@ -1,10 +1,10 @@
 <p align="center">
   <a href="https://github.com/K1rL3s/maxo">
-    <img width="200px" height="200px" alt="maxo - асинхронный Python-фреймворк для ботов мессенджера MAX (max.ru)" src="https://raw.githubusercontent.com/K1rL3s/maxo/refs/heads/master/docs/_static/maxo-logo.png">
+    <img width="200px" height="200px" alt="maxo - библиотека и асинхронный Python-фреймворк для разработки ботов MAX (max.ru) и работы с MAX Bot API" src="https://raw.githubusercontent.com/K1rL3s/maxo/refs/heads/master/docs/_static/maxo-logo.png">
   </a>
 </p>
 <h1 align="center">
-  maxo - асинхронный Python-фреймворк для ботов MAX (max.ru)
+  maxo - библиотека и асинхронный Python-фреймворк для разработки ботов MAX (max.ru) и работы с MAX Bot API
 </h1>
 
 <div align="center">
@@ -61,6 +61,14 @@ dependencies = [
 - Поддержка лонг-поллинга и вебхуков через `aiohttp` и `fastapi`
 - Интеграции с `dishka` и `magic_filter`
 - Автогенерация методов, типов и апдейтов по [официальной документации](https://dev.max.ru/docs-api)
+
+## Для чего подходит maxo
+
+- Разработка ботов MAX на Python
+- Работа с MAX Bot API
+- long-polling и webhook для MAX
+- FSM, диалоги и inline-клавиатуры для ботов
+- Миграция с aiogram-подхода на MAX
 
 ## Быстрый старт
 

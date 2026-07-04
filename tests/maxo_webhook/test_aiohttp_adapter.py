@@ -23,7 +23,6 @@ def mocked_engine() -> MagicMock:
     return engine
 
 
-@pytest.mark.asyncio
 async def test_adapter(aiohttp_client: AiohttpClient, aiohttp_app: Application) -> None:
     payload = None
 
