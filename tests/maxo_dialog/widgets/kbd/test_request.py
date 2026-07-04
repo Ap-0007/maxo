@@ -5,7 +5,6 @@ from maxo.types import RequestContactButton, RequestGeoLocationButton
 
 
 async def test_request_contact_basic(mock_manager: DialogManager) -> None:
-    """Test basic RequestContact widget rendering."""
     request_contact = RequestContact(text=Const("Share Contact"))
 
     keyboard = await request_contact.render_keyboard(data={}, manager=mock_manager)
@@ -16,7 +15,6 @@ async def test_request_contact_basic(mock_manager: DialogManager) -> None:
 
 
 async def test_request_contact_with_data(mock_manager: DialogManager) -> None:
-    """Test RequestContact with dynamic data."""
     request_contact = RequestContact(text=Format("{label}"))
 
     keyboard = await request_contact.render_keyboard(
@@ -30,7 +28,6 @@ async def test_request_contact_with_data(mock_manager: DialogManager) -> None:
 
 
 async def test_request_location_basic(mock_manager: DialogManager) -> None:
-    """Test basic RequestLocation widget rendering without quick parameter."""
     request_location = RequestLocation(text=Const("Share Location"))
 
     keyboard = await request_location.render_keyboard(data={}, manager=mock_manager)
@@ -41,7 +38,6 @@ async def test_request_location_basic(mock_manager: DialogManager) -> None:
 
 
 async def test_request_location_with_quick(mock_manager: DialogManager) -> None:
-    """Test RequestLocation widget with quick=True."""
     request_location = RequestLocation(text=Const("Quick Location"), quick=True)
 
     keyboard = await request_location.render_keyboard(data={}, manager=mock_manager)
@@ -53,7 +49,6 @@ async def test_request_location_with_quick(mock_manager: DialogManager) -> None:
 
 
 async def test_request_location_with_quick_false(mock_manager: DialogManager) -> None:
-    """Test RequestLocation widget with quick=False."""
     request_location = RequestLocation(text=Const("Precise Location"), quick=False)
 
     keyboard = await request_location.render_keyboard(data={}, manager=mock_manager)
@@ -65,7 +60,6 @@ async def test_request_location_with_quick_false(mock_manager: DialogManager) ->
 
 
 async def test_request_location_with_data(mock_manager: DialogManager) -> None:
-    """Test RequestLocation with dynamic data."""
     request_location = RequestLocation(text=Format("{label}"), quick=True)
 
     keyboard = await request_location.render_keyboard(

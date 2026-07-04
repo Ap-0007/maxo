@@ -5,7 +5,6 @@ from maxo.types import ClipboardButton
 
 
 async def test_copy_text_basic(mock_manager: DialogManager) -> None:
-    """Test basic CopyText widget rendering."""
     copy_text_widget = CopyText(
         text=Const("Copy this"),
         copy_text=Const("Text to be copied"),
@@ -20,7 +19,6 @@ async def test_copy_text_basic(mock_manager: DialogManager) -> None:
 
 
 async def test_copy_text_with_data(mock_manager: DialogManager) -> None:
-    """Test CopyText with dynamic data."""
     copy_text_widget = CopyText(
         text=Format("{label}"),
         copy_text=Format("{content}"),
