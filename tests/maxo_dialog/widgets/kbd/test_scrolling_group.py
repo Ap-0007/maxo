@@ -134,7 +134,10 @@ async def test_scrolling_group_process_item_callback(
     )
 
     result = await scrolling._process_item_callback(
-        callback.callback, "1", None, mock_manager
+        callback.callback,
+        "1",
+        None,
+        mock_manager,
     )
 
     assert result is True

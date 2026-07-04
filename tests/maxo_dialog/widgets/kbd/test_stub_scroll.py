@@ -1,8 +1,6 @@
 from typing import Any
-from unittest.mock import Mock
 
 from maxo.dialogs import DialogManager
-from maxo.dialogs.integrations.magic_filter import DialogMagic
 from maxo.dialogs.widgets.kbd.stub_scroll import StubScroll
 
 
