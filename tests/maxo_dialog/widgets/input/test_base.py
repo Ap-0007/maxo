@@ -1,52 +1,10 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.input.base import ContentTypeFilter, MessageInput
-from maxo.enums import AttachmentType, ChatType
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, PhotoAttachment, Recipient
-from maxo.types.photo_attachment_payload import PhotoAttachmentPayload
+from maxo.enums import AttachmentType
 
-
-def setup_mock_manager(
-    mock_manager: DialogManager,
-    event: MessageCreated | None = None,
-) -> None:
-    """Add middleware_data with ctx to mock_manager."""
-    mock_manager.middleware_data = {"ctx": {}}
-    if event:
-        mock_manager.event = event
-
-
-def create_text_message(text: str) -> MessageCreated:
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=text),
-        ),
-    )
-
-
-def create_photo_message() -> MessageCreated:
-    photo = PhotoAttachment(
-        type=AttachmentType.IMAGE,
-        payload=PhotoAttachmentPayload(
-            photo_id=123,
-            token="test_token",
-            url="https://example.com/photo.jpg",
-        ),
-    )
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=None, attachments=[photo]),
-        ),
-    )
+from .conftest import create_photo_message, create_text_message, setup_mock_manager
 
 
 async def test_message_input_basic(mock_manager: DialogManager) -> None:

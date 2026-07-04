@@ -1,29 +1,16 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.input.text import TextInput
-from maxo.enums import ChatType
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, Recipient
 
-
-def create_message(text: str) -> MessageCreated:
-    return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=MessageBody(mid="test_mid", seq=1, text=text),
-        ),
-    )
+from .conftest import create_message_no_body, create_text_message
 
 
 async def test_text_input_basic(mock_manager: DialogManager) -> None:
     on_success = AsyncMock()
     text_input = TextInput(id="text", on_success=on_success)
 
-    message = create_message("Hello World")
+    message = create_text_message("Hello World")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
@@ -35,7 +22,7 @@ async def test_text_input_with_type_factory(mock_manager: DialogManager) -> None
     on_success = AsyncMock()
     text_input = TextInput(id="number", type_factory=int, on_success=on_success)
 
-    message = create_message("42")
+    message = create_text_message("42")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
@@ -50,7 +37,7 @@ async def test_text_input_type_factory_error(mock_manager: DialogManager) -> Non
     on_error = AsyncMock()
     text_input = TextInput(id="number", type_factory=int, on_error=on_error)
 
-    message = create_message("not a number")
+    message = create_text_message("not a number")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
@@ -64,7 +51,7 @@ async def test_text_input_empty_message(mock_manager: DialogManager) -> None:
     on_success = AsyncMock()
     text_input = TextInput(id="text", on_success=on_success)
 
-    message = create_message("")
+    message = create_text_message("")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is False
@@ -75,14 +62,7 @@ async def test_text_input_no_body(mock_manager: DialogManager) -> None:
     on_success = AsyncMock()
     text_input = TextInput(id="text", on_success=on_success)
 
-    message = MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-        message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
-            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            body=None,
-        ),
-    )
+    message = create_message_no_body()
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is False
@@ -94,7 +74,7 @@ async def test_text_input_with_filter(mock_manager: DialogManager) -> None:
     filter_func = AsyncMock(return_value=True)
     text_input = TextInput(id="text", on_success=on_success, filter=filter_func)
 
-    message = create_message("Test")
+    message = create_text_message("Test")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
@@ -107,7 +87,7 @@ async def test_text_input_filter_rejects(mock_manager: DialogManager) -> None:
     filter_func = AsyncMock(return_value=False)
     text_input = TextInput(id="text", on_success=on_success, filter=filter_func)
 
-    message = create_message("Test")
+    message = create_text_message("Test")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is False
@@ -127,7 +107,7 @@ async def test_text_input_managed(mock_manager: DialogManager) -> None:
     on_success = AsyncMock()
     text_input = TextInput(id="text", on_success=on_success)
 
-    message = create_message("Managed Test")
+    message = create_text_message("Managed Test")
     await text_input.process_message(message, None, mock_manager)
 
     managed = text_input.managed(mock_manager)
@@ -138,7 +118,7 @@ async def test_text_input_float_factory(mock_manager: DialogManager) -> None:
     on_success = AsyncMock()
     text_input = TextInput(id="decimal", type_factory=float, on_success=on_success)
 
-    message = create_message("3.14")
+    message = create_text_message("3.14")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
@@ -160,7 +140,7 @@ async def test_text_input_custom_type_factory(mock_manager: DialogManager) -> No
         on_success=on_success,
     )
 
-    message = create_message("hello")
+    message = create_text_message("hello")
     result = await text_input.process_message(message, None, mock_manager)
 
     assert result is True
