@@ -8,7 +8,7 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.omit import Omittable, Omitted
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.updates import MessageCallback
 from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButton
 
@@ -90,7 +90,7 @@ class WebApp(Keyboard):
         self,
         text: TextWidget,
         web_app: TextWidget,
-        payload:  Omittable[TextWidget] = Omitted(),
+        payload: Omittable[TextWidget] = Omitted(),
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
@@ -107,8 +107,8 @@ class WebApp(Keyboard):
     ) -> RawKeyboard:
         text = await self.text.render_text(data, manager)
         web_app = await self.web_app.render_text(data, manager)
-        
-        payload = Omitted()
+
+        payload: Omittable[str] = Omitted()
         if is_defined(self.payload):
             payload = await self.payload.render_text(data, manager)
 
