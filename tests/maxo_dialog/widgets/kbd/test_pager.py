@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import MagicMock, Mock
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import ListGroup
@@ -276,7 +276,7 @@ async def test_find_scroll_by_id(mock_manager: DialogManager) -> None:
         page_size=1,
     )
 
-    mock_manager.find = AsyncMock(return_value=list_group.managed(mock_manager))
+    mock_manager.find = MagicMock(return_value=list_group.managed(mock_manager))
 
     pager = FirstPage("list")
     scroll = pager._find_scroll(mock_manager)
