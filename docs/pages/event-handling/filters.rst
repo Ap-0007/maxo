@@ -41,6 +41,37 @@
     async def admin_area(update: MessageCreated):
         ...
 
+Несколько фильтров через запятую (И)
+------------------------------------
+
+При регистрации обработчика можно передать сразу несколько фильтров через
+запятую. Они автоматически объединяются по правилу ``И`` (эквивалент ``&``),
+поэтому обработчик сработает только если сработали все переданные фильтры.
+
+.. code-block:: python
+
+    from magic_filter import F
+
+    from maxo.integrations.magic_filter import MagicFilter
+    from maxo.routing.filters import Command
+    from maxo.routing.updates import MessageCreated
+
+    # Эти две регистрации эквивалентны
+    @dispatcher.message_created(Command("start"), MagicFilter(F.text == "hello"))
+    async def start(update: MessageCreated):
+        ...
+
+    @dispatcher.message_created(Command("start") & MagicFilter(F.text == "hello"))
+    async def start_explicit(update: MessageCreated):
+        ...
+
+То же самое работает и для методов ``handler`` и ``register``:
+
+.. code-block:: python
+
+    dispatcher.message_created.handler(start, Command("start"), MagicFilter(F.text == "hello"))
+    dispatcher.message_created.register(start, Command("start"), MagicFilter(F.text == "hello"))
+
 Magic Filter
 ------------
 

@@ -117,8 +117,8 @@ def inject_router(router: BaseRouter) -> None:
 
 def inject_handler(handler: _Handler) -> _Handler:
     temp_handler = type(handler)(
-        handler_fn=inject(handler._handler_fn),
-        filter=handler._filter,
+        inject(handler._handler_fn),
+        handler._filter,
     )
 
     handler._handler_fn = temp_handler._handler_fn

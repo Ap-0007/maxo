@@ -68,10 +68,10 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     def __call__(
         self,
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         def wrapper(handler_fn: _HandlerFnT) -> _HandlerFnT:
-            return self.handler(handler_fn, filter)
+            return self.handler(handler_fn, *filters)
 
         return wrapper
 

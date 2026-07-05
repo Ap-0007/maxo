@@ -205,6 +205,91 @@ async def test_parent_handlers_filtered_out_falls_through_to_child(ctx: Ctx) -> 
     ]
 
 
+async def test_handler_multiple_filters_all_true_runs_handler(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class FirstFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("second_filter")
+            return True
+
+    dp.message_created.handler(handler, FirstFilter(), SecondFilter())
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == ["first_filter", "second_filter", "handler"]
+
+
+async def test_handler_multiple_filters_one_false_skips_handler(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class FirstFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("second_filter")
+            return False
+
+    dp.message_created.handler(handler, FirstFilter(), SecondFilter())
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result is UNHANDLED
+    assert ctx["execution_order"] == ["first_filter", "second_filter"]
+
+
+async def test_decorator_multiple_filters_combined_as_and(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class FirstFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("second_filter")
+            return True
+
+    @dp.message_created(FirstFilter(), SecondFilter())
+    async def decorated_handler(_: Any, ctx: Ctx) -> str:
+        ctx["execution_order"].append("handler")
+        return "OK"
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == ["first_filter", "second_filter", "handler"]
+
+
+async def test_handler_no_filters_runs_handler(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    dp.message_created.handler(handler)
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == ["handler"]
+
+
 async def test_skip_handler_in_parent_falls_through_to_child(ctx: Ctx) -> None:
     dp = Dispatcher()
     parent_router = Router("parent")

@@ -6,6 +6,7 @@ from copy import copy
 from typing import Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
+from maxo.routing.filters.always import AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.updates.base import BaseUpdate
@@ -128,3 +129,22 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 and_f = AndFilter
 or_f = OrFilter
 invert_f = InvertFilter
+
+
+def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
+    """
+    Склеивает переданные фильтры в один по правилу `И`.
+
+    - Пустой набор (или только `None`) -> `AlwaysTrueFilter`.
+    - Один фильтр -> он сам, без лишней обёртки.
+    - Несколько фильтров -> `AndFilter`, объединяющий их.
+
+    `None` в наборе игнорируется, чтобы сохранить обратную совместимость
+    со старым параметром `filter: Filter | None`.
+    """
+    real_filters = [filter_ for filter_ in filters if filter_ is not None]
+    if not real_filters:
+        return AlwaysTrueFilter()
+    if len(real_filters) == 1:
+        return real_filters[0]
+    return AndFilter(*real_filters)

@@ -22,11 +22,11 @@ class SignalObserver(
     def handler(
         self,
         handler_fn: SignalHandlerFn[_SignalT, Any],
-        filter: Filter[_SignalT] | None = None,
+        *filters: Filter[_SignalT],
     ) -> SignalHandlerFn[_SignalT, Any]:
         self.state.ensure_add_handler()
 
-        self._handlers.append(SignalHandler(handler_fn, filter))
+        self._handlers.append(SignalHandler(handler_fn, *filters))
 
         return handler_fn
 
