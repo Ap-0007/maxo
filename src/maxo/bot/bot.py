@@ -50,7 +50,6 @@ from maxo.bot.methods import (
     UploadMedia,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.resumable import DEFAULT_UPLOAD_CHUNK_SIZE
 from maxo.bot.state import (
     BotState,
     ClosedBotState,
@@ -58,6 +57,7 @@ from maxo.bot.state import (
     EmptyBotState,
     RunningBotState,
 )
+from maxo.bot.upload import DEFAULT_UPLOAD_CONFIG, UploadConfig
 from maxo.errors import MaxBotApiError
 from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, MaxoType
@@ -76,6 +76,7 @@ class Bot(BaseAsyncClient):
         "_retort",
         "_state",
         "_token",
+        "_upload_config",
         "_warming_up",
     )
 
@@ -84,6 +85,7 @@ class Bot(BaseAsyncClient):
         token: str,
         *,
         defaults: BotDefaults | None = None,
+        upload_config: UploadConfig = DEFAULT_UPLOAD_CONFIG,
         warming_up: bool = True,
         middleware: list[AsyncMiddleware] | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
@@ -93,6 +95,7 @@ class Bot(BaseAsyncClient):
         self._token = token
         self._warming_up = warming_up
         self._middleware = middleware
+        self._upload_config = upload_config
         self._json_dumps = json_dumps
         self._json_loads = json_loads
 
@@ -117,6 +120,10 @@ class Bot(BaseAsyncClient):
         return self._defaults
 
     @property
+    def upload_config(self) -> UploadConfig:
+        return self._upload_config
+
+    @property
     def token(self) -> str:
         return self._token
 
@@ -138,6 +145,7 @@ class Bot(BaseAsyncClient):
             request_dumper=self._retort,
             response_loader=self._retort,
             middleware=self._middleware,
+            upload_config=self._upload_config,
             json_dumps=self._json_dumps,
             json_loads=self._json_loads,
         )
@@ -201,21 +209,17 @@ class Bot(BaseAsyncClient):
         self,
         upload_url: str,
         file: InputFile,
-        chunk_size: int = DEFAULT_UPLOAD_CHUNK_SIZE,
     ) -> UploadMediaResult | None:
         """
         Загружает медиа resumable-протоколом (частями) по `upload_url`.
 
         Не держит файл в памяти целиком и снимает лимит ~2 ГБ на единый
-        запрос. `upload_url` берётся из `get_upload_url`. Возвращает
-        `UploadMediaResult` для `file`/`image` или `None` для `video`/`audio`
-        (у них токен приходит из `get_upload_url`).
+        запрос. Параметры кусков берутся из `upload_config`. `upload_url`
+        берётся из `get_upload_url`. Возвращает `UploadMediaResult` для
+        `file`/`image` или `None` для `video`/`audio` (у них токен приходит
+        из `get_upload_url`).
         """
-        return await self.state.api_client.upload_resumable(
-            upload_url,
-            file,
-            chunk_size=chunk_size,
-        )
+        return await self.state.api_client.upload_resumable(upload_url, file)
 
     # Bots
 

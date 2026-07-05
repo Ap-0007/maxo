@@ -46,11 +46,7 @@ from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
-from maxo.bot.resumable import (
-    DEFAULT_UPLOAD_CHUNK_RETRIES,
-    DEFAULT_UPLOAD_CHUNK_SIZE,
-    resumable_upload,
-)
+from maxo.bot.upload import DEFAULT_UPLOAD_CONFIG, UploadConfig, resumable_upload
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -85,15 +81,16 @@ class MaxApiClient(AiohttpAsyncClient):
         base_url: str = "https://platform-api2.max.ru/",
         middleware: list[AsyncMiddleware] | None = None,
         session: ClientSession | None = None,
+        upload_config: UploadConfig = DEFAULT_UPLOAD_CONFIG,
         json_dumps: Callable[[Any], str] = json.dumps,
         json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
     ) -> None:
         self._token = token
+        self._ssl_context = _build_ssl_context()
+        self._upload_config = upload_config
 
         if session is None:
-            ssl_context = ssl.create_default_context()
-            ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
-            connector = TCPConnector(ssl=ssl_context)
+            connector = TCPConnector(ssl=self._ssl_context)
             session = ClientSession(connector=connector)
 
         if AUTHORIZATION not in session.headers:
@@ -104,7 +101,11 @@ class MaxApiClient(AiohttpAsyncClient):
         # Ретраи на `attachment.not.ready` ставим самым внутренним middleware
         # (ближе всего к HTTP-вызову), чтобы повторы не задевали пользовательские
         # middleware и логировались как один логический вызов.
-        middleware = [AttachmentNotReadyRetryMiddleware(), *(middleware or [])]
+        not_ready_retry = AttachmentNotReadyRetryMiddleware(
+            max_retries=upload_config.not_ready_max_retries,
+            backoff_config=upload_config.not_ready_backoff,
+        )
+        middleware = [not_ready_retry, *(middleware or [])]
 
         super().__init__(
             base_url=base_url,
@@ -120,8 +121,6 @@ class MaxApiClient(AiohttpAsyncClient):
         self,
         url: str,
         file: InputFile,
-        chunk_size: int = DEFAULT_UPLOAD_CHUNK_SIZE,
-        chunk_retries: int = DEFAULT_UPLOAD_CHUNK_RETRIES,
     ) -> UploadMediaResult | None:
         """
         Загружает файл resumable-протоколом (частями), не держа его в памяти.
@@ -129,6 +128,7 @@ class MaxApiClient(AiohttpAsyncClient):
         В отличие от обычного multipart-аплоада, читает файл по кускам и шлёт
         их последовательными POST-ами по выделенному соединению. Это снимает
         лимит ~2 ГБ на единый буфер и позволяет грузить большие файлы.
+        Параметры кусков и ретраев берутся из `upload_config`.
         """
         session = self._new_upload_session()
         try:
@@ -138,22 +138,26 @@ class MaxApiClient(AiohttpAsyncClient):
                 session=session,
                 response_loader=self.response_loader,
                 json_loads=self.json_loads,
-                chunk_size=chunk_size,
-                chunk_retries=chunk_retries,
+                config=self._upload_config,
             )
         finally:
             await session.close()
 
     def _new_upload_session(self) -> ClientSession:
         """
-        Отдельная keep-alive сессия под один resumable-аплоад.
+        Отдельная keep-alive сессия с собственным соединением под аплоад.
 
-        Нужна, потому что resumable-сессия на сервере привязана к соединению.
-        `limit=1` и общий keep-alive гарантируют, что все куски одного файла
-        уйдут по одному соединению, не смешиваясь с остальными запросами.
+        Свой `TCPConnector(limit=1)` обязателен: resumable-сессия на сервере
+        привязана к соединению, поэтому все куски одного файла должны идти по
+        одному соединению и не смешиваться с остальным трафиком. Переиспользовать
+        коннектор основной сессии нельзя - при закрытии этой сессии закрылся бы
+        и общий коннектор, оборвав основную сессию бота.
         """
-        session = ClientSession(connector=self._session.connector)
-        session.headers.update(self._session.headers)
+        connector = TCPConnector(ssl=self._ssl_context, limit=1)
+        session = ClientSession(connector=connector)
+        # session.headers.update(self._session.headers)
+        session.headers[AUTHORIZATION] = self._token
+        session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
         return session
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:

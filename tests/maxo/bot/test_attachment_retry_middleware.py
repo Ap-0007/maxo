@@ -48,7 +48,10 @@ def test_is_attachment_not_ready_false_for_other() -> None:
 
 
 async def test_returns_result_without_retry_on_success() -> None:
-    middleware = AttachmentNotReadyRetryMiddleware(backoff_config=FAST_BACKOFF)
+    middleware = AttachmentNotReadyRetryMiddleware(
+        max_retries=10,
+        backoff_config=FAST_BACKOFF,
+    )
     sentinel = MagicMock()
     next_handler = AsyncMock(return_value=sentinel)
 
@@ -61,7 +64,10 @@ async def test_returns_result_without_retry_on_success() -> None:
 
 
 async def test_retries_until_ready() -> None:
-    middleware = AttachmentNotReadyRetryMiddleware(backoff_config=FAST_BACKOFF)
+    middleware = AttachmentNotReadyRetryMiddleware(
+        max_retries=10,
+        backoff_config=FAST_BACKOFF,
+    )
     sentinel = MagicMock()
     next_handler = AsyncMock(
         side_effect=[not_ready_error(), not_ready_error(), sentinel],
@@ -76,7 +82,10 @@ async def test_retries_until_ready() -> None:
 
 
 async def test_reraises_non_not_ready_bad_request_without_retry() -> None:
-    middleware = AttachmentNotReadyRetryMiddleware(backoff_config=FAST_BACKOFF)
+    middleware = AttachmentNotReadyRetryMiddleware(
+        max_retries=10,
+        backoff_config=FAST_BACKOFF,
+    )
     next_handler = AsyncMock(side_effect=other_bad_request())
 
     with (
@@ -90,7 +99,10 @@ async def test_reraises_non_not_ready_bad_request_without_retry() -> None:
 
 
 async def test_reraises_other_api_errors_without_retry() -> None:
-    middleware = AttachmentNotReadyRetryMiddleware(backoff_config=FAST_BACKOFF)
+    middleware = AttachmentNotReadyRetryMiddleware(
+        max_retries=10,
+        backoff_config=FAST_BACKOFF,
+    )
     next_handler = AsyncMock(side_effect=MaxBotForbiddenError("", "", ""))
 
     with (
@@ -104,7 +116,10 @@ async def test_reraises_other_api_errors_without_retry() -> None:
 
 async def test_does_not_retry_too_many_requests() -> None:
     # 429 - не наследник BadRequest, поэтому не должен ретраиться этим middleware.
-    middleware = AttachmentNotReadyRetryMiddleware(backoff_config=FAST_BACKOFF)
+    middleware = AttachmentNotReadyRetryMiddleware(
+        max_retries=10,
+        backoff_config=FAST_BACKOFF,
+    )
     next_handler = AsyncMock(side_effect=MaxBotTooManyRequestsError("", "", ""))
 
     with pytest.raises(MaxBotTooManyRequestsError):

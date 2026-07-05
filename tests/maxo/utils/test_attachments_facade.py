@@ -5,13 +5,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from maxo.bot.bot import Bot
+from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.enums import UploadType
+from maxo.errors.api import RetvalReturnedServerException
 from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
-from maxo.routing.mixins.attachments import (
-    _MIB,
-    _PROCESSING_MAX_DELAY,
-    _estimated_processing_delay,
-)
 from maxo.types import (
     AudioAttachmentRequest,
     FileAttachmentRequest,
@@ -40,7 +37,9 @@ class DummyMessageFacade(MessageMethodsFacade):
 
 @pytest.fixture
 def bot_mock() -> AsyncMock:
-    return AsyncMock(spec=Bot)
+    bot = AsyncMock(spec=Bot)
+    bot.upload_config = UploadConfig()
+    return bot
 
 
 @pytest.fixture
@@ -105,7 +104,10 @@ async def test_build_media_waits_for_file_type(facade: DummyFacade) -> None:
         build_media_attachments_mock.return_value = uploaded_attachments
         result = await facade._build_media(input_files)
 
-        expected_delay = _estimated_processing_delay(UploadType.FILE, len(data))
+        expected_delay = UploadConfig().estimated_processing_delay(
+            UploadType.FILE,
+            len(data),
+        )
         sleep_mock.assert_awaited_once_with(expected_delay)
 
     assert result == uploaded_attachments
@@ -268,11 +270,12 @@ async def test_build_media_attachments_skips_unknown_upload_type(
     assert result == []
 
 
-async def test_upload_media_uses_token_from_upload_endpoint(
+async def test_upload_media_uses_resumable_when_configured(
     facade: DummyFacade,
     bot_mock: AsyncMock,
 ) -> None:
     file = BufferedInputFile.image(b"image", "image.png")
+    bot_mock.upload_config = UploadConfig(method=UploadMethod.RESUMABLE)
     bot_mock.get_upload_url = AsyncMock(
         return_value=UploadEndpoint(
             url="https://example.com/upload",
@@ -282,27 +285,93 @@ async def test_upload_media_uses_token_from_upload_endpoint(
     bot_mock.upload_media_resumable = AsyncMock(
         return_value=UploadMediaResult(token="result-token"),  # noqa: S106
     )
+    bot_mock.upload_media = AsyncMock()
 
     assert await facade.upload_media(file) == (UploadType.IMAGE, "endpoint-token")
     bot_mock.upload_media_resumable.assert_awaited_once_with(
         "https://example.com/upload",
         file,
     )
+    bot_mock.upload_media.assert_not_called()
 
 
-async def test_upload_media_falls_back_to_upload_result_token(
+async def test_upload_media_uses_single_when_configured(
     facade: DummyFacade,
     bot_mock: AsyncMock,
 ) -> None:
     file = BufferedInputFile.video(b"video", "video.mp4")
+    bot_mock.upload_config = UploadConfig(method=UploadMethod.SINGLE)
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=UploadEndpoint(url="https://example.com"),
+    )
+    bot_mock.upload_media = AsyncMock(
+        return_value=UploadMediaResult(token="result-token"),  # noqa: S106
+    )
+    bot_mock.upload_media_resumable = AsyncMock()
+
+    assert await facade.upload_media(file) == (UploadType.VIDEO, "result-token")
+    bot_mock.upload_media.assert_awaited_once()
+    bot_mock.upload_media_resumable.assert_not_called()
+
+
+async def test_upload_media_single_retval_falls_back_to_endpoint_token(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.video(b"video", "video.mp4")
+    bot_mock.upload_config = UploadConfig(method=UploadMethod.SINGLE)
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=UploadEndpoint(
+            url="https://example.com",
+            token="endpoint-token",  # noqa: S106
+        ),
+    )
+    # video/audio при single-загрузке возвращают retval.
+    bot_mock.upload_media = AsyncMock(side_effect=RetvalReturnedServerException())
+
+    assert await facade.upload_media(file) == (UploadType.VIDEO, "endpoint-token")
+
+
+async def test_upload_media_auto_small_uses_single(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.file(b"tiny", "f.bin")
+    bot_mock.upload_config = UploadConfig(method=UploadMethod.AUTO)
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=UploadEndpoint(url="https://example.com"),
+    )
+    bot_mock.upload_media = AsyncMock(
+        return_value=UploadMediaResult(token="single-token"),  # noqa: S106
+    )
+    bot_mock.upload_media_resumable = AsyncMock()
+
+    assert await facade.upload_media(file) == (UploadType.FILE, "single-token")
+    bot_mock.upload_media.assert_awaited_once()
+    bot_mock.upload_media_resumable.assert_not_called()
+
+
+async def test_upload_media_auto_large_uses_resumable(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+) -> None:
+    file = BufferedInputFile.file(b"large-enough", "f.bin")
+    bot_mock.upload_config = UploadConfig(
+        method=UploadMethod.AUTO,
+        resumable_threshold=4,
+    )
     bot_mock.get_upload_url = AsyncMock(
         return_value=UploadEndpoint(url="https://example.com"),
     )
     bot_mock.upload_media_resumable = AsyncMock(
-        return_value=UploadMediaResult(token="result-token"),  # noqa: S106
+        return_value=UploadMediaResult(token="resumable-token"),  # noqa: S106
     )
+    bot_mock.upload_media = AsyncMock()
 
-    assert await facade.upload_media(file) == (UploadType.VIDEO, "result-token")
+    assert await facade.upload_media(file) == (UploadType.FILE, "resumable-token")
+
+    bot_mock.upload_media_resumable.assert_awaited_once()
+    bot_mock.upload_media.assert_not_called()
 
 
 async def test_upload_media_raises_without_any_token(
@@ -310,6 +379,7 @@ async def test_upload_media_raises_without_any_token(
     bot_mock: AsyncMock,
 ) -> None:
     file = BufferedInputFile.audio(b"audio", "audio.mp3")
+    bot_mock.upload_config = UploadConfig(method=UploadMethod.RESUMABLE)
     bot_mock.get_upload_url = AsyncMock(
         return_value=UploadEndpoint(url="https://example.com"),
     )
@@ -318,23 +388,3 @@ async def test_upload_media_raises_without_any_token(
 
     with pytest.raises(RuntimeError, match="Could not get upload token"):
         await facade.upload_media(file)
-
-
-@pytest.mark.parametrize("upload_type", [UploadType.IMAGE, UploadType.VIDEO])
-def test_estimated_delay_zero_for_instant_types(upload_type: UploadType) -> None:
-    assert _estimated_processing_delay(upload_type, 100 * _MIB) == 0.0
-
-
-@pytest.mark.parametrize("upload_type", [UploadType.FILE, UploadType.AUDIO])
-def test_estimated_delay_grows_with_size(upload_type: UploadType) -> None:
-    small = _estimated_processing_delay(upload_type, 1 * _MIB)
-    big = _estimated_processing_delay(upload_type, 100 * _MIB)
-
-    assert small >= 0.5
-    assert big > small
-
-
-def test_estimated_delay_is_capped() -> None:
-    huge = _estimated_processing_delay(UploadType.FILE, 100_000 * _MIB)
-
-    assert huge == _PROCESSING_MAX_DELAY

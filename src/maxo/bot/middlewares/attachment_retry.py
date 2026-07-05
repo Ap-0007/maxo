@@ -8,17 +8,6 @@ from maxo.errors.api import MaxBotBadRequestError
 NOT_READY_CODE = "attachment.not.ready"
 NOT_READY_MESSAGE_MARK = "not.processed"
 
-# Значения подобраны эмпирически (см. examples/research_upload_delay.py):
-# после начального умного сна остаётся небольшой "хвост",
-# который добираем частыми короткими ретраями
-DEFAULT_NOT_READY_BACKOFF = BackoffConfig(
-    min_delay=0.2,
-    max_delay=3.0,
-    factor=1.6,
-    jitter=0.1,
-)
-DEFAULT_MAX_RETRIES = 10
-
 
 def is_attachment_not_ready(error: MaxBotBadRequestError) -> bool:
     """Проверяет, что ошибка означает "вложение ещё обрабатывается сервером"."""
@@ -44,13 +33,9 @@ class AttachmentNotReadyRetryMiddleware:
 
     __slots__ = ("_backoff_config", "_max_retries")
 
-    def __init__(
-        self,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_config: BackoffConfig | None = None,
-    ) -> None:
+    def __init__(self, max_retries: int, backoff_config: BackoffConfig) -> None:
         self._max_retries = max_retries
-        self._backoff_config = backoff_config or DEFAULT_NOT_READY_BACKOFF
+        self._backoff_config = backoff_config
 
     async def handle(
         self,

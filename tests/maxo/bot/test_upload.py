@@ -6,10 +6,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from aiohttp import ClientConnectionError
 
-from maxo.bot.resumable import resumable_upload
+from maxo.bot.upload import UploadConfig, UploadMethod, resumable_upload
+from maxo.enums import UploadType
 from maxo.errors.api import MaxBotApiError
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
+
+_MIB = 1024 * 1024
 
 
 class _FakeResponse:
@@ -56,7 +59,7 @@ async def _run(
     session: _FakeSession,
     data: bytes,
     chunk_size: int,
-    **kwargs: Any,
+    chunk_retries: int = 3,
 ) -> UploadMediaResult | None:
     file = BufferedInputFile.file(data, "f.bin")
     return await resumable_upload(
@@ -65,8 +68,7 @@ async def _run(
         session=session,  # type: ignore[arg-type]
         response_loader=_Retort(),
         json_loads=json.loads,
-        chunk_size=chunk_size,
-        **kwargs,
+        config=UploadConfig(chunk_size=chunk_size, chunk_retries=chunk_retries),
     )
 
 
@@ -156,3 +158,39 @@ async def test_network_error_is_retried_then_reraised() -> None:
 
     # Изначальная попытка + 1 ретрай.
     assert len(session.calls) == 2
+
+
+# --- UploadConfig ---
+
+
+def test_should_use_resumable_respects_explicit_method() -> None:
+    assert UploadConfig(method=UploadMethod.RESUMABLE).should_use_resumable(1) is True
+    assert UploadConfig(method=UploadMethod.SINGLE).should_use_resumable(10**9) is False
+
+
+def test_should_use_resumable_auto_by_threshold() -> None:
+    config = UploadConfig(method=UploadMethod.AUTO, resumable_threshold=100)
+    assert config.should_use_resumable(99) is False
+    assert config.should_use_resumable(100) is True
+
+
+@pytest.mark.parametrize("upload_type", [UploadType.IMAGE, UploadType.VIDEO])
+def test_estimated_delay_zero_for_instant_types(upload_type: UploadType) -> None:
+    assert UploadConfig().estimated_processing_delay(upload_type, 100 * _MIB) == 0.0
+
+
+@pytest.mark.parametrize("upload_type", [UploadType.FILE, UploadType.AUDIO])
+def test_estimated_delay_grows_with_size(upload_type: UploadType) -> None:
+    config = UploadConfig()
+    small = config.estimated_processing_delay(upload_type, 1 * _MIB)
+    big = config.estimated_processing_delay(upload_type, 100 * _MIB)
+
+    assert small >= config.processing_base_delay
+    assert big > small
+
+
+def test_estimated_delay_is_capped() -> None:
+    config = UploadConfig()
+    huge = config.estimated_processing_delay(UploadType.FILE, 100_000 * _MIB)
+
+    assert huge == config.processing_max_delay

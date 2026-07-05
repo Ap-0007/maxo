@@ -2,8 +2,11 @@ import asyncio
 from collections.abc import Sequence
 from typing import TypeAlias
 
+from unihttp.http import UploadFile
+
 from maxo import loggers
 from maxo.enums import UploadType
+from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 from maxo.types.attachments import AttachmentsRequests, MediaAttachmentsRequests
@@ -18,18 +21,11 @@ from maxo.types.inline_keyboard_attachment_request_payload import (
 )
 from maxo.types.photo_attachment_request import PhotoAttachmentRequest
 from maxo.types.upload_endpoint import UploadEndpoint
+from maxo.types.upload_media_result import UploadMediaResult
 from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
 
 MediaInput: TypeAlias = InputFile | MediaAttachmentsRequests
-
-_MIB = 1024 * 1024
-# Модель задержки обработки файла на сервере (см. examples/research_upload_delay.py)
-_PROCESSING_BASE_DELAY = 0.5
-_PROCESSING_DELAY_PER_MIB = 0.008
-_PROCESSING_MAX_DELAY = 30.0
-# Эти типы сервер принимает сразу и обрабатывает асинхронно - ждать не нужно
-_INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
 
 
 class AttachmentsFacade(SubscriptionMethodsFacade):
@@ -84,13 +80,15 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         Ждёт, пока сервер обработает загруженные файлы.
 
         Начальный сон зависит от типа и размера самого большого файла
-        (`_estimated_processing_delay`). Оставшийся "хвост", если он есть,
-        добирают ретраи на `attachment.not.ready` в
-        AttachmentNotReadyRetryMiddleware. Так мелкие вложения и
-        картинки/видео не тормозят, а крупные файлы дожидаются корректно.
+        (`UploadConfig.estimated_processing_delay`). Оставшийся "хвост", если
+        он есть, добирают ретраи на `attachment.not.ready` в
+        AttachmentNotReadyRetryMiddleware. Так мелкие вложения и картинки/видео
+        не тормозят, а крупные файлы дожидаются корректно.
         """
+        config = self.bot.upload_config
         delays = [
-            _estimated_processing_delay(file.type, await file.size()) for file in files
+            config.estimated_processing_delay(file.type, await file.size())
+            for file in files
         ]
         delay = max(delays, default=0.0)
         if delay > 0:
@@ -122,9 +120,7 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
     async def upload_media(self, file: InputFile) -> tuple[UploadType, str]:
         result: UploadEndpoint = await self.bot.get_upload_url(type=file.type)
 
-        # Resumable-загрузка стримит файл частями: не держит его в памяти
-        # целиком и снимает лимит ~2 ГБ на единый multipart-запрос.
-        upload_result = await self.bot.upload_media_resumable(result.url, file)
+        upload_result = await self._upload_file(file, result.url)
 
         token: str
         if is_defined(result.token):
@@ -136,17 +132,15 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
 
         return file.type, token
 
+    async def _upload_file(self, file: InputFile, url: str) -> UploadMediaResult | None:
+        if self.bot.upload_config.should_use_resumable(await file.size()):
+            return await self.bot.upload_media_resumable(url, file)
 
-def _estimated_processing_delay(upload_type: UploadType, size: int) -> float:
-    """
-    Оценивает задержку обработки файла на сервере MAX (в секундах).
-
-    Модель получена эмпирически: image/video готовы практически сразу,
-    а file/audio требуют базовой задержки плюс линейной надбавки от размера.
-    Оценка намеренно занижена - "хвост" добирают ретраи на
-    attachment.not.ready` в AttachmentNotReadyRetryMiddleware
-    """
-    if upload_type in _INSTANT_UPLOAD_TYPES:
-        return 0.0
-    delay = _PROCESSING_BASE_DELAY + _PROCESSING_DELAY_PER_MIB * (size / _MIB)
-    return min(delay, _PROCESSING_MAX_DELAY)
+        try:
+            return await self.bot.upload_media(
+                upload_url=url,
+                file=UploadFile(file=await file.read(), filename=file.file_name),
+            )
+        except RetvalReturnedServerException:
+            # video/audio возвращают retval; токен берётся из get_upload_url.
+            return None
