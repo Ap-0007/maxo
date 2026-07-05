@@ -46,6 +46,11 @@ from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
+from maxo.bot.resumable import (
+    DEFAULT_UPLOAD_CHUNK_RETRIES,
+    DEFAULT_UPLOAD_CHUNK_SIZE,
+    resumable_upload,
+)
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -59,6 +64,16 @@ from maxo.errors import (
     MaxBotUnsupportedMediaTypeError,
 )
 from maxo.types import AttachmentPayload
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import InputFile
+
+_CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    ssl_context = ssl.create_default_context()
+    ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
+    return ssl_context
 
 
 class MaxApiClient(AiohttpAsyncClient):
@@ -76,9 +91,8 @@ class MaxApiClient(AiohttpAsyncClient):
         self._token = token
 
         if session is None:
-            cert = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
             ssl_context = ssl.create_default_context()
-            ssl_context.load_verify_locations(cafile=cert)
+            ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
             connector = TCPConnector(ssl=ssl_context)
             session = ClientSession(connector=connector)
 
@@ -101,6 +115,46 @@ class MaxApiClient(AiohttpAsyncClient):
             json_dumps=json_dumps,
             json_loads=json_loads,
         )
+
+    async def upload_resumable(
+        self,
+        url: str,
+        file: InputFile,
+        chunk_size: int = DEFAULT_UPLOAD_CHUNK_SIZE,
+        chunk_retries: int = DEFAULT_UPLOAD_CHUNK_RETRIES,
+    ) -> UploadMediaResult | None:
+        """
+        Загружает файл resumable-протоколом (частями), не держа его в памяти.
+
+        В отличие от обычного multipart-аплоада, читает файл по кускам и шлёт
+        их последовательными POST-ами по выделенному соединению. Это снимает
+        лимит ~2 ГБ на единый буфер и позволяет грузить большие файлы.
+        """
+        session = self._new_upload_session()
+        try:
+            return await resumable_upload(
+                url=url,
+                file=file,
+                session=session,
+                response_loader=self.response_loader,
+                json_loads=self.json_loads,
+                chunk_size=chunk_size,
+                chunk_retries=chunk_retries,
+            )
+        finally:
+            await session.close()
+
+    def _new_upload_session(self) -> ClientSession:
+        """
+        Отдельная keep-alive сессия под один resumable-аплоад.
+
+        Нужна, потому что resumable-сессия на сервере привязана к соединению.
+        `limit=1` и общий keep-alive гарантируют, что все куски одного файла
+        уйдут по одному соединению, не смешиваясь с остальными запросами.
+        """
+        session = ClientSession(connector=self._session.connector)
+        session.headers.update(self._session.headers)
+        return session
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
         # ruff: noqa: PLR2004

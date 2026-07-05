@@ -50,6 +50,7 @@ from maxo.bot.methods import (
     UploadMedia,
 )
 from maxo.bot.methods.base import MaxoMethod
+from maxo.bot.resumable import DEFAULT_UPLOAD_CHUNK_SIZE
 from maxo.bot.state import (
     BotState,
     ClosedBotState,
@@ -60,6 +61,8 @@ from maxo.bot.state import (
 from maxo.errors import MaxBotApiError
 from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, MaxoType
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import InputFile
 
 _MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 
@@ -192,6 +195,26 @@ class Bot(BaseAsyncClient):
             timeout=timeout,
             chunk_size=chunk_size,
             seek=seek,
+        )
+
+    async def upload_media_resumable(
+        self,
+        upload_url: str,
+        file: InputFile,
+        chunk_size: int = DEFAULT_UPLOAD_CHUNK_SIZE,
+    ) -> UploadMediaResult | None:
+        """
+        Загружает медиа resumable-протоколом (частями) по `upload_url`.
+
+        Не держит файл в памяти целиком и снимает лимит ~2 ГБ на единый
+        запрос. `upload_url` берётся из `get_upload_url`. Возвращает
+        `UploadMediaResult` для `file`/`image` или `None` для `video`/`audio`
+        (у них токен приходит из `get_upload_url`).
+        """
+        return await self.state.api_client.upload_resumable(
+            upload_url,
+            file,
+            chunk_size=chunk_size,
         )
 
     # Bots

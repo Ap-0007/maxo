@@ -51,6 +51,19 @@
     photo = BufferedInputFile.image(content, "photo.jpg")
     await facade.send_media(media=photo, text="Новое фото")
 
+Файлы загружаются на сервер по resumable-протоколу MAX: содержимое читается
+и отправляется частями, а не одним запросом. Для ``FSInputFile`` это значит,
+что большой файл стримится прямо с диска и не держится в памяти целиком - так
+снимается лимит на размер (обычный однозапросный аплоад падает на файлах
+около 2 ГБ). Для больших файлов предпочитайте ``FSInputFile``:
+
+.. code-block:: python
+
+    from maxo.utils.upload_media import FSInputFile
+
+    video = FSInputFile.video("/path/to/large_video.mp4")
+    await facade.send_media(media=video, text="Большое видео")
+
 Отправка по токену
 ~~~~~~~~~~~~~~~~~~
 

@@ -2,11 +2,8 @@ import asyncio
 from collections.abc import Sequence
 from typing import TypeAlias
 
-from unihttp.http import UploadFile
-
 from maxo import loggers
 from maxo.enums import UploadType
-from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 from maxo.types.attachments import AttachmentsRequests, MediaAttachmentsRequests
@@ -21,7 +18,6 @@ from maxo.types.inline_keyboard_attachment_request_payload import (
 )
 from maxo.types.photo_attachment_request import PhotoAttachmentRequest
 from maxo.types.upload_endpoint import UploadEndpoint
-from maxo.types.upload_media_result import UploadMediaResult
 from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
 
@@ -126,14 +122,9 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
     async def upload_media(self, file: InputFile) -> tuple[UploadType, str]:
         result: UploadEndpoint = await self.bot.get_upload_url(type=file.type)
 
-        upload_result: UploadMediaResult | None
-        try:
-            upload_result = await self.bot.upload_media(
-                upload_url=result.url,
-                file=UploadFile(file=await file.read(), filename=file.file_name),
-            )
-        except RetvalReturnedServerException:
-            upload_result = None
+        # Resumable-загрузка стримит файл частями: не держит его в памяти
+        # целиком и снимает лимит ~2 ГБ на единый multipart-запрос.
+        upload_result = await self.bot.upload_media_resumable(result.url, file)
 
         token: str
         if is_defined(result.token):
