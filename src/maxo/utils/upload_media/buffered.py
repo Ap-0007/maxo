@@ -41,3 +41,6 @@ class BufferedInputFile(InputFile):
 
     async def read(self) -> bytes:
         return self._data
+
+    async def size(self) -> int:
+        return len(self._data)

@@ -54,3 +54,6 @@ class FSInputFile(InputFile):
     async def read(self) -> bytes:
         async with await open_file(self._path, "rb") as file:
             return await file.read()
+
+    async def size(self) -> int:
+        return Path(self._path).stat().st_size

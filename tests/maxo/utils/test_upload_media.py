@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from maxo.enums import UploadType
-from maxo.utils.upload_media import BufferedInputFile, FSInputFile
+from maxo.utils.upload_media import BufferedInputFile, FSInputFile, InputFile
 
 
 async def test_buffered_input_file_factories() -> None:
@@ -46,3 +46,34 @@ async def test_fs_input_file_custom_name(tmp_path: Path) -> None:
     input_file = FSInputFile.image(path, file_name="custom.bin")
 
     assert input_file.file_name == "custom.bin"
+
+
+async def test_buffered_input_file_size() -> None:
+    input_file = BufferedInputFile.file(b"payload", "file.bin")
+
+    assert await input_file.size() == len(b"payload")
+
+
+async def test_fs_input_file_size(tmp_path: Path) -> None:
+    path = tmp_path / "file.bin"
+    path.write_bytes(b"x" * 123)
+    input_file = FSInputFile.file(path)
+
+    assert await input_file.size() == 123
+
+
+async def test_input_file_default_size_reads_content() -> None:
+    class CustomInputFile(InputFile):
+        @property
+        def file_name(self) -> str:
+            return "custom.bin"
+
+        @property
+        def type(self) -> UploadType:
+            return UploadType.FILE
+
+        async def read(self) -> bytes:
+            return b"payload"
+
+    # Базовая реализация size() читает файл целиком
+    assert await CustomInputFile().size() == len(b"payload")

@@ -19,3 +19,12 @@ class InputFile(ABC):
     @abstractmethod
     async def read(self) -> bytes:
         raise NotImplementedError
+
+    async def size(self) -> int:
+        """
+        Размер файла в байтах.
+
+        По умолчанию читает файл целиком.
+        Наследники, которые знают размер дёшево, должны переопределить метод.
+        """
+        return len(await self.read())

@@ -8,6 +8,11 @@ from maxo.bot.bot import Bot
 from maxo.enums import UploadType
 from maxo.errors.api import RetvalReturnedServerException
 from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
+from maxo.routing.mixins.attachments import (
+    _MIB,
+    _PROCESSING_MAX_DELAY,
+    _estimated_processing_delay,
+)
 from maxo.types import (
     AudioAttachmentRequest,
     FileAttachmentRequest,
@@ -74,7 +79,35 @@ async def test_build_media_only_input_files(facade: DummyFacade) -> None:
         result = await facade._build_media(input_files)
 
         build_media_attachments_mock.assert_called_once_with(input_files)
-        sleep_mock.assert_awaited_once_with(0.5)
+        # image и video сервер обрабатывает сразу - ждать не нужно.
+        sleep_mock.assert_not_awaited()
+
+    assert result == uploaded_attachments
+
+
+async def test_build_media_waits_for_file_type(facade: DummyFacade) -> None:
+    data = b"x" * (2 * 1024 * 1024)
+    input_files = [BufferedInputFile.file(data, "big.bin")]
+    uploaded_attachments = [
+        FileAttachmentRequest.factory(token="file_token"),  # noqa: S106
+    ]
+
+    with (
+        patch.object(
+            facade,
+            "build_media_attachments",
+            new_callable=AsyncMock,
+        ) as build_media_attachments_mock,
+        patch(
+            "asyncio.sleep",
+            new_callable=AsyncMock,
+        ) as sleep_mock,
+    ):
+        build_media_attachments_mock.return_value = uploaded_attachments
+        result = await facade._build_media(input_files)
+
+        expected_delay = _estimated_processing_delay(UploadType.FILE, len(data))
+        sleep_mock.assert_awaited_once_with(expected_delay)
 
     assert result == uploaded_attachments
 
@@ -139,7 +172,8 @@ async def test_build_media_mixed_order(facade: DummyFacade) -> None:
         result = await facade._build_media(media)
 
         upload_files_mock.assert_called_once_with([input_file1, input_file2])
-        sleep_mock.assert_awaited_once_with(0.5)
+        # Обе загрузки - картинки, готовы сразу.
+        sleep_mock.assert_not_awaited()
 
     assert result == expected_result
 
@@ -286,3 +320,23 @@ async def test_upload_media_raises_without_any_token(
 
     with pytest.raises(RuntimeError, match="Could not get upload token"):
         await facade.upload_media(file)
+
+
+@pytest.mark.parametrize("upload_type", [UploadType.IMAGE, UploadType.VIDEO])
+def test_estimated_delay_zero_for_instant_types(upload_type: UploadType) -> None:
+    assert _estimated_processing_delay(upload_type, 100 * _MIB) == 0.0
+
+
+@pytest.mark.parametrize("upload_type", [UploadType.FILE, UploadType.AUDIO])
+def test_estimated_delay_grows_with_size(upload_type: UploadType) -> None:
+    small = _estimated_processing_delay(upload_type, 1 * _MIB)
+    big = _estimated_processing_delay(upload_type, 100 * _MIB)
+
+    assert small >= 0.5
+    assert big > small
+
+
+def test_estimated_delay_is_capped() -> None:
+    huge = _estimated_processing_delay(UploadType.FILE, 100_000 * _MIB)
+
+    assert huge == _PROCESSING_MAX_DELAY

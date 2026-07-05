@@ -45,6 +45,7 @@ from unihttp.serialize import RequestDumper, ResponseLoader
 from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers
+from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -85,6 +86,11 @@ class MaxApiClient(AiohttpAsyncClient):
             session.headers[AUTHORIZATION] = self._token
         if USER_AGENT not in session.headers:
             session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
+
+        # Ретраи на `attachment.not.ready` ставим самым внутренним middleware
+        # (ближе всего к HTTP-вызову), чтобы повторы не задевали пользовательские
+        # middleware и логировались как один логический вызов.
+        middleware = [AttachmentNotReadyRetryMiddleware(), *(middleware or [])]
 
         super().__init__(
             base_url=base_url,

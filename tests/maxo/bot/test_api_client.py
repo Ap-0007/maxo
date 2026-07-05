@@ -1,4 +1,5 @@
 import io
+from collections.abc import AsyncIterable
 from http.cookies import SimpleCookie
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,6 +9,7 @@ from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.methods.base import MaxoMethod
+from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -37,7 +39,7 @@ def mock_http_response(*chunks: bytes) -> MagicMock:
 
 
 @pytest.fixture
-async def api_client():
+async def api_client() -> AsyncIterable[MaxApiClient]:
     client = MaxApiClient(
         token=TOKEN,
         request_dumper=lambda x: x,
@@ -47,11 +49,40 @@ async def api_client():
     await client.close()
 
 
-async def test_api_client_init(api_client: MaxApiClient):
+async def test_api_client_init(api_client: MaxApiClient) -> None:
     assert api_client._token == TOKEN
     assert "Authorization" in api_client._session.headers
     assert api_client._session.headers["Authorization"] == TOKEN
     assert "User-Agent" in api_client._session.headers
+
+
+async def test_api_client_registers_attachment_retry_middleware(
+    api_client: MaxApiClient,
+) -> None:
+    # Ретрай на attachment.not.ready ставится самым внутренним middleware
+    assert isinstance(
+        api_client.middleware[0],
+        AttachmentNotReadyRetryMiddleware,
+    )
+
+
+async def test_api_client_keeps_user_middleware_outer() -> None:
+    user_middleware = MagicMock()
+    client = MaxApiClient(
+        token=TOKEN,
+        request_dumper=lambda x: x,
+        response_loader=lambda _, y: y,
+        middleware=[user_middleware],
+    )
+    try:
+        # Пользовательский middleware остаётся внешним, наш ретрай - внутренним
+        assert isinstance(
+            client.middleware[0],
+            AttachmentNotReadyRetryMiddleware,
+        )
+        assert client.middleware[-1] is user_middleware
+    finally:
+        await client.close()
 
 
 @pytest.mark.parametrize(

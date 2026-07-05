@@ -27,6 +27,14 @@ from maxo.utils.upload_media import InputFile
 
 MediaInput: TypeAlias = InputFile | MediaAttachmentsRequests
 
+_MIB = 1024 * 1024
+# Модель задержки обработки файла на сервере (см. examples/research_upload_delay.py)
+_PROCESSING_BASE_DELAY = 0.5
+_PROCESSING_DELAY_PER_MIB = 0.008
+_PROCESSING_MAX_DELAY = 30.0
+# Эти типы сервер принимает сразу и обрабатывает асинхронно - ждать не нужно
+_INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
+
 
 class AttachmentsFacade(SubscriptionMethodsFacade):
     __slots__ = ()
@@ -71,13 +79,26 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
             for i, uploaded_file in zip(file_indices, uploaded_files, strict=True):
                 attachments[i] = uploaded_file
 
-            # TODO: Исправить костыль со сном, https://github.com/K1rL3s/maxo/issues/10
-            # maxo.errors.api.MaxBotBadRequestError:
-            # ('attachment.not.ready',
-            # 'Key: errors.process.attachment.file.not.processed')
-            await asyncio.sleep(0.5)
+            await self._wait_media_processing(files_to_upload)
 
         return [attachment for attachment in attachments if attachment is not None]
+
+    async def _wait_media_processing(self, files: Sequence[InputFile]) -> None:
+        """
+        Ждёт, пока сервер обработает загруженные файлы.
+
+        Начальный сон зависит от типа и размера самого большого файла
+        (`_estimated_processing_delay`). Оставшийся "хвост", если он есть,
+        добирают ретраи на `attachment.not.ready` в
+        AttachmentNotReadyRetryMiddleware. Так мелкие вложения и
+        картинки/видео не тормозят, а крупные файлы дожидаются корректно.
+        """
+        delays = [
+            _estimated_processing_delay(file.type, await file.size()) for file in files
+        ]
+        delay = max(delays, default=0.0)
+        if delay > 0:
+            await asyncio.sleep(delay)
 
     async def build_media_attachments(
         self,
@@ -123,3 +144,18 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
             raise RuntimeError("Could not get upload token")
 
         return file.type, token
+
+
+def _estimated_processing_delay(upload_type: UploadType, size: int) -> float:
+    """
+    Оценивает задержку обработки файла на сервере MAX (в секундах).
+
+    Модель получена эмпирически: image/video готовы практически сразу,
+    а file/audio требуют базовой задержки плюс линейной надбавки от размера.
+    Оценка намеренно занижена - "хвост" добирают ретраи на
+    attachment.not.ready` в AttachmentNotReadyRetryMiddleware
+    """
+    if upload_type in _INSTANT_UPLOAD_TYPES:
+        return 0.0
+    delay = _PROCESSING_BASE_DELAY + _PROCESSING_DELAY_PER_MIB * (size / _MIB)
+    return min(delay, _PROCESSING_MAX_DELAY)
