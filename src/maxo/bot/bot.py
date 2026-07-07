@@ -57,7 +57,7 @@ from maxo.bot.state import (
     EmptyBotState,
     RunningBotState,
 )
-from maxo.bot.upload import DEFAULT_UPLOAD_CONFIG, UploadConfig
+from maxo.bot.upload import UploadConfig
 from maxo.errors import MaxBotApiError
 from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, MaxoType
@@ -85,7 +85,7 @@ class Bot(BaseAsyncClient):
         token: str,
         *,
         defaults: BotDefaults | None = None,
-        upload_config: UploadConfig = DEFAULT_UPLOAD_CONFIG,
+        upload_config: UploadConfig | None = None,
         warming_up: bool = True,
         middleware: list[AsyncMiddleware] | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
@@ -95,7 +95,9 @@ class Bot(BaseAsyncClient):
         self._token = token
         self._warming_up = warming_up
         self._middleware = middleware
-        self._upload_config = upload_config
+        self._upload_config = (
+            upload_config if upload_config is not None else UploadConfig()
+        )
         self._json_dumps = json_dumps
         self._json_loads = json_loads
 

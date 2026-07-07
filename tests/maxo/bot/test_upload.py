@@ -8,7 +8,12 @@ from aiohttp import ClientConnectionError
 
 from maxo.bot.upload import UploadConfig, UploadMethod, resumable_upload
 from maxo.enums import UploadType
-from maxo.errors.api import MaxBotApiError
+from maxo.errors.api import (
+    MaxBotApiError,
+    MaxBotBadRequestError,
+    MaxBotTooManyRequestsError,
+    MaxBotUnsupportedMediaTypeError,
+)
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
 
@@ -123,6 +128,36 @@ async def test_client_error_status_raises_without_retry() -> None:
     with pytest.raises(MaxBotApiError):
         await _run(session, b"hello", 1024)
 
+    assert len(session.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "error_class"),
+    [
+        (400, MaxBotBadRequestError),
+        (415, MaxBotUnsupportedMediaTypeError),
+        (429, MaxBotTooManyRequestsError),
+    ],
+)
+async def test_client_error_status_preserves_typed_api_error(
+    status: int,
+    error_class: type[MaxBotApiError],
+) -> None:
+    payload = {
+        "error_code": "proto.payload",
+        "error_data": "attachment.not.ready",
+        "message": "cannot process attachment",
+    }
+    session = _FakeSession([_FakeResponse(status, json.dumps(payload).encode())])
+
+    with pytest.raises(error_class) as exc_info:
+        await _run(session, b"hello", 1024)
+
+    error = exc_info.value
+    assert error.code == "proto.payload"
+    assert error.error == "attachment.not.ready"
+    assert error.message == "cannot process attachment"
+    assert error.raw_data == payload
     assert len(session.calls) == 1
 
 

@@ -42,6 +42,7 @@ from unihttp.serialize import ResponseLoader
 from maxo.backoff import BackoffConfig
 from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
+from maxo.errors.api import raise_api_error
 from maxo.types import MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
@@ -141,7 +142,7 @@ async def resumable_upload(
     session: ClientSession,
     response_loader: ResponseLoader,
     json_loads: Callable[[bytes], Any],
-    config: UploadConfig = DEFAULT_UPLOAD_CONFIG,
+    config: UploadConfig | None = None,
 ) -> UploadMediaResult | None:
     """
     Загружает `file` на `url` частями по resumable-протоколу MAX.
@@ -153,6 +154,9 @@ async def resumable_upload(
     (`file`/`image`), либо `None`, если тело не JSON (`video`/`audio` -
     токен берётся из `POST /uploads`).
     """
+    if config is None:
+        config = UploadConfig()
+
     total = await file.size()
     if total <= 0:
         msg = "Нельзя загрузить пустой файл resumable-способом"
@@ -218,18 +222,21 @@ def _raise_upload_error(
 ) -> Never:
     code = ""
     message = ""
+    raw_data: object = body
     try:
         data = json_loads(body)
     except (ValueError, TypeError):
         message = body.decode("utf-8", "replace")
     else:
+        raw_data = data
         if isinstance(data, dict):
-            code = str(data.get("code", ""))
-            message = str(data.get("message", ""))
+            raise_api_error(status, data)
+        message = str(data)
     raise MaxBotApiError(
         code=code,
         error=f"upload failed with status {status}",
         message=message,
+        raw_data=raw_data,
     )
 
 

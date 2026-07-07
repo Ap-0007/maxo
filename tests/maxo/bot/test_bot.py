@@ -5,6 +5,7 @@ import pytest
 
 from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
+from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
 from tests.constants import TOKEN
@@ -25,6 +26,23 @@ def bot() -> Bot:
 async def test_bot_init(bot: Bot) -> None:
     assert bot.token == TOKEN
     assert isinstance(bot.state, EmptyBotState)
+
+
+def test_default_upload_config_is_not_shared() -> None:
+    first = Bot(token=TOKEN, warming_up=False)
+    second = Bot(token=TOKEN, warming_up=False)
+
+    first.upload_config.method = UploadMethod.SINGLE
+
+    assert second.upload_config.method is UploadMethod.AUTO
+    assert first.upload_config is not second.upload_config
+
+
+def test_explicit_upload_config_is_preserved() -> None:
+    config = UploadConfig(method=UploadMethod.RESUMABLE)
+    bot = Bot(token=TOKEN, upload_config=config, warming_up=False)
+
+    assert bot.upload_config is config
 
 
 async def test_bot_start_and_close() -> None:

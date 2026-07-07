@@ -46,19 +46,8 @@ from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
-from maxo.bot.upload import DEFAULT_UPLOAD_CONFIG, UploadConfig, resumable_upload
-from maxo.errors import (
-    MaxBotApiError,
-    MaxBotBadRequestError,
-    MaxBotForbiddenError,
-    MaxBotMethodNotAllowedError,
-    MaxBotNotFoundError,
-    MaxBotServiceUnavailableError,
-    MaxBotTooManyRequestsError,
-    MaxBotUnauthorizedError,
-    MaxBotUnknownServerError,
-    MaxBotUnsupportedMediaTypeError,
-)
+from maxo.bot.upload import UploadConfig, resumable_upload
+from maxo.errors.api import raise_api_error
 from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
@@ -81,12 +70,15 @@ class MaxApiClient(AiohttpAsyncClient):
         base_url: str = "https://platform-api2.max.ru/",
         middleware: list[AsyncMiddleware] | None = None,
         session: ClientSession | None = None,
-        upload_config: UploadConfig = DEFAULT_UPLOAD_CONFIG,
+        upload_config: UploadConfig | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
         json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
     ) -> None:
         self._token = token
         self._ssl_context = _build_ssl_context()
+
+        if upload_config is None:
+            upload_config = UploadConfig()
         self._upload_config = upload_config
 
         if session is None:
@@ -98,14 +90,11 @@ class MaxApiClient(AiohttpAsyncClient):
         if USER_AGENT not in session.headers:
             session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
 
-        # Ретраи на `attachment.not.ready` ставим самым внутренним middleware
-        # (ближе всего к HTTP-вызову), чтобы повторы не задевали пользовательские
-        # middleware и логировались как один логический вызов.
         not_ready_retry = AttachmentNotReadyRetryMiddleware(
-            max_retries=upload_config.not_ready_max_retries,
-            backoff_config=upload_config.not_ready_backoff,
+            max_retries=self._upload_config.not_ready_max_retries,
+            backoff_config=self._upload_config.not_ready_backoff,
         )
-        middleware = [not_ready_retry, *(middleware or [])]
+        middleware = [*(middleware or []), not_ready_retry]
 
         super().__init__(
             base_url=base_url,
@@ -149,9 +138,9 @@ class MaxApiClient(AiohttpAsyncClient):
 
         Свой `TCPConnector(limit=1)` обязателен: resumable-сессия на сервере
         привязана к соединению, поэтому все куски одного файла должны идти по
-        одному соединению и не смешиваться с остальным трафиком. Переиспользовать
-        коннектор основной сессии нельзя - при закрытии этой сессии закрылся бы
-        и общий коннектор, оборвав основную сессию бота.
+        одному соединению и не смешиваться с остальным трафиком
+        Переиспользовать коннектор основной сессии нельзя -
+        при закрытии этой сессии закрывается  и общий коннектор, обрывая основную сессию
         """
         connector = TCPConnector(ssl=self._ssl_context, limit=1)
         session = ClientSession(connector=connector)
@@ -161,36 +150,7 @@ class MaxApiClient(AiohttpAsyncClient):
         return session
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
-        # ruff: noqa: PLR2004
-        data = response.data
-        if isinstance(data, dict):
-            code: str = data.get("code") or data.get("error_code", "")
-            error: str = data.get("error") or data.get("error_data", "")
-            message: str = data.get("message", "")
-        else:
-            code = ""
-            error = ""
-            message = ""
-
-        if response.status_code == 400:
-            raise MaxBotBadRequestError(code, error, message, data)
-        if response.status_code == 401:
-            raise MaxBotUnauthorizedError(code, error, message, data)
-        if response.status_code == 403:
-            raise MaxBotForbiddenError(code, error, message, data)
-        if response.status_code == 404:
-            raise MaxBotNotFoundError(code, error, message, data)
-        if response.status_code == 405:
-            raise MaxBotMethodNotAllowedError(code, error, message, data)
-        if response.status_code == 415:
-            raise MaxBotUnsupportedMediaTypeError(code, error, message, data)
-        if response.status_code == 429:
-            raise MaxBotTooManyRequestsError(code, error, message, data)
-        if response.status_code == 500:
-            raise MaxBotUnknownServerError(code, error, message, data)
-        if response.status_code == 503:
-            raise MaxBotServiceUnavailableError(code, error, message, data)
-        raise MaxBotApiError(code, error, message, data)
+        raise_api_error(response.status_code, response.data)
 
     def validate_response(
         self,
