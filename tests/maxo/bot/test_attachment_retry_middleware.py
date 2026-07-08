@@ -14,7 +14,6 @@ from maxo.errors.api import (
     MaxBotTooManyRequestsError,
 )
 
-# Быстрый backoff, чтобы тесты не спали по-настоящему.
 FAST_BACKOFF = BackoffConfig(min_delay=0.0, max_delay=0.01, factor=2.0, jitter=0.0)
 
 
@@ -115,7 +114,6 @@ async def test_reraises_other_api_errors_without_retry() -> None:
 
 
 async def test_does_not_retry_too_many_requests() -> None:
-    # 429 - не наследник BadRequest, поэтому не должен ретраиться этим middleware.
     middleware = AttachmentNotReadyRetryMiddleware(
         max_retries=10,
         backoff_config=FAST_BACKOFF,
@@ -141,6 +139,5 @@ async def test_raises_after_exhausting_retries() -> None:
     ):
         await middleware.handle(MagicMock(), next_handler)
 
-    # Изначальная попытка + 3 ретрая, между ними 3 сна.
     assert next_handler.await_count == 4
     assert sleep_mock.await_count == 3

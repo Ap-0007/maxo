@@ -1,35 +1,3 @@
-"""
-Загрузка медиа в MAX: настройки, выбор способа и resumable-протокол.
-
-MAX принимает файл двумя способами:
-
-- **single** - обычный multipart-запрос. Простой, но держит весь файл в
-  памяти и падает на файлах ~2 ГБ из-за лимита буфера OpenSSL.
-- **resumable** - загрузка частями. Файл читается по кускам и отправляется
-  последовательными POST-ами, что снимает лимит размера и не держит файл в
-  памяти целиком.
-
-Все настройки загрузки собраны в `UploadConfig` (см. `Bot(upload_config=...)`):
-способ (`UploadMethod`), размеры/ретраи кусков, ретраи на `attachment.not.ready`
-и модель задержки обработки файла на сервере.
-
-Протокол resumable (проверен эмпирически на боевом API):
-
-- Тело запроса - сырые байты куска (`Content-Type: application/octet-stream`),
-  не multipart.
-- Имя файла передаётся в `Content-Disposition: attachment; filename="..."`.
-- Позиция куска - в `Content-Range: bytes {start}-{end}/{total}`.
-- Куски должны идти по одному keep-alive соединению: сессия загрузки на
-  сервере привязана к соединению (при обрыве - `restore session` ошибка).
-- Промежуточный кусок -> HTTP 201 и заголовок `Range: 0-{накоплено}/{total}`.
-- Финальный кусок -> HTTP 200. Для `file`/`image` в теле JSON с токеном, для
-  `video`/`audio` в теле эхо диапазона (токен берётся из `POST /uploads`).
-
-Через декларативные методы `unihttp` (`MaxoMethod` + `bind_method`) это
-реализовать нельзя: у `unihttp` нет маркера сырого тела (`Body` уходит в JSON,
-`File` - в multipart), один метод = один запрос, и нет пиннинга соединения.
-"""
-
 import asyncio
 from collections.abc import Callable
 from enum import StrEnum
@@ -52,11 +20,8 @@ _OCTET_STREAM = "application/octet-stream"
 _SERVER_ERROR_STATUS = 500
 _CLIENT_ERROR_STATUS = 400
 
-# Эти типы сервер принимает сразу и обрабатывает асинхронно - ждать не нужно.
 _INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
 
-# Backoff для ретраев на `attachment.not.ready` по умолчанию (см. исследование
-# examples/research_upload_delay.py): частые короткие повторы добирают "хвост".
 DEFAULT_NOT_READY_BACKOFF = BackoffConfig(
     min_delay=0.2,
     max_delay=3.0,
@@ -66,14 +31,7 @@ DEFAULT_NOT_READY_BACKOFF = BackoffConfig(
 
 
 class UploadMethod(StrEnum):
-    """
-    Способ загрузки медиа на сервер MAX.
-
-    - `AUTO` - resumable для файлов от `UploadConfig.resumable_threshold`,
-      иначе single.
-    - `SINGLE` - всегда одним multipart-запросом.
-    - `RESUMABLE` - всегда частями (streaming, без лимита ~2 ГБ).
-    """
+    """Способ загрузки медиа на сервер MAX."""
 
     AUTO = "auto"
     SINGLE = "single"
@@ -81,25 +39,7 @@ class UploadMethod(StrEnum):
 
 
 class UploadConfig(MaxoType):
-    """
-    Настройки загрузки медиа. Передаётся в `Bot(upload_config=...)`.
-
-    Args:
-        method: Способ загрузки (см. `UploadMethod`).
-        resumable_threshold: Порог размера (байты), с которого `AUTO` берёт
-            resumable.
-        chunk_size: Размер куска resumable-загрузки в байтах.
-        chunk_retries: Сколько раз повторить отправку куска при временной ошибке.
-        chunk_retry_base_delay: Базовая пауза между повторами куска (секунды).
-        chunk_retry_max_delay: Максимальная пауза между повторами куска (секунды).
-        not_ready_backoff: Backoff для ретраев отправки сообщения при
-            `attachment.not.ready`.
-        not_ready_max_retries: Максимум таких ретраев.
-        processing_base_delay: Базовый сон перед отправкой сообщения (секунды).
-        processing_delay_per_mib: Надбавка ко сну за каждый МиБ файла (секунды).
-        processing_max_delay: Потолок начального сна (секунды).
-
-    """
+    """Настройки загрузки медиа для `Bot(upload_config=...)`."""
 
     method: UploadMethod = UploadMethod.AUTO
     resumable_threshold: int = 20 * _MIB
@@ -144,16 +84,7 @@ async def resumable_upload(
     json_loads: Callable[[bytes], Any],
     config: UploadConfig | None = None,
 ) -> UploadMediaResult | None:
-    """
-    Загружает `file` на `url` частями по resumable-протоколу MAX.
-
-    `session` должна быть выделенной keep-alive сессией (одно соединение),
-    иначе сервер потеряет сессию загрузки между кусками.
-
-    Возвращает `UploadMediaResult`, если сервер вернул JSON с токеном
-    (`file`/`image`), либо `None`, если тело не JSON (`video`/`audio` -
-    токен берётся из `POST /uploads`).
-    """
+    """Загружает файл частями через выделенную keep-alive сессию."""
     if config is None:
         config = UploadConfig()
 
@@ -200,7 +131,6 @@ async def _send_chunk(
                 body = await response.read()
                 if response.status < _CLIENT_ERROR_STATUS:
                     return body
-                # 5xx повторяем, 4xx - это ошибка запроса, повторять смысла нет.
                 if (
                     response.status < _SERVER_ERROR_STATUS
                     or attempt >= config.chunk_retries

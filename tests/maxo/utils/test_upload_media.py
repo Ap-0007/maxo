@@ -75,7 +75,6 @@ async def test_input_file_default_size_reads_content() -> None:
         async def read(self) -> bytes:
             return b"payload"
 
-    # Базовая реализация size() читает файл целиком
     assert await CustomInputFile().size() == len(b"payload")
 
 
@@ -116,5 +115,4 @@ async def test_input_file_default_stream_reads_content() -> None:
         async def read(self) -> bytes:
             return b"abcdefghij"
 
-    # Базовая реализация stream() режет прочитанные целиком байты
     assert await _collect(CustomInputFile(), 4) == [b"abcd", b"efgh", b"ij"]

@@ -77,7 +77,6 @@ async def test_build_media_only_input_files(facade: DummyFacade) -> None:
         result = await facade._build_media(input_files)
 
         build_media_attachments_mock.assert_called_once_with(input_files)
-        # image и video сервер обрабатывает сразу - ждать не нужно.
         sleep_mock.assert_not_awaited()
 
     assert result == uploaded_attachments
@@ -173,7 +172,6 @@ async def test_build_media_mixed_order(facade: DummyFacade) -> None:
         result = await facade._build_media(media)
 
         upload_files_mock.assert_called_once_with([input_file1, input_file2])
-        # Обе загрузки - картинки, готовы сразу.
         sleep_mock.assert_not_awaited()
 
     assert result == expected_result
@@ -260,7 +258,6 @@ async def test_build_media_attachments_skips_unknown_upload_type(
     facade: DummyFacade,
 ) -> None:
     with patch.object(facade, "upload_media", new_callable=AsyncMock) as upload_mock:
-        # cast нужен, чтобы смоделировать неизвестный UploadType, не входящий в enum
         upload_mock.return_value = (cast(UploadType, "unknown"), "token")
 
         result = await facade.build_media_attachments(
@@ -326,7 +323,6 @@ async def test_upload_media_single_retval_falls_back_to_endpoint_token(
             token="endpoint-token",  # noqa: S106
         ),
     )
-    # video/audio при single-загрузке возвращают retval.
     bot_mock.upload_media = AsyncMock(side_effect=RetvalReturnedServerException())
 
     assert await facade.upload_media(file) == (UploadType.VIDEO, "endpoint-token")
@@ -383,7 +379,6 @@ async def test_upload_media_raises_without_any_token(
     bot_mock.get_upload_url = AsyncMock(
         return_value=UploadEndpoint(url="https://example.com"),
     )
-    # Для video/audio resumable-загрузка возвращает None (токен - из endpoint).
     bot_mock.upload_media_resumable = AsyncMock(return_value=None)
 
     with pytest.raises(RuntimeError, match="Could not get upload token"):

@@ -76,15 +76,7 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         return [attachment for attachment in attachments if attachment is not None]
 
     async def _wait_media_processing(self, files: Sequence[InputFile]) -> None:
-        """
-        Ждёт, пока сервер обработает загруженные файлы.
-
-        Начальный сон зависит от типа и размера самого большого файла
-        (`UploadConfig.estimated_processing_delay`). Оставшийся "хвост", если
-        он есть, добирают ретраи на `attachment.not.ready` в
-        AttachmentNotReadyRetryMiddleware. Так мелкие вложения и картинки/видео
-        не тормозят, а крупные файлы дожидаются корректно.
-        """
+        """Делает первичную паузу перед отправкой загруженных файлов."""
         config = self.bot.upload_config
         delays = [
             config.estimated_processing_delay(file.type, await file.size())
@@ -142,5 +134,4 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                 file=UploadFile(file=await file.read(), filename=file.file_name),
             )
         except RetvalReturnedServerException:
-            # video/audio возвращают retval; токен берётся из get_upload_url.
             return None

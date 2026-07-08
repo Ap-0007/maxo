@@ -111,14 +111,7 @@ class MaxApiClient(AiohttpAsyncClient):
         url: str,
         file: InputFile,
     ) -> UploadMediaResult | None:
-        """
-        Загружает файл resumable-протоколом (частями), не держа его в памяти.
-
-        В отличие от обычного multipart-аплоада, читает файл по кускам и шлёт
-        их последовательными POST-ами по выделенному соединению. Это снимает
-        лимит ~2 ГБ на единый буфер и позволяет грузить большие файлы.
-        Параметры кусков и ретраев берутся из `upload_config`.
-        """
+        """Загружает файл частями, без чтения всего файла в память."""
         session = self._new_upload_session()
         try:
             return await resumable_upload(
@@ -133,18 +126,9 @@ class MaxApiClient(AiohttpAsyncClient):
             await session.close()
 
     def _new_upload_session(self) -> ClientSession:
-        """
-        Отдельная keep-alive сессия с собственным соединением под аплоад.
-
-        Свой `TCPConnector(limit=1)` обязателен: resumable-сессия на сервере
-        привязана к соединению, поэтому все куски одного файла должны идти по
-        одному соединению и не смешиваться с остальным трафиком
-        Переиспользовать коннектор основной сессии нельзя -
-        при закрытии этой сессии закрывается  и общий коннектор, обрывая основную сессию
-        """
+        """Отдельная сессия с одним соединением для resumable-загрузки."""
         connector = TCPConnector(ssl=self._ssl_context, limit=1)
         session = ClientSession(connector=connector)
-        # session.headers.update(self._session.headers)
         session.headers[AUTHORIZATION] = self._token
         session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
         return session
@@ -166,9 +150,7 @@ class MaxApiClient(AiohttpAsyncClient):
             )
         ):
             if isinstance(method, AddMembers):
-                # При ошибке добавления юзера апи возвращает success=false и статус 200,
-                # и даёт подробную инфу в ModifyMembersResult.
-                # Из-за этого для нормальной работы метода нужно не патчить его статус
+                # AddMembers возвращает частичный результат при success=false.
                 return
             loggers.bot_session.warning(
                 "Patch the status code from %d to 400 due to an error on the MAX API",

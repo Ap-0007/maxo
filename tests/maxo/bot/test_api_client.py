@@ -59,7 +59,6 @@ async def test_api_client_init(api_client: MaxApiClient) -> None:
 async def test_api_client_registers_attachment_retry_middleware(
     api_client: MaxApiClient,
 ) -> None:
-    # Ретрай на attachment.not.ready ставится самым внутренним middleware
     assert isinstance(
         api_client.middleware[-1],
         AttachmentNotReadyRetryMiddleware,
@@ -75,7 +74,6 @@ async def test_api_client_keeps_user_middleware_outer() -> None:
         middleware=[user_middleware],
     )
     try:
-        # Пользовательский middleware остаётся внешним, наш ретрай - внутренним
         assert client.middleware[0] is user_middleware
         assert isinstance(client.middleware[-1], AttachmentNotReadyRetryMiddleware)
     finally:

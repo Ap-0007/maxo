@@ -173,10 +173,7 @@ class Bot(BaseAsyncClient):
         try:
             await self.call_method(method)
         except MaxBotApiError as e:
-            # In due to WebHook mechanism doesn't allow getting response for
-            # requests called in answer to WebHook request.
-            # Need to skip unsuccessful responses.
-            # For debugging here is added logging.
+            # Webhook-ответ не позволяет вернуть ошибку вызывающему коду.
             loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
 
     async def __aenter__(self) -> Self:
@@ -212,15 +209,7 @@ class Bot(BaseAsyncClient):
         upload_url: str,
         file: InputFile,
     ) -> UploadMediaResult | None:
-        """
-        Загружает медиа resumable-протоколом (частями) по `upload_url`.
-
-        Не держит файл в памяти целиком и снимает лимит ~2 ГБ на единый
-        запрос. Параметры кусков берутся из `upload_config`. `upload_url`
-        берётся из `get_upload_url`. Возвращает `UploadMediaResult` для
-        `file`/`image` или `None` для `video`/`audio` (у них токен приходит
-        из `get_upload_url`).
-        """
+        """Загружает медиа по `upload_url` частями."""
         return await self.state.api_client.upload_resumable(upload_url, file)
 
     # Bots

@@ -1,140 +1,7 @@
-"""
-Исследование задержки обработки загруженных файлов на бэкенде MAX (issue #10).
+"""Замеряет задержку обработки вложений после загрузки.
 
-Проблема
---------
-После загрузки файла (`POST /uploads` -> получение токена) и немедленной
-отправки сообщения с этим вложением MAX может ответить ошибкой::
-
-    maxo.errors.api.MaxBotBadRequestError:
-        code='attachment.not.ready'
-        message='Key: errors.process.attachment.file.not.processed'
-
-То есть сервер ещё не закончил внутреннюю обработку файла. Сейчас в
-`maxo` стоит "костыль" - фиксированный `await asyncio.sleep(0.5)`, который
-одновременно и слишком долгий для одних файлов, и слишком короткий для
-других (см. `maxo.routing.mixins.attachments.AttachmentsFacade._build_media`).
-
-Цель скрипта
-------------
-Эмпирически измерить, сколько времени сервер MAX тратит на внутреннюю
-обработку файла в зависимости от его размера и типа, чтобы обосновать
-"умную" стратегию ожидания.
-
-Метод
------
-Для набора размеров и типов файлов:
-
-1. Загружаем файл и фиксируем токен (та же логика, что в
-   `AttachmentsFacade.upload_media`, но без сна).
-2. Замеряем `t0` сразу после получения токена.
-3. В цикле пытаемся отправить сообщение с вложением. Пока приходит
-   `attachment.not.ready` - ждём короткий poll-интервал и повторяем.
-   Время до первой успешной отправки - это и есть искомая
-   "задержка обработки на сервере".
-
-Затем комбинируем две идеи из issue: начальный сон, зависящий от размера
-и типа файла, плюс backoff-ретраи на `attachment.not.ready` как страховку.
-Референсная реализация этой стратегии - `smart_send` в конце файла.
-
-Запуск
-------
-В переменных окружения (или в `.env`) должны быть заданы::
-
-    TOKEN=...      # токен бота
-    CHAT_ID=...    # чат, куда слать пробные сообщения (или USER_ID)
-    USER_ID=...
-
-Затем::
-
-    set -a; source .env; set +a
-    uv run python examples/research_upload_delay.py
-
-ВНИМАНИЕ: скрипт реально отправляет сообщения в указанный чат - по одному
-на каждый успешно обработанный пробный файл.
-
-================================ РЕЗУЛЬТАТЫ ================================
-
-Прогон выполнен против боевого API MAX (5 июля 2026), размеры - вплоть до
-лимитов из документации (4 ГБ файл / 4 ГБ картинка / 250 МБ видео). Базовый
-сетевой RTT одного `send_message` - около 0.16 c; это нижняя граница
-разрешения замера (сама отправка и есть проба готовности).
-
-Тип `file` (случайные байты / нули), задержка обработки на сервере::
-
-    размер        ready (c)   попыток
-    0.01 MiB      0.50        2
-    1    MiB      0.71        3
-    50   MiB      1.1         4-5
-    100  MiB      1.85        5
-    250  MiB      3.53        8
-    500  MiB      4.55        9
-    1024 MiB      10.47       22
-    2048 MiB      NetworkError [BUF] malloc failure  (см. п.5)
-    4096 MiB      NetworkError [BUF] malloc failure  (см. п.5)
-
-Тип `image` (валидный PNG-шум), поиск потолка::
-
-    0.01 .. 35 MiB   ready ≈ 0.17-0.20 c, всегда 1 попытка (готово сразу)
-    40 MiB и выше    MaxBotBadRequestError(error='SIZE_LIMIT_EXCEEDED')
-
-Тип `video` (mp4, testsrc CBR)::
-
-    3.3  MiB    ready ≈ 0.19 c, 1 попытка
-    238  MiB    ready ≈ 0.60 c, 1 попытка   (принят сразу, транскод асинхронно)
-
-Тип `audio` (mp3, 30 KiB)::
-
-    ready ≈ 0.50 c, 2 попытки
-
-Выводы
-------
-1. Тип файла важнее размера.
-   - `image` и `video` готовы практически мгновенно (1 попытка): сервер
-     принимает токен сразу, обработку/транскод делает асинхронно.
-     `attachment.not.ready` для них не воспроизвёлся ни разу, даже на видео
-     238 МБ.
-   - `audio` и особенно `file` имеют заметную задержку.
-
-2. Для `file` зависимость от размера линейная и на больших файлах весомая::
-
-       ready ≈ 0.8 + 0.010 * размер_MiB  (секунд)
-
-   То есть примерно +1 c на каждые 100 MiB: 100 MiB ~1.9 c, 1 ГБ ~10.5 c.
-   Фиксированный `sleep(0.5)` для гигабайтного файла промахивается в ~20 раз.
-
-3. Заявленные в документации лимиты размеров - НЕ универсальны:
-   - картинки упираются в ~36-39 МБ (35 МБ - ок, 40 МБ - `SIZE_LIMIT_EXCEEDED`),
-     то есть до 4 ГБ картинку загрузить нельзя;
-   - видео до 238 МБ грузится и принимается штатно.
-
-4. Время загрузки (сеть) и задержка обработки - разные величины. Аплоад
-   растёт линейно с размером и на крупных файлах доминирует (1 ГБ грузился
-   ~92 c против ~10 c обработки). Issue #10 - именно про вторую, серверную.
-
-5. Отдельная находка про текущий upload в maxo: файл читается целиком в
-   память и отправляется одним multipart-запросом
-   (`AttachmentsFacade.upload_media` -> `UploadFile(file=await file.read())`).
-   На 2 ГБ и 4 ГБ это стабильно падает с `NetworkError: [BUF] malloc failure
-   (_ssl.c)` - OpenSSL не выделяет буфер под такой единый payload. Значит,
-   документированный лимит 4 ГБ на файлы текущим кодом недостижим: нужен
-   resumable/чанкованный аплоад (отдельная задача от #10).
-
-Рекомендация (реализована в `smart_send`)
-   Комбинировать оба подхода из issue:
-   - начальный сон = оценка задержки по самому большому файлу и его типу
-     (`estimated_processing_delay`): 0 для image/video, ~0.5 + 0.008 * MiB
-     для audio/file;
-   - затем backoff-ретраи отправки на `attachment.not.ready`
-     (`maxo.backoff.Backoff`) - страховка от разброса серверных задержек и
-     непокрытых кейсов.
-   Такой гибрид не тормозит мелкие вложения и картинки/видео, но корректно
-   ждёт крупные файлы.
-
-Ограничения
-   Аудио замерено только на маленьком сэмпле; крупное аудио отдельно не
-   гонялось. Абсолютные числа зависят от сети и нагрузки на сервер - это
-   порядок величины, а не константы.
+Использует боевой MAX API и отправляет тестовые сообщения. Нужны `TOKEN` и
+`CHAT_ID` или `USER_ID`.
 """
 
 import asyncio
@@ -169,8 +36,6 @@ from maxo.utils.upload_media import BufferedInputFile, FSInputFile, InputFile
 KIB = 1024
 MIB = 1024 * KIB
 
-# Лестницы размеров синтетических проб (в байтах). Разные по типам:
-# у картинок MAX режет размер на ~36-39 МБ, поэтому их лестница ниже.
 FILE_SIZES: tuple[int, ...] = (
     10 * KIB,
     100 * KIB,
@@ -187,18 +52,14 @@ IMAGE_SIZES: tuple[int, ...] = (
     30 * MIB,
 )
 
-# Как часто опрашивать сервер, пока файл не готов, и сколько ждать максимум.
 POLL_INTERVAL = 0.1
 MAX_WAIT = 120.0
 
-# Реальные сэмплы для кросс-типовой проверки (image/video/audio/file).
 SAMPLE_FILES = "examples/files"
 
 
 @dataclass(slots=True)
 class ProbeResult:
-    """Результат одного замера."""
-
     kind: str
     size: int
     upload_seconds: float
@@ -211,12 +72,6 @@ class ProbeResult:
 
 
 def _make_png(target_bytes: int) -> bytes:
-    """
-    Собирает валидный PNG заданного (примерно) размера из случайного шума.
-
-    Шум почти не сжимается, поэтому итоговый размер близок к `target_bytes`.
-    Нужен pure-Python генератор, т.к. в окружении нет Pillow/ffmpeg.
-    """
     side = max(1, int((target_bytes / 3) ** 0.5))
 
     raw = bytearray()
@@ -242,7 +97,6 @@ def _make_png(target_bytes: int) -> bytes:
 
 
 def build_probe_file(kind: str, size: int) -> InputFile:
-    """Создаёт синтетический `InputFile` нужного типа и размера."""
     if kind == "file":
         return BufferedInputFile.file(os.urandom(size), file_name=f"probe_{size}.txt")
     if kind == "image":
@@ -252,7 +106,6 @@ def build_probe_file(kind: str, size: int) -> InputFile:
 
 
 def make_attachment(file_type: UploadType, token: str) -> AttachmentsRequests:
-    """Строит запрос-вложение по типу файла и токену."""
     if file_type is UploadType.IMAGE:
         return PhotoAttachmentRequest.factory(token=token)
     if file_type is UploadType.VIDEO:
@@ -263,17 +116,12 @@ def make_attachment(file_type: UploadType, token: str) -> AttachmentsRequests:
 
 
 def is_not_ready_error(error: MaxBotBadRequestError) -> bool:
-    """`True`, если ошибка означает "файл ещё обрабатывается сервером"."""
     code = error.code or ""
     message = error.message or ""
     return code == "attachment.not.ready" or "not.processed" in message
 
 
 async def upload_and_get_token(bot: Bot, file: InputFile) -> str:
-    """
-    Загружает файл и возвращает токен, повторяя логику `AttachmentsFacade`,
-    но без искусственного сна после загрузки.
-    """
     endpoint = await bot.get_upload_url(type=file.type)
 
     upload_result = None
@@ -298,10 +146,6 @@ async def wait_until_ready(
     attachment: AttachmentsRequests,
     text: str,
 ) -> tuple[float, int]:
-    """
-    Долбит `send_message`, пока сервер не перестанет отвечать
-    `attachment.not.ready`. Возвращает (задержка_секунд, число_попыток).
-    """
     start = time.monotonic()
     attempts = 0
 
@@ -316,14 +160,12 @@ async def wait_until_ready(
                 raise TimeoutError(f"Файл не обработался за {MAX_WAIT} c") from error
             await asyncio.sleep(POLL_INTERVAL)
         except MaxBotTooManyRequestsError:
-            # Слишком частый опрос - притормаживаем.
             await asyncio.sleep(1.0)
         else:
             return time.monotonic() - start, attempts
 
 
 async def probe_input_file(bot: Bot, chat_id: int, file: InputFile) -> ProbeResult:
-    """Один полный замер для готового `InputFile`: загрузка -> ожидание."""
     real_size = len(await file.read())
 
     upload_start = time.monotonic()
@@ -351,7 +193,6 @@ async def probe_input_file(bot: Bot, chat_id: int, file: InputFile) -> ProbeResu
 
 
 async def measure_rtt(bot: Bot, chat_id: int, tries: int = 3) -> float:
-    """Базовый сетевой RTT: время пустого текстового `send_message`."""
     samples: list[float] = []
     for _ in range(tries):
         start = time.monotonic()
@@ -361,7 +202,6 @@ async def measure_rtt(bot: Bot, chat_id: int, tries: int = 3) -> float:
 
 
 def linear_fit(points: Sequence[tuple[float, float]]) -> tuple[float, float] | None:
-    """Метод наименьших квадратов: возвращает (slope, intercept) или None."""
     min_points = 2
     n = len(points)
     if n < min_points:
@@ -379,7 +219,6 @@ def linear_fit(points: Sequence[tuple[float, float]]) -> tuple[float, float] | N
 
 
 def report(results: Sequence[ProbeResult]) -> None:
-    """Печатает сводку и оценку зависимости задержки от размера по типам."""
     print("\n=== Сводка ===")
     kinds = dict.fromkeys(r.kind for r in results)
     for kind in kinds:
@@ -401,11 +240,6 @@ def report(results: Sequence[ProbeResult]) -> None:
             )
 
 
-# --------------------------------------------------------------------------- #
-# Референсная реализация "умной" стратегии - предложение для issue #10.
-# --------------------------------------------------------------------------- #
-
-# Backoff-конфиг для ретраев на `attachment.not.ready`.
 NOT_READY_BACKOFF = BackoffConfig(
     min_delay=0.2,
     max_delay=3.0,
@@ -415,13 +249,6 @@ NOT_READY_BACKOFF = BackoffConfig(
 
 
 def estimated_processing_delay(file_type: UploadType, size_bytes: int) -> float:
-    """
-    Оценка серверной задержки обработки по типу и размеру файла (в секундах).
-
-    Модель по замерам исследования: для file/audio ready ≈ 0.8 + 0.010 * MiB.
-    Коэффициент намеренно чуть занижен (0.008) - добивать "хвост" должны
-    backoff-ретраи, а не начальный сон. Для image/video ожидание не нужно.
-    """
     if file_type in (UploadType.IMAGE, UploadType.VIDEO):
         return 0.0
     size_mib = size_bytes / MIB
@@ -437,11 +264,6 @@ async def smart_send(
     text: str = "",
     max_retries: int = 15,
 ) -> None:
-    """
-    Отправляет вложение по "умной" схеме из issue #10: адаптивный начальный
-    сон по размеру/типу самого большого файла плюс backoff-ретраи на
-    `attachment.not.ready`.
-    """
     await asyncio.sleep(estimated_processing_delay(file_type, size_bytes))
 
     backoff = Backoff(NOT_READY_BACKOFF)
@@ -457,11 +279,7 @@ async def smart_send(
             return
 
 
-# --------------------------------------------------------------------------- #
-
-
 async def run_synthetic(bot: Bot, chat_id: int) -> list[ProbeResult]:
-    """Синтетический замер зависимости задержки от размера (file и image)."""
     results: list[ProbeResult] = []
     for kind, sizes in (("file", FILE_SIZES), ("image", IMAGE_SIZES)):
         print(f"\nСинтетические замеры для типа: {kind}")
@@ -471,12 +289,11 @@ async def run_synthetic(bot: Bot, chat_id: int) -> list[ProbeResult]:
                 results.append(await probe_input_file(bot, chat_id, file))
             except Exception as error:  # noqa: BLE001
                 print(f"  {kind:5} | {size / MIB:7.2f} MiB | ОШИБКА: {error}")
-            await asyncio.sleep(0.3)  # немного бережём чат и сервер
+            await asyncio.sleep(0.3)
     return results
 
 
 async def run_real_samples(bot: Bot, chat_id: int) -> list[ProbeResult]:
-    """Кросс-типовой замер на реальных сэмплах из `examples/files`."""
     samples = (
         FSInputFile.image(f"{SAMPLE_FILES}/watermelon.jpg"),
         FSInputFile.audio(f"{SAMPLE_FILES}/watermelon.mp3"),

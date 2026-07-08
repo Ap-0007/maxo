@@ -22,22 +22,11 @@ class InputFile(ABC):
         raise NotImplementedError
 
     async def size(self) -> int:
-        """
-        Размер файла в байтах.
-
-        По умолчанию читает файл целиком.
-        Наследники, которые знают размер дёшево, должны переопределить метод.
-        """
+        """Размер файла в байтах."""
         return len(await self.read())
 
     async def stream(self, chunk_size: int) -> AsyncIterator[bytes]:
-        """
-        Отдаёт содержимое файла кусками по `chunk_size` байт.
-
-        Нужно для resumable-загрузки, чтобы не держать весь файл в памяти.
-        Базовая реализация читает файл целиком; наследники, умеющие читать
-        по частям (например, с диска), должны переопределить метод.
-        """
+        """Содержимое файла кусками по `chunk_size` байт."""
         data = await self.read()
         for start in range(0, len(data), chunk_size):
             yield data[start : start + chunk_size]

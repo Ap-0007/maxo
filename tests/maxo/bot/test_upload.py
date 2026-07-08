@@ -36,8 +36,6 @@ class _FakeResponse:
 
 
 class _FakeSession:
-    """Мок сессии: отдаёт заранее заданные ответы и пишет заголовки вызовов."""
-
     def __init__(self, responses: Iterable[_FakeResponse | Exception]) -> None:
         self._responses = list(responses)
         self.calls: list[dict[str, Any]] = []
@@ -92,9 +90,7 @@ async def test_sends_chunks_with_correct_content_range() -> None:
     assert result.token == "tok"  # noqa: S105
     ranges = [call["headers"]["Content-Range"] for call in session.calls]
     assert ranges == ["bytes 0-3/10", "bytes 4-7/10", "bytes 8-9/10"]
-    # Тело каждого запроса - соответствующий кусок.
     assert [call["data"] for call in session.calls] == [b"abcd", b"efgh", b"ij"]
-    # Имя файла уходит в Content-Disposition.
     assert 'filename="f.bin"' in session.calls[0]["headers"]["Content-Disposition"]
 
 
@@ -109,7 +105,6 @@ async def test_single_chunk_small_file() -> None:
 
 
 async def test_non_json_final_body_returns_none() -> None:
-    # video/audio возвращают эхо диапазона - не JSON.
     session = _FakeSession([_FakeResponse(200, b"0-4/5")])
 
     assert await _run(session, b"hello", 1024) is None
@@ -191,11 +186,7 @@ async def test_network_error_is_retried_then_reraised() -> None:
     ):
         await _run(session, b"hello", 1024, chunk_retries=1)
 
-    # Изначальная попытка + 1 ретрай.
     assert len(session.calls) == 2
-
-
-# --- UploadConfig ---
 
 
 def test_should_use_resumable_respects_explicit_method() -> None:
