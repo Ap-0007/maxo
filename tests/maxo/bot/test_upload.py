@@ -110,11 +110,33 @@ async def test_non_json_final_body_returns_none() -> None:
     assert await _run(session, b"hello", 1024) is None
 
 
+async def test_json_non_dict_final_body_returns_none() -> None:
+    session = _FakeSession([_FakeResponse(200, b'["0-4/5"]')])
+
+    assert await _run(session, b"hello", 1024) is None
+
+
 async def test_empty_file_raises() -> None:
     session = _FakeSession([])
 
     with pytest.raises(ValueError, match="пустой файл"):
         await _run(session, b"", 1024)
+
+
+async def test_default_config_is_used() -> None:
+    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    file = BufferedInputFile.file(b"hello", "f.bin")
+
+    result = await resumable_upload(
+        url="https://upload.example/upload.do",
+        file=file,
+        session=session,  # type: ignore[arg-type]
+        response_loader=_Retort(),
+        json_loads=json.loads,
+    )
+
+    assert result is not None
+    assert result.token == "tok"  # noqa: S105
 
 
 async def test_client_error_status_raises_without_retry() -> None:
@@ -124,6 +146,30 @@ async def test_client_error_status_raises_without_retry() -> None:
         await _run(session, b"hello", 1024)
 
     assert len(session.calls) == 1
+
+
+async def test_non_json_error_status_raises_base_error() -> None:
+    session = _FakeSession([_FakeResponse(406, b"plain error")])
+
+    with pytest.raises(MaxBotApiError) as exc_info:
+        await _run(session, b"hello", 1024)
+
+    error = exc_info.value
+    assert error.error == "upload failed with status 406"
+    assert error.message == "plain error"
+    assert error.raw_data == b"plain error"
+
+
+async def test_json_non_dict_error_status_raises_base_error() -> None:
+    session = _FakeSession([_FakeResponse(406, b'["plain error"]')])
+
+    with pytest.raises(MaxBotApiError) as exc_info:
+        await _run(session, b"hello", 1024)
+
+    error = exc_info.value
+    assert error.error == "upload failed with status 406"
+    assert error.message == "['plain error']"
+    assert error.raw_data == ["plain error"]
 
 
 @pytest.mark.parametrize(
@@ -186,6 +232,24 @@ async def test_network_error_is_retried_then_reraised() -> None:
     ):
         await _run(session, b"hello", 1024, chunk_retries=1)
 
+    assert len(session.calls) == 2
+
+
+async def test_server_error_is_raised_after_retries() -> None:
+    session = _FakeSession(
+        [
+            _FakeResponse(500, b"temporary"),
+            _FakeResponse(500, b"temporary"),
+        ],
+    )
+
+    with (
+        patch("asyncio.sleep", new_callable=AsyncMock),
+        pytest.raises(MaxBotApiError) as exc_info,
+    ):
+        await _run(session, b"hello", 1024, chunk_retries=1)
+
+    assert exc_info.value.error == "upload failed with status 500"
     assert len(session.calls) == 2
 
 

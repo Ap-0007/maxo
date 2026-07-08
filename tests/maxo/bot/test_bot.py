@@ -1,3 +1,4 @@
+import io
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,11 +9,13 @@ from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import TOKEN
 
 
 class MockMaxBotApiError(MaxBotApiError):
-    def __init__(self, message: str, code: str = "", error: str = ""):
+    def __init__(self, message: str, code: str = "", error: str = "") -> None:
         self.message = message
         self.code = code
         self.error = error
@@ -69,7 +72,7 @@ async def test_bot_start_and_close() -> None:
         mock_api_client.close.assert_awaited_once()
 
 
-async def test_bot_context(bot: Bot):
+async def test_bot_context(bot: Bot) -> None:
     with (
         patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
         patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
@@ -79,15 +82,18 @@ async def test_bot_context(bot: Bot):
         mock_close.assert_awaited_once()
 
 
-async def test_bot_call_method(bot: Bot):
+async def test_bot_call_method(bot: Bot) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(return_value="test_result")
-        result = await bot.call_method(MagicMock())
+        result: object = await bot.call_method(MagicMock())
         assert result == "test_result"
         mock_state.api_client.call_method.assert_awaited_once()
 
 
-async def test_bot_silent_call_method(bot: Bot, caplog):
+async def test_bot_silent_call_method(
+    bot: Bot,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(
             side_effect=MockMaxBotApiError("test error"),
@@ -96,13 +102,29 @@ async def test_bot_silent_call_method(bot: Bot, caplog):
         assert "Failed to make answer" in caplog.text
 
 
-async def test_bot_download(bot: Bot):
+async def test_bot_download(bot: Bot) -> None:
+    downloaded = io.BytesIO(b"downloaded")
     with patch.object(
         bot,
         "_state",
         MagicMock(),
-    ) as mock_state:  # Patch private attribute
-        mock_state.api_client.download = AsyncMock(return_value="downloaded")
+    ) as mock_state:
+        mock_state.api_client.download = AsyncMock(return_value=downloaded)
         result = await bot.download("https://example.com/file")
-        assert result == "downloaded"
+        assert result is downloaded
         mock_state.api_client.download.assert_awaited_once()
+
+
+async def test_bot_upload_media_resumable(bot: Bot) -> None:
+    file = BufferedInputFile.file(b"payload", "f.bin")
+    upload_result = UploadMediaResult(token="upload-token")  # noqa: S106
+
+    with patch.object(bot, "_state", MagicMock()) as mock_state:
+        mock_state.api_client.upload_resumable = AsyncMock(return_value=upload_result)
+        result = await bot.upload_media_resumable("https://example.com/upload", file)
+
+    assert result is upload_result
+    mock_state.api_client.upload_resumable.assert_awaited_once_with(
+        "https://example.com/upload",
+        file,
+    )

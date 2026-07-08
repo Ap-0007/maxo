@@ -12,6 +12,7 @@ import time
 import zlib
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Literal, TypeAlias
 
 from unihttp.http import UploadFile
 
@@ -32,6 +33,8 @@ from maxo.types import (
 )
 from maxo.types.attachments import AttachmentsRequests
 from maxo.utils.upload_media import BufferedInputFile, FSInputFile, InputFile
+
+Target: TypeAlias = tuple[Literal["chat_id", "user_id"], int]
 
 KIB = 1024
 MIB = 1024 * KIB
@@ -76,7 +79,7 @@ def _make_png(target_bytes: int) -> bytes:
 
     raw = bytearray()
     for _ in range(side):
-        raw.append(0)  # тип фильтра строки (0 = None)
+        raw.append(0)
         raw.extend(os.urandom(side * 3))
 
     compressed = zlib.compress(bytes(raw), level=0)
@@ -87,7 +90,7 @@ def _make_png(target_bytes: int) -> bytes:
         return head + struct.pack(">I", crc)
 
     signature = b"\x89PNG\r\n\x1a\n"
-    ihdr = struct.pack(">IIBBBBB", side, side, 8, 2, 0, 0, 0)  # 8 бит, RGB
+    ihdr = struct.pack(">IIBBBBB", side, side, 8, 2, 0, 0, 0)
     return (
         signature
         + chunk(b"IHDR", ihdr)
@@ -142,7 +145,7 @@ async def upload_and_get_token(bot: Bot, file: InputFile) -> str:
 
 async def wait_until_ready(
     bot: Bot,
-    chat_id: int,
+    target: Target,
     attachment: AttachmentsRequests,
     text: str,
 ) -> tuple[float, int]:
@@ -152,21 +155,37 @@ async def wait_until_ready(
     while True:
         attempts += 1
         try:
-            await bot.send_message(chat_id=chat_id, attachments=[attachment], text=text)
+            await _send_message(bot, target, attachment, text)
         except MaxBotBadRequestError as error:
             if not is_not_ready_error(error):
                 raise
             if time.monotonic() - start > MAX_WAIT:
                 raise TimeoutError(f"Файл не обработался за {MAX_WAIT} c") from error
             await asyncio.sleep(POLL_INTERVAL)
-        except MaxBotTooManyRequestsError:
-            await asyncio.sleep(1.0)
+        except MaxBotTooManyRequestsError as error:
+            elapsed = time.monotonic() - start
+            if elapsed > MAX_WAIT:
+                raise TimeoutError(f"Файл не обработался за {MAX_WAIT} c") from error
+            await asyncio.sleep(min(1.0, MAX_WAIT - elapsed))
         else:
             return time.monotonic() - start, attempts
 
 
-async def probe_input_file(bot: Bot, chat_id: int, file: InputFile) -> ProbeResult:
-    real_size = len(await file.read())
+async def _send_message(
+    bot: Bot,
+    target: Target,
+    attachment: AttachmentsRequests,
+    text: str,
+) -> None:
+    target_kind, target_id = target
+    if target_kind == "chat_id":
+        await bot.send_message(chat_id=target_id, attachments=[attachment], text=text)
+        return
+    await bot.send_message(user_id=target_id, attachments=[attachment], text=text)
+
+
+async def probe_input_file(bot: Bot, target: Target, file: InputFile) -> ProbeResult:
+    real_size = await file.size()
 
     upload_start = time.monotonic()
     token = await upload_and_get_token(bot, file)
@@ -174,7 +193,7 @@ async def probe_input_file(bot: Bot, chat_id: int, file: InputFile) -> ProbeResu
 
     attachment = make_attachment(file.type, token)
     text = f"[research] {file.type.value} {real_size / MIB:.2f} MiB"
-    ready_seconds, attempts = await wait_until_ready(bot, chat_id, attachment, text)
+    ready_seconds, attempts = await wait_until_ready(bot, target, attachment, text)
 
     result = ProbeResult(
         kind=file.type.value,
@@ -192,11 +211,15 @@ async def probe_input_file(bot: Bot, chat_id: int, file: InputFile) -> ProbeResu
     return result
 
 
-async def measure_rtt(bot: Bot, chat_id: int, tries: int = 3) -> float:
+async def measure_rtt(bot: Bot, target: Target, tries: int = 3) -> float:
     samples: list[float] = []
     for _ in range(tries):
         start = time.monotonic()
-        await bot.send_message(chat_id=chat_id, text="[rtt probe]")
+        target_kind, target_id = target
+        if target_kind == "chat_id":
+            await bot.send_message(chat_id=target_id, text="[rtt probe]")
+        else:
+            await bot.send_message(user_id=target_id, text="[rtt probe]")
         samples.append(time.monotonic() - start)
     return statistics.mean(samples)
 
@@ -279,21 +302,21 @@ async def smart_send(
             return
 
 
-async def run_synthetic(bot: Bot, chat_id: int) -> list[ProbeResult]:
+async def run_synthetic(bot: Bot, target: Target) -> list[ProbeResult]:
     results: list[ProbeResult] = []
     for kind, sizes in (("file", FILE_SIZES), ("image", IMAGE_SIZES)):
         print(f"\nСинтетические замеры для типа: {kind}")
         for size in sizes:
             file = build_probe_file(kind, size)
             try:
-                results.append(await probe_input_file(bot, chat_id, file))
+                results.append(await probe_input_file(bot, target, file))
             except Exception as error:  # noqa: BLE001
                 print(f"  {kind:5} | {size / MIB:7.2f} MiB | ОШИБКА: {error}")
             await asyncio.sleep(0.3)
     return results
 
 
-async def run_real_samples(bot: Bot, chat_id: int) -> list[ProbeResult]:
+async def run_real_samples(bot: Bot, target: Target) -> list[ProbeResult]:
     samples = (
         FSInputFile.image(f"{SAMPLE_FILES}/watermelon.jpg"),
         FSInputFile.audio(f"{SAMPLE_FILES}/watermelon.mp3"),
@@ -304,7 +327,7 @@ async def run_real_samples(bot: Bot, chat_id: int) -> list[ProbeResult]:
     results: list[ProbeResult] = []
     for file in samples:
         try:
-            results.append(await probe_input_file(bot, chat_id, file))
+            results.append(await probe_input_file(bot, target, file))
         except Exception as error:  # noqa: BLE001
             print(f"  {file.type.value:5} | ОШИБКА: {error}")
         await asyncio.sleep(0.3)
@@ -313,15 +336,18 @@ async def run_real_samples(bot: Bot, chat_id: int) -> list[ProbeResult]:
 
 async def run() -> None:
     token = os.environ["TOKEN"]
-    chat_id = int(os.environ.get("CHAT_ID") or os.environ["USER_ID"])
+    if chat_id := os.environ.get("CHAT_ID"):
+        target: Target = ("chat_id", int(chat_id))
+    else:
+        target = ("user_id", int(os.environ["USER_ID"]))
 
     bot = Bot(token=token)
     async with bot.context():
-        rtt = await measure_rtt(bot, chat_id)
+        rtt = await measure_rtt(bot, target)
         print(f"Базовый RTT send_message: {rtt:.3f} c (нижняя граница разрешения)")
 
-        synthetic = await run_synthetic(bot, chat_id)
-        real = await run_real_samples(bot, chat_id)
+        synthetic = await run_synthetic(bot, target)
+        real = await run_real_samples(bot, target)
 
     report(synthetic)
     report(real)

@@ -11,7 +11,9 @@ from maxo.errors.api import RetvalReturnedServerException
 from maxo.routing.mixins import AttachmentsFacade, MediaInput, MessageMethodsFacade
 from maxo.types import (
     AudioAttachmentRequest,
+    CallbackButton,
     FileAttachmentRequest,
+    InlineKeyboardAttachmentRequest,
     Message,
     PhotoAttachmentRequest,
     UploadEndpoint,
@@ -187,6 +189,17 @@ async def test_build_attachments_no_files(facade: DummyFacade) -> None:
         build_media_mock.assert_not_called()
 
     assert result == []
+
+
+async def test_build_attachments_with_keyboard(facade: DummyFacade) -> None:
+    button = CallbackButton(text="open", payload="payload")
+
+    result = await facade.build_attachments(base=[], keyboard=((button,),), files=None)
+
+    assert len(result) == 1
+    attachment = result[0]
+    assert isinstance(attachment, InlineKeyboardAttachmentRequest)
+    assert attachment.payload.buttons == [[button]]
 
 
 async def test_build_attachments_with_files(facade: DummyFacade) -> None:

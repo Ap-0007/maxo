@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TypeAlias
 
 from unihttp.http import UploadFile
@@ -26,6 +26,14 @@ from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
 
 MediaInput: TypeAlias = InputFile | MediaAttachmentsRequests
+MediaAttachmentFactory: TypeAlias = Callable[[str], MediaAttachmentsRequests]
+
+MEDIA_ATTACHMENT_FACTORIES: dict[UploadType, MediaAttachmentFactory] = {
+    UploadType.FILE: FileAttachmentRequest.factory,
+    UploadType.AUDIO: AudioAttachmentRequest.factory,
+    UploadType.VIDEO: VideoAttachmentRequest.factory,
+    UploadType.IMAGE: lambda token: PhotoAttachmentRequest.factory(token=token),
+}
 
 
 class AttachmentsFacade(SubscriptionMethodsFacade):
@@ -42,7 +50,9 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         if keyboard is not None:
             attachments.append(
                 InlineKeyboardAttachmentRequest(
-                    payload=InlineKeyboardAttachmentRequestPayload(buttons=keyboard),
+                    payload=InlineKeyboardAttachmentRequestPayload(
+                        buttons=[list(row) for row in keyboard],
+                    ),
                 ),
             )
 
@@ -78,9 +88,10 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
     async def _wait_media_processing(self, files: Sequence[InputFile]) -> None:
         """Делает первичную паузу перед отправкой загруженных файлов."""
         config = self.bot.upload_config
+        sizes = await asyncio.gather(*(file.size() for file in files))
         delays = [
-            config.estimated_processing_delay(file.type, await file.size())
-            for file in files
+            config.estimated_processing_delay(file.type, size)
+            for file, size in zip(files, sizes, strict=True)
         ]
         delay = max(delays, default=0.0)
         if delay > 0:
@@ -95,17 +106,12 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         result = await asyncio.gather(*(self.upload_media(file) for file in files))
 
         for type_, token in result:
-            match type_:
-                case UploadType.FILE:
-                    attachments.append(FileAttachmentRequest.factory(token))
-                case UploadType.AUDIO:
-                    attachments.append(AudioAttachmentRequest.factory(token))
-                case UploadType.VIDEO:
-                    attachments.append(VideoAttachmentRequest.factory(token))
-                case UploadType.IMAGE:
-                    attachments.append(PhotoAttachmentRequest.factory(token=token))
-                case _:
-                    loggers.utils.warning("Received unknown attachment type: %s", type_)
+            factory = MEDIA_ATTACHMENT_FACTORIES.get(type_)
+            if factory is None:
+                loggers.utils.warning("Received unknown attachment type: %s", type_)
+                continue
+
+            attachments.append(factory(token))
 
         return attachments
 

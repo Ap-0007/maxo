@@ -2,7 +2,7 @@ import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from anyio import open_file
+from anyio import Path as AsyncPath, open_file
 
 from maxo.enums import UploadType
 from maxo.utils.upload_media.base import InputFile
@@ -57,7 +57,7 @@ class FSInputFile(InputFile):
             return await file.read()
 
     async def size(self) -> int:
-        return Path(self._path).stat().st_size
+        return (await AsyncPath(self._path).stat()).st_size
 
     async def stream(self, chunk_size: int) -> AsyncIterator[bytes]:
         async with await open_file(self._path, "rb") as file:
