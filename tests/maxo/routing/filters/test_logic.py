@@ -6,6 +6,7 @@ from maxo.routing.filters.logic import (
     OrFilter,
     combine_filters,
 )
+from maxo.routing.interfaces.filter import Filter
 from maxo.routing.updates.base import BaseUpdate
 
 TrueF = AlwaysTrueFilter
@@ -55,12 +56,12 @@ def test_invert_inlining() -> None:
 
 
 def test_combine_filters_empty_returns_always_true() -> None:
-    combined = combine_filters()
+    combined: Filter[BaseUpdate] = combine_filters()
     assert isinstance(combined, AlwaysTrueFilter)
 
 
 def test_combine_filters_only_none_returns_always_true() -> None:
-    combined = combine_filters(None, None)
+    combined: Filter[BaseUpdate] = combine_filters(None, None)
     assert isinstance(combined, AlwaysTrueFilter)
 
 
