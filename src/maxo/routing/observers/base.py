@@ -3,7 +3,7 @@ from collections.abc import Callable, Coroutine, MutableSequence, Sequence
 from typing import Any, ParamSpec, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.filters import AlwaysTrueFilter
+from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces import Filter, Handler, Observer
 from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
@@ -39,7 +39,7 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     def __init__(self) -> None:
         self._handlers = []
-        self._filter = AlwaysTrueFilter()
+        self._filter = combine_filters()
         self._middleware = MiddlewareManagerFacade()
         self._state = EmptyObserverState()
 
@@ -75,10 +75,10 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
         return wrapper
 
-    def filter(self, filter: Filter[_UpdateT]) -> None:
+    def filter(self, *filters: Filter[_UpdateT]) -> None:
         self._state.ensure_add_filter()
 
-        self._filter = filter
+        self._filter = combine_filters(*filters)
 
     async def execute_filter(self, ctx: Ctx) -> bool:
         return await self._filter(ctx["update"], ctx)

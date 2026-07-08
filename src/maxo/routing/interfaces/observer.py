@@ -72,7 +72,7 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
         return self.handler(handler_fn, *filters)
 
     @abstractmethod
-    def filter(self, filter: Filter[_UpdateT]) -> None:
+    def filter(self, *filters: Filter[_UpdateT]) -> None:
         raise NotImplementedError
 
     @abstractmethod
