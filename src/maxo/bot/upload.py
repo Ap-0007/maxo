@@ -2,6 +2,7 @@ import asyncio
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Never
+from urllib.parse import quote
 
 from aiohttp import ClientError, ClientSession
 from aiohttp.hdrs import CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE
@@ -17,8 +18,9 @@ from maxo.utils.upload_media import InputFile
 
 _MIB = 1024 * 1024
 _OCTET_STREAM = "application/octet-stream"
+_OK_STATUS = 200
+_REDIRECT_STATUS = 300
 _SERVER_ERROR_STATUS = 500
-_CLIENT_ERROR_STATUS = 400
 
 _INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
 
@@ -83,15 +85,24 @@ async def resumable_upload(
     response_loader: ResponseLoader,
     json_loads: Callable[[bytes], Any],
     config: UploadConfig | None = None,
+    size: int | None = None,
 ) -> UploadMediaResult | None:
-    """Загружает файл частями через выделенную keep-alive сессию."""
+    """
+    Загружает файл частями через выделенную keep-alive сессию.
+
+    `size` - заранее известный размер файла в байтах
+    """
     if config is None:
         config = UploadConfig()
 
-    total = await file.size()
-    if total <= 0:
-        msg = "Нельзя загрузить пустой файл resumable-способом"
+    if size is None:
+        size = await file.size()
+    if size <= 0:
+        msg = "Нельзя загрузить пустой файл"
         raise ValueError(msg)
+
+    encoded_name = quote(file.file_name, safe="")
+    disposition = f'attachment; filename="{encoded_name}"'
 
     offset = 0
     final_body = b""
@@ -99,8 +110,8 @@ async def resumable_upload(
         end = offset + len(chunk) - 1
         headers: dict[str, str] = {
             CONTENT_TYPE: _OCTET_STREAM,
-            CONTENT_DISPOSITION: f'attachment; filename="{file.file_name}"',
-            CONTENT_RANGE: f"bytes {offset}-{end}/{total}",
+            CONTENT_DISPOSITION: disposition,
+            CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
         }
         final_body = await _send_chunk(
             session=session,
@@ -129,8 +140,9 @@ async def _send_chunk(
         try:
             async with session.post(url, data=chunk, headers=headers) as response:
                 body = await response.read()
-                if response.status < _CLIENT_ERROR_STATUS:
+                if _OK_STATUS <= response.status < _REDIRECT_STATUS:
                     return body
+                # 1xx/3xx/4xx считаем неретраибельными, ретраим только 5xx.
                 if (
                     response.status < _SERVER_ERROR_STATUS
                     or attempt >= config.chunk_retries

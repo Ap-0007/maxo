@@ -208,9 +208,14 @@ class Bot(BaseAsyncClient):
         self,
         upload_url: str,
         file: InputFile,
+        size: int | None = None,
     ) -> UploadMediaResult | None:
-        """Загружает медиа по `upload_url` частями."""
-        return await self.state.api_client.upload_resumable(upload_url, file)
+        """
+        Загружает медиа по `upload_url` частями.
+
+        `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
+        """
+        return await self.state.api_client.upload_resumable(upload_url, file, size)
 
     # Bots
 

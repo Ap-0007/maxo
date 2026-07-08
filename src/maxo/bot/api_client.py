@@ -75,14 +75,14 @@ class MaxApiClient(AiohttpAsyncClient):
         json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
     ) -> None:
         self._token = token
-        self._ssl_context = _build_ssl_context()
+        self._ssl_context: ssl.SSLContext | None = None
 
         if upload_config is None:
             upload_config = UploadConfig()
         self._upload_config = upload_config
 
         if session is None:
-            connector = TCPConnector(ssl=self._ssl_context)
+            connector = TCPConnector(ssl=self._get_ssl_context())
             session = ClientSession(connector=connector)
 
         if AUTHORIZATION not in session.headers:
@@ -110,8 +110,13 @@ class MaxApiClient(AiohttpAsyncClient):
         self,
         url: str,
         file: InputFile,
+        size: int | None = None,
     ) -> UploadMediaResult | None:
-        """Загружает файл частями, без чтения всего файла в память."""
+        """
+        Загружает файл частями, без чтения всего файла в память.
+
+        `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
+        """
         session = self._new_upload_session()
         try:
             return await resumable_upload(
@@ -121,13 +126,19 @@ class MaxApiClient(AiohttpAsyncClient):
                 response_loader=self.response_loader,
                 json_loads=self.json_loads,
                 config=self._upload_config,
+                size=size,
             )
         finally:
             await session.close()
 
+    def _get_ssl_context(self) -> ssl.SSLContext:
+        if self._ssl_context is None:
+            self._ssl_context = _build_ssl_context()
+        return self._ssl_context
+
     def _new_upload_session(self) -> ClientSession:
         """Отдельная сессия с одним соединением для resumable-загрузки."""
-        connector = TCPConnector(ssl=self._ssl_context, limit=1)
+        connector = TCPConnector(ssl=self._get_ssl_context(), limit=1)
         session = ClientSession(connector=connector)
         session.headers[AUTHORIZATION] = self._token
         session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"

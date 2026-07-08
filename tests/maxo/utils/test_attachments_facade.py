@@ -78,7 +78,10 @@ async def test_build_media_only_input_files(facade: DummyFacade) -> None:
         build_media_attachments_mock.return_value = uploaded_attachments
         result = await facade._build_media(input_files)
 
-        build_media_attachments_mock.assert_called_once_with(input_files)
+        build_media_attachments_mock.assert_called_once_with(
+            input_files,
+            [len(b"photo_bytes"), len(b"video_bytes")],
+        )
         sleep_mock.assert_not_awaited()
 
     assert result == uploaded_attachments
@@ -173,7 +176,10 @@ async def test_build_media_mixed_order(facade: DummyFacade) -> None:
         upload_files_mock.return_value = uploaded_attachments
         result = await facade._build_media(media)
 
-        upload_files_mock.assert_called_once_with([input_file1, input_file2])
+        upload_files_mock.assert_called_once_with(
+            [input_file1, input_file2],
+            [len(b"photo_bytes"), len(b"photo_bytes2")],
+        )
         sleep_mock.assert_not_awaited()
 
     assert result == expected_result
@@ -301,6 +307,7 @@ async def test_upload_media_uses_resumable_when_configured(
     bot_mock.upload_media_resumable.assert_awaited_once_with(
         "https://example.com/upload",
         file,
+        len(b"image"),
     )
     bot_mock.upload_media.assert_not_called()
 
@@ -396,3 +403,27 @@ async def test_upload_media_raises_without_any_token(
 
     with pytest.raises(RuntimeError, match="Could not get upload token"):
         await facade.upload_media(file)
+
+
+@pytest.mark.parametrize(
+    "method",
+    [UploadMethod.SINGLE, UploadMethod.AUTO, UploadMethod.RESUMABLE],
+)
+async def test_upload_media_empty_file_rejected(
+    facade: DummyFacade,
+    bot_mock: AsyncMock,
+    method: UploadMethod,
+) -> None:
+    file = BufferedInputFile.file(b"", "empty.bin")
+    bot_mock.upload_config = UploadConfig(method=method)
+    bot_mock.get_upload_url = AsyncMock(
+        return_value=UploadEndpoint(url="https://example.com"),
+    )
+    bot_mock.upload_media = AsyncMock()
+    bot_mock.upload_media_resumable = AsyncMock()
+
+    with pytest.raises(ValueError, match="пустой файл"):
+        await facade.upload_media(file)
+
+    bot_mock.upload_media.assert_not_called()
+    bot_mock.upload_media_resumable.assert_not_called()

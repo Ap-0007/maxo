@@ -127,4 +127,5 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
     mock_state.api_client.upload_resumable.assert_awaited_once_with(
         "https://example.com/upload",
         file,
+        None,
     )

@@ -2,6 +2,7 @@ import json
 from collections.abc import Iterable
 from typing import Any
 from unittest.mock import AsyncMock, patch
+from urllib.parse import unquote
 
 import pytest
 from aiohttp import ClientConnectionError
@@ -121,6 +122,56 @@ async def test_empty_file_raises() -> None:
 
     with pytest.raises(ValueError, match="пустой файл"):
         await _run(session, b"", 1024)
+
+
+async def test_content_disposition_is_latin1_safe() -> None:
+    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    file_name = 'файл "1".bin'
+    file = BufferedInputFile.file(b"hello", file_name)
+
+    await resumable_upload(
+        url="https://upload.example/upload.do",
+        file=file,
+        session=session,  # type: ignore[arg-type]
+        response_loader=_Retort(),
+        json_loads=json.loads,
+    )
+
+    disposition = session.calls[0]["headers"]["Content-Disposition"]
+    disposition.encode("latin-1")
+    encoded = disposition.removeprefix('attachment; filename="').removesuffix('"')
+    assert unquote(encoded) == file_name
+
+
+async def test_explicit_total_skips_size_call() -> None:
+    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    file = BufferedInputFile.file(b"hello", "f.bin")
+
+    with patch.object(
+        BufferedInputFile,
+        "size",
+        side_effect=AssertionError("size() не должен вызываться"),
+    ):
+        result = await resumable_upload(
+            url="https://upload.example/upload.do",
+            file=file,
+            session=session,  # type: ignore[arg-type]
+            response_loader=_Retort(),
+            json_loads=json.loads,
+            size=5,
+        )
+
+    assert result is not None
+    assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
+
+
+async def test_redirect_status_raises_without_retry() -> None:
+    session = _FakeSession([_FakeResponse(302, b"redirect")])
+
+    with pytest.raises(MaxBotApiError):
+        await _run(session, b"hello", 1024)
+
+    assert len(session.calls) == 1
 
 
 async def test_default_config_is_used() -> None:

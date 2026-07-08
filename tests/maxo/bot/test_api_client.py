@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from adaptix import Retort
+from aiohttp import ClientSession
 from multidict import CIMultiDict
 from unihttp.http import HTTPResponse
 
@@ -111,8 +112,27 @@ async def test_upload_resumable_closes_dedicated_session(
         response_loader=api_client.response_loader,
         json_loads=api_client.json_loads,
         config=api_client._upload_config,
+        total=None,
     )
     session.close.assert_awaited_once()
+
+
+async def test_ssl_context_is_lazy_with_custom_session() -> None:
+    retort = Retort()
+    session = ClientSession()
+    client = MaxApiClient(
+        token=TOKEN,
+        request_dumper=retort,
+        response_loader=retort,
+        session=session,
+    )
+    try:
+        assert client._ssl_context is None
+        first = client._get_ssl_context()
+        second = client._get_ssl_context()
+        assert first is second
+    finally:
+        await client.close()
 
 
 async def test_new_upload_session_uses_dedicated_connector(

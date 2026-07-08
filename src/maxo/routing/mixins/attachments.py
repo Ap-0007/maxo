@@ -77,18 +77,23 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                 attachments[i] = file
 
         if files_to_upload:
-            uploaded_files = await self.build_media_attachments(files_to_upload)
+            # Размер каждого файла считаем один раз и прокидываем дальше
+            sizes = await asyncio.gather(*(file.size() for file in files_to_upload))
+            uploaded_files = await self.build_media_attachments(files_to_upload, sizes)
             for i, uploaded_file in zip(file_indices, uploaded_files, strict=True):
                 attachments[i] = uploaded_file
 
-            await self._wait_media_processing(files_to_upload)
+            await self._wait_media_processing(files_to_upload, sizes)
 
         return [attachment for attachment in attachments if attachment is not None]
 
-    async def _wait_media_processing(self, files: Sequence[InputFile]) -> None:
+    async def _wait_media_processing(
+        self,
+        files: Sequence[InputFile],
+        sizes: Sequence[int],
+    ) -> None:
         """Делает первичную паузу перед отправкой загруженных файлов."""
         config = self.bot.upload_config
-        sizes = await asyncio.gather(*(file.size() for file in files))
         delays = [
             config.estimated_processing_delay(file.type, size)
             for file, size in zip(files, sizes, strict=True)
@@ -100,10 +105,19 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
     async def build_media_attachments(
         self,
         files: Sequence[InputFile],
+        sizes: Sequence[int] | None = None,
     ) -> Sequence[MediaAttachmentsRequests]:
         attachments: list[MediaAttachmentsRequests] = []
 
-        result = await asyncio.gather(*(self.upload_media(file) for file in files))
+        if sizes is None:
+            sizes = await asyncio.gather(*(file.size() for file in files))
+
+        result = await asyncio.gather(
+            *(
+                self.upload_media(file, size)
+                for file, size in zip(files, sizes, strict=True)
+            ),
+        )
 
         for type_, token in result:
             factory = MEDIA_ATTACHMENT_FACTORIES.get(type_)
@@ -115,10 +129,20 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
 
         return attachments
 
-    async def upload_media(self, file: InputFile) -> tuple[UploadType, str]:
+    async def upload_media(
+        self,
+        file: InputFile,
+        size: int | None = None,
+    ) -> tuple[UploadType, str]:
+        if size is None:
+            size = await file.size()
+        if size <= 0:
+            msg = "Нельзя загрузить пустой файл"
+            raise ValueError(msg)
+
         result: UploadEndpoint = await self.bot.get_upload_url(type=file.type)
 
-        upload_result = await self._upload_file(file, result.url)
+        upload_result = await self._upload_file(file, result.url, size)
 
         token: str
         if is_defined(result.token):
@@ -130,9 +154,14 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
 
         return file.type, token
 
-    async def _upload_file(self, file: InputFile, url: str) -> UploadMediaResult | None:
-        if self.bot.upload_config.should_use_resumable(await file.size()):
-            return await self.bot.upload_media_resumable(url, file)
+    async def _upload_file(
+        self,
+        file: InputFile,
+        url: str,
+        size: int,
+    ) -> UploadMediaResult | None:
+        if self.bot.upload_config.should_use_resumable(size):
+            return await self.bot.upload_media_resumable(url, file, size)
 
         try:
             return await self.bot.upload_media(
