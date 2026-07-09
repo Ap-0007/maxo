@@ -307,3 +307,15 @@ asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "@overload",
+    "if sys.version_info",
+    "except ImportError:",
+    "raise NotImplementedError",
+]
