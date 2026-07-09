@@ -25,7 +25,7 @@ from maxo.dialogs.manager.updater import Updater
 from maxo.dialogs.utils import is_user_loaded
 from maxo.enums import ChatType
 from maxo.fsm import State
-from maxo.types import Recipient, User
+from maxo.types import Chat, ChatMembersList, Recipient, User
 
 
 class BgManager(BaseDialogManager):
@@ -126,25 +126,25 @@ class BgManager(BaseDialogManager):
     async def _load(self) -> None:
         if not self.load:
             return
-        user = self._event_context.user
-        chat_id = self._event_context.chat_id
-        user_id = self._event_context.user_id
-        if user is None or chat_id is None or user_id is None:
-            return
+
         bot = self._event_context.bot
-        if not is_user_loaded(user):
+        if not is_user_loaded(self._event_context.user):
             loggers.dialogs.debug(
                 "load user %s from chat %s",
-                user_id,
-                chat_id,
+                self._event_context.user_id,
+                self._event_context.chat_id,
             )
-            chat_members = await bot.get_members(
-                chat_id=chat_id,
-                user_ids=[user_id],
-            )
-            if chat_members.members:
-                self._event_context.user = chat_members.members[0]
-
+            if self._event_context.chat_type == ChatType.DIALOG:
+                chat: Chat = await bot.get_chat(chat_id=self._event_context.chat_id)
+                self._event_context.chat = chat
+                self._event_context.user = chat.unsafe_dialog_with_user
+            else:
+                chat_members: ChatMembersList = await bot.get_members(
+                    chat_id=self._event_context.chat_id,
+                    user_ids=[self._event_context.user_id],
+                )
+                if chat_members.members:
+                    self._event_context.user = chat_members.members[0]
     async def done(
         self,
         result: Any = None,

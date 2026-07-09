@@ -34,7 +34,7 @@ class Renderer:
             router = raw_router()
         else:
             router = raw_router
-        return cast("BaseRouter", router)
+        return cast(BaseRouter, router)
 
     async def _load_preview(self) -> str:
         router = await self._get_router()

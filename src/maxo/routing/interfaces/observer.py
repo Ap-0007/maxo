@@ -51,7 +51,7 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
     @abstractmethod
     def __call__(
         self,
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         raise NotImplementedError
 
@@ -59,7 +59,7 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
     def handler(
         self,
         handler_fn: _HandlerFnT,
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> _HandlerFnT:
         raise NotImplementedError
 
@@ -67,12 +67,12 @@ class Observer(Protocol[_UpdateT, _HandlerT, _HandlerFnT]):
     def register(
         self,
         handler_fn: _HandlerFnT,
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> _HandlerFnT:
-        return self.handler(handler_fn, filter)
+        return self.handler(handler_fn, *filters)
 
     @abstractmethod
-    def filter(self, filter: Filter[_UpdateT]) -> None:
+    def filter(self, *filters: Filter[_UpdateT]) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -19,6 +19,7 @@ from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.updates.updates import Updates
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
+from tests.constants import TOKEN
 
 
 @dataclass
@@ -33,7 +34,7 @@ def mock_api_client() -> AsyncMock:
 
 @pytest.fixture
 def mock_bot(mock_api_client: AsyncMock) -> Bot:
-    bot = Bot("test_token")
+    bot = Bot(token=TOKEN, warming_up=False)
     bot._state = RunningBotState(
         info=BotInfo(
             user_id=123,

@@ -7,6 +7,7 @@ from maxo.routing.filters import Command
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.utils.formatting import (
+    BlockQuote,
     Bold,
     Heading,
     Highlighted,
@@ -50,7 +51,9 @@ async def start_handler(update: MessageCreated) -> None:
         ),
         "\n",
         Highlighted("Это выделенный текст"),
-        "\n\n",
+        "\n",
+        BlockQuote("Это цитата"),
+        "\n\n"
         "Вы также можете использовать вспомогательные функции для создания списков:",
         "\n\n",
         as_list(

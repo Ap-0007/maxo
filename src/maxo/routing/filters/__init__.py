@@ -8,6 +8,7 @@ from .exception import ExceptionMessageFilter, ExceptionTypeFilter
 from .logic import AndFilter, InvertFilter, OrFilter, and_f, invert_f, or_f
 from .payload import Payload
 from .state import StateFilter
+from .sync import SyncFilter
 
 __all__ = (
     "AlwaysFalseFilter",
@@ -24,6 +25,7 @@ __all__ = (
     "OrFilter",
     "Payload",
     "StateFilter",
+    "SyncFilter",
     "and_f",
     "invert_f",
     "or_f",

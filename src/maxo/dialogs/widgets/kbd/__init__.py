@@ -13,6 +13,7 @@ from .calendar_kbd import (
     ManagedCalendar,
 )
 from .checkbox import Checkbox, ManagedCheckbox
+from .confirm_button import ConfirmButton
 from .copy import CopyText
 from .counter import Counter, ManagedCounter
 from .group import Column, Group, Row
@@ -52,6 +53,7 @@ __all__ = (
     "Checkbox",
     "Clipboard",
     "Column",
+    "ConfirmButton",
     "CopyText",
     "Counter",
     "CurrentPage",

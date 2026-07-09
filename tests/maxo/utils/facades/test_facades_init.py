@@ -17,6 +17,7 @@ from maxo.routing.facades.message_callback import MessageCallbackFacade
 from maxo.routing.facades.message_created import MessageCreatedFacade
 from maxo.routing.facades.message_edited import MessageEditedFacade
 from maxo.routing.facades.message_removed import MessageRemovedFacade
+from maxo.routing.facades.middleware import FACADE_KEY, FacadeMiddleware
 from maxo.routing.facades.user_added_to_chat import UserAddedToChatFacade
 from maxo.routing.facades.user_removed_from_chat import UserRemovedFromChatFacade
 from maxo.routing.mixins import (
@@ -30,7 +31,7 @@ from maxo.routing.mixins import (
 from maxo.routing.mixins.callback import CallbackMethodsFacade
 
 
-def test_deprecation_warning():
+def test_deprecation_warning() -> None:
     with pytest.warns(
         DeprecationWarning,
         match="Фасады были перенесены из `maxo.utils.facades`",
@@ -40,7 +41,7 @@ def test_deprecation_warning():
     importlib.reload(maxo.utils.facades)
 
 
-def test_all_facades_are_exported():
+def test_all_facades_are_exported() -> None:
     import maxo.utils.facades  # noqa: PLC0415
 
     assert hasattr(maxo.utils.facades, "AttachmentsFacade")
@@ -114,3 +115,10 @@ def test_all_facades_are_exported():
 
     assert hasattr(maxo.utils.facades, "UserRemovedFromChatFacade")
     assert maxo.utils.facades.UserRemovedFromChatFacade is UserRemovedFromChatFacade
+
+
+def test_middleware_reexports() -> None:
+    import maxo.utils.facades.middleware  # noqa: PLC0415
+
+    assert maxo.utils.facades.middleware.FACADE_KEY is FACADE_KEY
+    assert maxo.utils.facades.middleware.FacadeMiddleware is FacadeMiddleware

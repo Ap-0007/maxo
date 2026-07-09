@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://maxo.readthedocs.io/ru/latest/sitemap.xml

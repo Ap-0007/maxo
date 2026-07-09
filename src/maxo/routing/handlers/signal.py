@@ -4,7 +4,7 @@ from functools import partial
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.filters.always import AlwaysTrueFilter
+from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
 from maxo.routing.signals.base import BaseSignal
@@ -34,12 +34,9 @@ class SignalHandler(Handler[_SignalT, _ReturnT_co], Generic[_SignalT, _ReturnT_c
     def __init__(
         self,
         handler_fn: SignalHandlerFn[_SignalT, _ReturnT_co],
-        filter: Filter[_SignalT] | None = None,
+        *filters: Filter[_SignalT],
     ) -> None:
-        if filter is None:
-            filter = AlwaysTrueFilter()
-
-        self._filter = filter
+        self._filter = combine_filters(*filters)
         self._handler_fn = handler_fn
         self._awaitable = inspect.isawaitable(
             handler_fn,

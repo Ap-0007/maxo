@@ -21,6 +21,7 @@ from maxo.enums import (
     UpdateType,
 )
 from maxo.omit import is_omitted
+from maxo.routing.mixins import message
 from maxo.routing.updates import (
     BotAddedToChat,
     BotRemovedFromChat,
@@ -174,6 +175,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
         recipe=[

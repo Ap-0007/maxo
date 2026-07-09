@@ -1,8 +1,12 @@
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, Mock
+
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import ListGroup
 from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.types import CallbackButton, LinkButton
+from maxo.routing.updates import MessageCallback
+from maxo.types import Callback, CallbackButton, LinkButton, User
 
 
 async def test_render_list_group_with_url_button(mock_manager: DialogManager) -> None:
@@ -54,3 +58,181 @@ async def test_render_list_group_with_callback_button(
     assert isinstance(button, CallbackButton)
     assert button.text == "Callback c"
     assert button.payload == "list:c:button"
+
+
+async def test_get_page_count_without_pagination(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Const("Button"), "button"),
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+    )
+
+    page_count = await list_group.get_page_count({}, mock_manager)
+
+    assert page_count == 1
+
+
+async def test_get_page_count_with_pagination(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Const("Button"), "button"),
+        id="list",
+        items=["a", "b", "c", "d", "e"],
+        item_id_getter=lambda item: item,
+        page_size=2,
+    )
+
+    page_count = await list_group.get_page_count({}, mock_manager)
+
+    assert page_count == 3
+
+
+async def test_render_with_pagination(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Format("Button {item}"), "button"),
+        id="list",
+        items=["a", "b", "c", "d", "e"],
+        item_id_getter=lambda item: item,
+        page_size=2,
+    )
+
+    keyboard = await list_group.render_keyboard(data={}, manager=mock_manager)
+
+    assert len(keyboard) == 2
+    assert keyboard[0][0].text == "Button a"
+    assert keyboard[1][0].text == "Button b"
+
+
+async def test_render_with_pagination_second_page(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Format("Button {item}"), "button"),
+        id="list",
+        items=["a", "b", "c", "d", "e"],
+        item_id_getter=lambda item: item,
+        page_size=2,
+    )
+
+    await list_group.set_page(Mock(), 1, mock_manager)
+    keyboard = await list_group.render_keyboard(data={}, manager=mock_manager)
+
+    assert len(keyboard) == 2
+    assert keyboard[0][0].text == "Button c"
+    assert keyboard[1][0].text == "Button d"
+
+
+async def test_find_widget(mock_manager: DialogManager) -> None:
+    button = Button(Const("Button"), "button")
+    list_group = ListGroup(
+        button,
+        id="list",
+        items=["a"],
+        item_id_getter=lambda item: item,
+    )
+
+    widget = list_group.find("list")
+    assert widget == list_group
+
+    widget = list_group.find("button")
+    assert widget == button
+
+    widget = list_group.find("nonexistent")
+    assert widget is None
+
+
+async def test_process_item_callback(mock_manager: DialogManager) -> None:
+    on_click = AsyncMock()
+    button = Button(Const("Button"), "button", on_click=on_click)
+    list_group = ListGroup(
+        button,
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+    )
+
+    fake_user = User(
+        user_id=1,
+        is_bot=False,
+        first_name="Test",
+        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+    )
+    callback = MessageCallback(
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        callback=Callback(
+            callback_id="1",
+            user=fake_user,
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            payload="list:a:button",
+        ),
+    )
+
+    result = await list_group._process_item_callback(
+        callback,
+        "a:button",
+        None,
+        mock_manager,
+    )
+
+    assert result is True
+    on_click.assert_called_once()
+
+
+async def test_get_and_set_page(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Const("Button"), "button"),
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+        page_size=1,
+    )
+
+    page = await list_group.get_page(mock_manager)
+    assert page == 0
+
+    await list_group.set_page(Mock(), 2, mock_manager)
+    page = await list_group.get_page(mock_manager)
+    assert page == 2
+
+
+async def test_on_page_changed(mock_manager: DialogManager) -> None:
+    on_page_changed = AsyncMock()
+    list_group = ListGroup(
+        Button(Const("Button"), "button"),
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+        page_size=1,
+        on_page_changed=on_page_changed,
+    )
+
+    await list_group.set_page(Mock(), 1, mock_manager)
+
+    on_page_changed.assert_called_once()
+
+
+async def test_managed_list_group(mock_manager: DialogManager) -> None:
+    list_group = ListGroup(
+        Button(Const("Button"), "button"),
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+    )
+
+    managed = list_group.managed(mock_manager)
+
+    assert managed.widget == list_group
+    assert managed.manager == mock_manager
+
+
+async def test_managed_find_for_item(mock_manager: DialogManager) -> None:
+    button = Button(Const("Button"), "button")
+    list_group = ListGroup(
+        button,
+        id="list",
+        items=["a", "b", "c"],
+        item_id_getter=lambda item: item,
+    )
+
+    managed = list_group.managed(mock_manager)
+    managed_button = managed.find_for_item("button", "a")
+
+    assert managed_button is not None

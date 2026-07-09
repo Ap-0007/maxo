@@ -19,10 +19,15 @@ if TYPE_CHECKING:
 class MessageMethodsFacade(ChatMethodsFacade):
     __slots__ = ()
 
-    @property
-    @abstractmethod
-    def message(self) -> "Message":
-        raise NotImplementedError
+    if TYPE_CHECKING:
+
+        @property
+        @abstractmethod
+        def message(self) -> "Message":
+            raise NotImplementedError
+
+    else:
+        message: "Message"
 
     @property
     def chat_id(self) -> int:

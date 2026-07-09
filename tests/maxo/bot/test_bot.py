@@ -8,8 +8,7 @@ from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import TOKEN
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -20,17 +19,17 @@ class MockMaxBotApiError(MaxBotApiError):
 
 
 @pytest.fixture
-def bot():
-    return Bot(token=TOKEN)
+def bot() -> Bot:
+    return Bot(token=TOKEN, warming_up=False)
 
 
-async def test_bot_init(bot: Bot):
+async def test_bot_init(bot: Bot) -> None:
     assert bot.token == TOKEN
     assert isinstance(bot.state, EmptyBotState)
 
 
-async def test_bot_start_and_close():
-    bot = Bot(token=TOKEN)
+async def test_bot_start_and_close() -> None:
+    bot = Bot(token=TOKEN, warming_up=False)
     assert isinstance(bot.state, EmptyBotState)
 
     with patch("maxo.bot.bot.MaxApiClient") as mock_api_client_class:

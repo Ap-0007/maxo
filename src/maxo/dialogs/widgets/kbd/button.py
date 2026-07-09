@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, TypeAlias
 
 from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
@@ -8,13 +8,16 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.omit import Omittable, Omitted
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.updates import MessageCallback
 from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButton
 
 from .base import Keyboard
 
-OnClick = Callable[[MessageCallback, "Button", DialogManager], Awaitable[Any]]
+OnClick: TypeAlias = Callable[
+    [MessageCallback, "Button", DialogManager],
+    Awaitable[Any],
+]
 
 
 class Button(Keyboard):
@@ -47,7 +50,7 @@ class Button(Keyboard):
             [
                 CallbackButton(
                     text=await self.text.render_text(data, manager),
-                    payload=self._own_payload() or "",
+                    payload=self._own_payload(),
                 ),
             ],
         ]
@@ -87,12 +90,14 @@ class WebApp(Keyboard):
         self,
         text: TextWidget,
         web_app: TextWidget,
+        payload: Omittable[TextWidget] = Omitted(),
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)
         self.text = text
         self.web_app = web_app
+        self.payload = payload
         self.contact_id = contact_id
 
     async def _render_keyboard(
@@ -103,11 +108,16 @@ class WebApp(Keyboard):
         text = await self.text.render_text(data, manager)
         web_app = await self.web_app.render_text(data, manager)
 
+        payload: Omittable[str] = Omitted()
+        if is_defined(self.payload):
+            payload = await self.payload.render_text(data, manager)
+
         return [
             [
                 OpenAppButton(
                     text=text,
                     web_app=web_app,
+                    payload=payload,
                     contact_id=self.contact_id,
                 ),
             ],
