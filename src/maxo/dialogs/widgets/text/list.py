@@ -20,8 +20,13 @@ class List(Text, BaseScroll):  # type: ignore[misc]
         page_size: int | None = None,
         on_page_changed: OnPageChangedVariants = None,
     ) -> None:
+        # Постраничный `List` хранит номер страницы в `widget_data` по `id`.
+        # Без `id` все такие виджеты делили бы один ключ и затирали друг друга.
+        if page_size is not None and id is None:
+            raise ValueError("`List` с `page_size` требует `id`")
+
         Text.__init__(self, when=when)
-        BaseScroll.__init__(self, id=id or "", on_page_changed=on_page_changed)
+        BaseScroll.__init__(self, id=id, on_page_changed=on_page_changed)
         self.field = field
         self.sep = sep
         self.items_getter = get_items_getter(items)

@@ -64,7 +64,7 @@ OnPageChangedVariants = OnPageChanged | WidgetEventProcessor | None
 class BaseScroll(Actionable, Scroll, ABC):
     def __init__(
         self,
-        id: str,
+        id: str | None = None,
         on_page_changed: OnPageChangedVariants = None,
     ) -> None:
         super().__init__(id=id)

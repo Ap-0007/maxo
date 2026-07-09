@@ -607,8 +607,12 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
         finally:
             stored_proxy: StorageProxy | None = ctx.get(STORAGE_KEY)
             if stored_proxy is not None:
-                await stored_proxy.unlock()
+                # Сначала сохраняем, потом снимаем лок, как в
+                # context_saver_middleware + context_unlocker_middleware.
+                # Иначе параллельный апдейт того же пользователя захватит лок
+                # и прочитает ещё не сохранённые context/stack.
                 context = ctx.get(CONTEXT_KEY)
                 if context is not None:
                     await stored_proxy.save_context(context)
                 await stored_proxy.save_stack(ctx.get(STACK_KEY))
+                await stored_proxy.unlock()

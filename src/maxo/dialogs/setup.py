@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable
-from typing import Any, cast
+from typing import Any
 
 from maxo import Ctx, Dispatcher, Router
 from maxo.dialogs.api.entities import (
@@ -70,13 +70,16 @@ class DialogRegistry(DialogRegistryProtocol):
 
     def find_dialog(self, state: State | str) -> DialogProtocol:
         self._ensure_loaded()
-        group = cast(State, state).group
-        try:
-            return self._dialogs[group]
-        except KeyError as e:
+        group = (
+            self._states_groups.get(state) if isinstance(state, str) else state.group
+        )
+        dialog = self._dialogs.get(group) if group is not None else None
+        if dialog is None:
             raise UnregisteredDialogError(
-                f"No dialog found for `{group}` (looking by state `{state}`)",
-            ) from e
+                f"No dialog found for `{group if group is not None else state}` "
+                f"(looking by state `{state}`)",
+            )
+        return dialog
 
     def states_groups(self) -> dict[str, type[StatesGroup]]:
         self._ensure_loaded()

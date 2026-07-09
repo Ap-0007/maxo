@@ -117,6 +117,7 @@ tests = [
     "nox-uv==0.7.1",
     "pytest-aiohttp==1.0.5",
     "httpx2==2.5.0",
+    "httpx==0.28.1",
 ]
 lint = [
     "mypy==2.1.0",

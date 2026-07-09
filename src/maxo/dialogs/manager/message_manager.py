@@ -267,9 +267,12 @@ class MessageManager(MessageManagerProtocol):
             new_message.keyboard,
             new_message.media,
         )
+        recipient = new_message.recipient
+        chat_id = Omitted() if recipient.chat_id is None else recipient.chat_id
+        user_id = Omitted() if recipient.user_id is None else recipient.user_id
         result = await bot.send_message(
-            chat_id=new_message.recipient.chat_id or Omitted(),
-            user_id=new_message.recipient.user_id or Omitted(),
+            chat_id=chat_id,
+            user_id=user_id,
             text=new_message.text,
             link=new_message.link_to,
             notify=True,

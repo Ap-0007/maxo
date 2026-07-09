@@ -19,7 +19,7 @@ class Actionable(BaseWidget):
         self.widget_id = id
 
     def find(self, widget_id: str) -> Optional["Actionable"]:
-        """Find nested widget or current one by id."""
+        """Найти вложенный виджет или текущий по `id`."""
         if self.widget_id is not None and self.widget_id == widget_id:
             return self
         return None
@@ -29,7 +29,7 @@ class Actionable(BaseWidget):
         manager: DialogManager,
         default: T,
     ) -> Any | T:
-        """Get data for current widget id, setting default if needed."""
+        """Получить данные виджета по его `id`, подставив `default` при отсутствии."""
         assert self.widget_id is not None  # noqa: S101
         widget_data = cast(dict[str, Any], manager.current_context().widget_data)
         return widget_data.setdefault(self.widget_id, default)
@@ -39,7 +39,7 @@ class Actionable(BaseWidget):
         manager: DialogManager,
         value: T,
     ) -> None:
-        """Set data for current widget id."""
+        """Записать данные виджета по его `id`."""
         assert self.widget_id is not None  # noqa: S101
         widget_data = cast(
             dict[str, Any],
