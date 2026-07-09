@@ -69,8 +69,20 @@
 
 .. code-block:: python
 
-    dispatcher.message_created.handler(start, Command("start"), MagicFilter(F.text == "hello"))
-    dispatcher.message_created.register(start, Command("start"), MagicFilter(F.text == "hello"))
+    dispatcher.message_created.handler(
+        start,
+        Command("start"),
+        MagicFilter(F.text == "hello"),
+    )
+    dispatcher.message_created.register(
+        start,
+        Command("start"),
+        MagicFilter(F.text == "hello"),
+    )
+    dispatcher.message_created.filter(
+        Command("start"),
+        MagicFilter(F.text == "hello"),
+    )
 
 Magic Filter
 ------------

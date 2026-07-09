@@ -132,16 +132,7 @@ invert_f = InvertFilter
 
 
 def combine_filters(*filters: Filter[_UpdateT] | None) -> Filter[_UpdateT]:
-    """
-    Склеивает переданные фильтры в один по правилу `И`.
-
-    - Пустой набор (или только `None`) -> `AlwaysTrueFilter`.
-    - Один фильтр -> он сам, без лишней обёртки.
-    - Несколько фильтров -> `AndFilter`, объединяющий их.
-
-    `None` в наборе игнорируется, чтобы сохранить обратную совместимость
-    со старым параметром `filter: Filter | None`.
-    """
+    """Склеивает фильтры в один фильтр по правилу `И`."""
     real_filters = [filter_ for filter_ in filters if filter_ is not None]
     if not real_filters:
         return AlwaysTrueFilter()

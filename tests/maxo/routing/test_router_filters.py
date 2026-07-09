@@ -228,6 +228,29 @@ async def test_handler_multiple_filters_all_true_runs_handler(ctx: Ctx) -> None:
     assert ctx["execution_order"] == ["first_filter", "second_filter", "handler"]
 
 
+async def test_register_multiple_filters_all_true_runs_handler(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class FirstFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("second_filter")
+            return True
+
+    dp.message_created.register(handler, FirstFilter(), SecondFilter())
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result == "OK"
+    assert ctx["execution_order"] == ["first_filter", "second_filter", "handler"]
+
+
 async def test_handler_multiple_filters_one_false_skips_handler(ctx: Ctx) -> None:
     dp = Dispatcher()
 
@@ -242,6 +265,30 @@ async def test_handler_multiple_filters_one_false_skips_handler(ctx: Ctx) -> Non
             return False
 
     dp.message_created.handler(handler, FirstFilter(), SecondFilter())
+
+    await dp.feed_signal(BeforeStartup())
+    ctx["execution_order"] = []
+    result = await dp.trigger(ctx)
+
+    assert result is UNHANDLED
+    assert ctx["execution_order"] == ["first_filter", "second_filter"]
+
+
+async def test_observer_multiple_filters_combined_as_and(ctx: Ctx) -> None:
+    dp = Dispatcher()
+
+    class FirstFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[MessageCreated]):
+        async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+            ctx["execution_order"].append("second_filter")
+            return False
+
+    dp.message_created.filter(FirstFilter(), SecondFilter())
+    dp.message_created.handler(handler)
 
     await dp.feed_signal(BeforeStartup())
     ctx["execution_order"] = []

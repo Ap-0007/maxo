@@ -238,6 +238,30 @@ async def test_signal_handler_multiple_filters_all_true_runs_handler() -> None:
     assert order == ["first_filter", "second_filter", "handler"]
 
 
+async def test_signal_register_multiple_filters_all_true_runs_handler() -> None:
+    dp = Dispatcher()
+    order = []
+
+    class FirstFilter(BaseFilter[BeforeStartup]):
+        async def __call__(self, update: BeforeStartup, ctx: Ctx) -> bool:
+            order.append("first_filter")
+            return True
+
+    class SecondFilter(BaseFilter[BeforeStartup]):
+        async def __call__(self, update: BeforeStartup, ctx: Ctx) -> bool:
+            order.append("second_filter")
+            return True
+
+    async def before_startup() -> None:
+        order.append("handler")
+
+    dp.before_startup.register(before_startup, FirstFilter(), SecondFilter())
+
+    await dp.feed_signal(BeforeStartup())
+
+    assert order == ["first_filter", "second_filter", "handler"]
+
+
 async def test_signal_handler_multiple_filters_one_false_skips_handler() -> None:
     dp = Dispatcher()
     order = []
