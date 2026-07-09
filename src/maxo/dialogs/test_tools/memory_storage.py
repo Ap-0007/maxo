@@ -45,4 +45,4 @@ class JsonMemoryStorage(BaseStorage):
         self.storage[key].data = json.dumps(dict(data))
 
     async def get_data(self, key: StorageKey) -> dict[str, Any]:
-        return cast("dict[str, Any]", json.loads(self.storage[key].data))
+        return cast(dict[str, Any], json.loads(self.storage[key].data))

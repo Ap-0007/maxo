@@ -70,7 +70,7 @@ class DialogRegistry(DialogRegistryProtocol):
 
     def find_dialog(self, state: State | str) -> DialogProtocol:
         self._ensure_loaded()
-        group = cast("State", state).group
+        group = cast(State, state).group
         try:
             return self._dialogs[group]
         except KeyError as e:

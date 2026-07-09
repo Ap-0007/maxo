@@ -199,3 +199,53 @@ async def test_handles_general_exception(
         )
         mock_api_client.call_method.assert_called_once()
         mock_feed_max_update.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "types",
+    [Omitted(), []],
+    ids=["omitted", "empty-list"],
+)
+async def test_start_collects_used_updates_when_types_not_given(
+    mock_bot: Bot,
+    types: Any,
+) -> None:
+    # Пустой список, как и Omitted(), означает "посчитать по роутерам",
+    # иначе бот молча перестаёт получать апдейты
+    dispatcher = Dispatcher()
+
+    @dispatcher.message_created()
+    async def _handler(update: Any) -> None: ...
+
+    long_polling = LongPolling(dispatcher=dispatcher)
+
+    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        return
+        yield  # pragma: no cover
+
+    with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
+        await long_polling.start(mock_bot, types=types, auto_close_bot=False)
+
+    assert spy.call_args.kwargs["types"] == ["message_created"]
+
+
+async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    @dispatcher.message_created()
+    async def _handler(update: Any) -> None: ...
+
+    long_polling = LongPolling(dispatcher=dispatcher)
+
+    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        return
+        yield  # pragma: no cover
+
+    with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
+        await long_polling.start(
+            mock_bot,
+            types=["bot_started"],
+            auto_close_bot=False,
+        )
+
+    assert spy.call_args.kwargs["types"] == ["bot_started"]

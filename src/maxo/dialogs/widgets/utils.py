@@ -33,7 +33,7 @@ def ensure_text(widget: str | TextWidget | Sequence[TextWidget]) -> TextWidget:
         return Format(widget)
     if isinstance(widget, Sequence):
         if len(widget) == 1:
-            return cast("TextWidget", widget[0])
+            return cast(TextWidget, widget[0])
         return MultiText(*widget)
     return widget
 
@@ -117,9 +117,9 @@ def ensure_widgets(
     return (
         ensure_text(texts),
         ensure_keyboard(keyboards),
-        ensure_input(cast("Sequence[BaseInput]", inputs)),
+        ensure_input(cast(Sequence[BaseInput], inputs)),
         ensure_media(media),
-        ensure_link_preview(cast("Sequence[LinkPreviewWidget]", link_preview)),
+        ensure_link_preview(cast(Sequence[LinkPreviewWidget], link_preview)),
     )
 
 

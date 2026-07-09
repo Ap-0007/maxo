@@ -52,7 +52,7 @@ class SubManager(DialogManager):
     def current_context(self) -> Context:
         context = self.manager.current_context()
         data = cast(
-            "dict[Any, Any]",
+            dict[Any, Any],
             context.widget_data.setdefault(self.widget_id, {}),
         )
         row_data = data.setdefault(self.item_id, {})
@@ -86,7 +86,7 @@ class SubManager(DialogManager):
         widget = self.widget.find(widget_id)
         if not widget:
             return None
-        return cast("Widget", widget.managed(self))
+        return cast(Widget, widget.managed(self))
 
     def find_in_parent(self, widget_id: str) -> Widget | None:
         return self.manager.find(widget_id)

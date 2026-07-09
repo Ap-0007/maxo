@@ -36,6 +36,22 @@ async def test_render_case(mock_manager: DialogManager) -> None:
     assert rendered_text == "10 is even!"
 
 
+async def test_render_case_magic_selector_returns_key_not_bool(
+    mock_manager: DialogManager,
+) -> None:
+    # magic-селектор обязан отдавать ключ ветки, а не приводиться к bool
+    case = Case(
+        {
+            "en": Const("Hello"),
+            "ru": Const("Привет"),
+        },
+        selector=F["lang"],
+    )
+
+    assert await case.render_text({"lang": "ru"}, mock_manager) == "Привет"
+    assert await case.render_text({"lang": "en"}, mock_manager) == "Hello"
+
+
 async def test_render_case_uses_default(mock_manager: DialogManager) -> None:
     case = Case(
         {

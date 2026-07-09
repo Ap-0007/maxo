@@ -9,9 +9,15 @@ from uuid import UUID, uuid4
 import pytest
 from magic_filter import F
 
+from maxo.enums import ChatType
 from maxo.integrations.magic_filter import MagicFilter
-from maxo.routing.filters.payload import Payload, _check_field_is_nullable
-from maxo.types import User
+from maxo.routing.filters.payload import (
+    MessageCallbackFilter,
+    Payload,
+    _check_field_is_nullable,
+)
+from maxo.routing.updates import MessageCreated
+from maxo.types import Message, MessageBody, Recipient, User
 
 
 class MyIntEnum(Enum):
@@ -380,3 +386,19 @@ class TestPayload:
         filter_object = MyPayload.filter(MagicFilter(F.foo == "test"))
         assert isinstance(filter_object.filter, MagicFilter)
         assert filter_object.payload is MyPayload
+
+
+async def test_message_callback_filter_ignores_foreign_update() -> None:
+    # Фильтр может быть по ошибке зарегистрирован на другом типе апдейта -
+    # он должен не сработать, а не уронить обработчик
+    filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
+    update = MessageCreated(
+        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        message=Message(
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            recipient=Recipient(chat_type=ChatType.CHAT, chat_id=1),
+            body=MessageBody(mid="m", seq=1, text="hi"),
+        ),
+    )
+
+    assert await filter_(update, {}) is False  # type: ignore[arg-type]

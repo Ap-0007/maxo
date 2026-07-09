@@ -168,5 +168,5 @@ class Or(Keyboard):
     def find(self, widget_id: str) -> Keyboard | None:
         for text in self.widgets:
             if found := text.find(widget_id):
-                return cast("Keyboard", found)
+                return cast(Keyboard, found)
         return None

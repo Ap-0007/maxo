@@ -35,7 +35,7 @@ class ManagerMiddleware(BaseMiddleware[MaxUpdate]):
     ) -> Any:
         if self._is_event_supported(ctx):
             dialog_manager = self.dialog_manager_factory(
-                event=cast("ChatEvent", update),
+                event=cast(ChatEvent, update),
                 ctx=ctx,
                 registry=self.registry,
                 router=self.router,

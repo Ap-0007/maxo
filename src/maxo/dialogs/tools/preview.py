@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import Any, Optional, cast
 
 import anyio
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -28,8 +28,10 @@ from maxo.dialogs.api.entities import (
     StartMode,
 )
 from maxo.dialogs.api.exceptions import NoContextError
+from maxo.dialogs.api.internal.widgets import Widget
 from maxo.dialogs.api.protocols.dialog import DialogProtocol
 from maxo.dialogs.api.protocols.manager import BaseDialogManager, DialogManager
+from maxo.dialogs.dialog import Dialog
 from maxo.dialogs.manager.manager_middleware import MANAGER_KEY
 from maxo.dialogs.setup import collect_dialogs
 from maxo.dialogs.utils import split_reply_callback
@@ -48,10 +50,6 @@ from maxo.types import Callback, CallbackButton, UpdateContext, User
 from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
 from maxo.types.recipient import Recipient
-
-if TYPE_CHECKING:
-    from maxo.dialogs.api.internal.widgets import Widget
-    from maxo.dialogs.dialog import Dialog
 
 
 @dataclass
@@ -245,7 +243,7 @@ class FakeManager(DialogManager):
         widget = self._dialog.find(widget_id)
         if not widget:
             return None
-        return cast("Widget", widget.managed(self))
+        return cast(Widget, widget.managed(self))
 
     async def update(
         self,
@@ -314,7 +312,7 @@ async def create_button(
     try:
         await dialog._callback_handler(
             message_callback,
-            ctx=cast("Ctx", manager.middleware_data),
+            ctx=cast(Ctx, manager.middleware_data),
             dialog_manager=manager,
         )
     except Exception:
@@ -345,7 +343,7 @@ async def render_input(
         manager.set_state(state)
         await dialog._message_handler(
             message_created,
-            ctx=cast("Ctx", manager.middleware_data),
+            ctx=cast(Ctx, manager.middleware_data),
             dialog_manager=manager,
         )
     except Exception:
@@ -496,7 +494,7 @@ async def render_preview_content(
         await render_dialog(
             manager=fake_manager,
             group=dialog.states_group(),
-            dialog=cast("Dialog", dialog),
+            dialog=cast(Dialog, dialog),
             simulate_events=simulate_events,
         )
         for dialog in collect_dialogs(router)

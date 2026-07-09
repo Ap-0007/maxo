@@ -25,11 +25,11 @@ class Group(Keyboard):
     def find(self, widget_id: str) -> Keyboard | None:
         widget = super().find(widget_id)
         if widget:
-            return cast("Keyboard", widget)
+            return cast(Keyboard, widget)
         for btn in self.buttons:
             widget = btn.find(widget_id)
             if widget:
-                return cast("Keyboard", widget)
+                return cast(Keyboard, widget)
         return None
 
     async def _render_keyboard(

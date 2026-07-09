@@ -47,7 +47,7 @@ class ChatMethodsFacade(AttachmentsFacade):
             chat_id=self.chat_id,
             text=text,
             attachments=cast(
-                "list[AttachmentsRequests | Attachments]",
+                list[AttachmentsRequests | Attachments],
                 prepared_attachments,
             ),
             link=link,

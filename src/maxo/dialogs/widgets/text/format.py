@@ -13,7 +13,7 @@ class _FormatDataStub:
 
     def __getitem__(self, item: Any) -> "_FormatDataStub":
         if item in self.data:
-            return cast("_FormatDataStub", self.data[item])
+            return cast(_FormatDataStub, self.data[item])
         if not self.name:
             return _FormatDataStub(item)
         return _FormatDataStub(f"{self.name}[{item}]")

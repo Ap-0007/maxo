@@ -43,5 +43,5 @@ class Case(Text):
     def find(self, widget_id: str) -> TextWidget | None:
         for text in self.texts.values():
             if found := text.find(widget_id):
-                return cast("TextWidget", found)
+                return cast(TextWidget, found)
         return None

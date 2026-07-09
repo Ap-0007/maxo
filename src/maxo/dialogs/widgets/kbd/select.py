@@ -300,7 +300,7 @@ class Radio(StatefulSelect[T], Generic[T]):
         item_id = str(self.item_id_getter(data["item"]))
         if manager.is_preview():
             return item_id == self._preview_checked_id(manager, item_id)
-        return self.is_checked(cast("T", item_id), manager)
+        return self.is_checked(cast(T, item_id), manager)
 
     async def _on_click(
         self,
@@ -309,7 +309,7 @@ class Radio(StatefulSelect[T], Generic[T]):
         manager: DialogManager,
         item_id: str,
     ) -> None:
-        await self.set_checked(callback, cast("T", item_id), manager)
+        await self.set_checked(callback, cast(T, item_id), manager)
 
     def managed(self, manager: DialogManager) -> "ManagedRadio[T]":
         return ManagedRadio(self, manager)
@@ -379,7 +379,7 @@ class Multiselect(StatefulSelect[T], Generic[T]):
         if manager.is_preview():
             # just stupid way to make it differ in preview
             return ord(item_id[-1]) % 2 != 0
-        return self.is_checked(cast("T", item_id), manager)
+        return self.is_checked(cast(T, item_id), manager)
 
     def is_checked(
         self,
@@ -433,8 +433,8 @@ class Multiselect(StatefulSelect[T], Generic[T]):
     ) -> None:
         await self.set_checked(
             callback,
-            cast("T", item_id),
-            not self.is_checked(cast("T", item_id), manager),
+            cast(T, item_id),
+            not self.is_checked(cast(T, item_id), manager),
             manager,
         )
 

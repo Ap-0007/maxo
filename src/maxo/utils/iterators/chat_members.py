@@ -40,8 +40,8 @@ class ChatMembersIterator(AsyncIterator[ChatMember]):
         while True:
             result = await self._bot.get_members(
                 chat_id=self._chat_id,
-                user_ids=cast("list[int] | Omitted | None", self._user_ids),
-                marker=cast("int | Omitted", self._marker),
+                user_ids=cast(list[int] | Omitted | None, self._user_ids),
+                marker=cast(int | Omitted, self._marker),
                 count=self._count,
             )
             self._marker = result.marker

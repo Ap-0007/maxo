@@ -157,7 +157,7 @@ class Dialog(Router, DialogProtocol):
         dialog_manager: DialogManager,
     ) -> None:
         old_context = dialog_manager.current_context()
-        _, payload = remove_intent_id(cast("str", callback.callback.payload))
+        _, payload = remove_intent_id(callback.callback.unsafe_payload)
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
@@ -256,7 +256,7 @@ class Dialog(Router, DialogProtocol):
         for w in self.windows.values():
             widget = w.find(widget_id)
             if widget:
-                return cast("_W", widget)
+                return cast(_W, widget)
         return None
 
     def __repr__(self) -> str:

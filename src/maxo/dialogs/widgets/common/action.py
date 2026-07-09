@@ -31,10 +31,7 @@ class Actionable(BaseWidget):
     ) -> Any | T:
         """Get data for current widget id, setting default if needed."""
         assert self.widget_id is not None  # noqa: S101
-        widget_data = cast(
-            "dict[str, Any]",
-            manager.current_context().widget_data,
-        )
+        widget_data = cast(dict[str, Any], manager.current_context().widget_data)
         return widget_data.setdefault(self.widget_id, default)
 
     def set_widget_data(
@@ -45,7 +42,7 @@ class Actionable(BaseWidget):
         """Set data for current widget id."""
         assert self.widget_id is not None  # noqa: S101
         widget_data = cast(
-            "dict[str, Any]",
+            dict[str, Any],
             manager.current_context().widget_data,
         )
         widget_data[self.widget_id] = value

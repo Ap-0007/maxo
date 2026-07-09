@@ -26,6 +26,7 @@ from maxo.types import (
     MessageBody,
     MessageStat,
     Recipient,
+    SimpleQueryResult,
     User,
 )
 
@@ -44,12 +45,14 @@ class FakeBot(Bot):
         )
         self._state = RunningBotState(info=info, api_client=AsyncMock())
 
-    async def answer_on_callback(  # type: ignore[override]
+    # `Bot.answer_on_callback` - это атрибут `bind_method(...)`, а не метод,
+    # поэтому подмена его в наследнике для mypy выглядит как covariant override.
+    async def answer_on_callback(  # type: ignore[mutable-override]
         self,
         *_: Any,
         **__: Any,
-    ) -> None:
-        pass
+    ) -> SimpleQueryResult:
+        return SimpleQueryResult(success=True)
 
     def __hash__(self) -> int:
         return 1000
@@ -232,7 +235,7 @@ class BotClient:
                 f"No button matching {locator} found",
             )
 
-        callback = self._new_callback(cast("CallbackButton", button))
+        callback = self._new_callback(cast(CallbackButton, button))
         await self.dp.feed_update(
             MaxoUpdate(
                 update=MessageCallback(

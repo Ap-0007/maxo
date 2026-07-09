@@ -797,7 +797,7 @@ class Calendar(Keyboard):
         if offset is None:
             offset = get_today(config.timezone)
             self.set_offset(offset, manager)
-        return cast("RawKeyboard", await view.render(config, offset, data, manager))
+        return cast(RawKeyboard, await view.render(config, offset, data, manager))
 
     def get_scope(self, manager: DialogManager) -> CalendarScope:
         calendar_data: CalendarData = self.get_widget_data(manager, {})

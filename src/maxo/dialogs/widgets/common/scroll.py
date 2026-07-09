@@ -106,7 +106,7 @@ def sync_scroll(
         if isinstance(scroll_id, str):
             scroll_ids = (scroll_id,)
         for id_ in scroll_ids:
-            other_scroll = cast("ManagedScroll", dialog_manager.find(id_))
+            other_scroll = cast(ManagedScroll, dialog_manager.find(id_))
             await other_scroll.set_page(page=page)
 
     return sync_scroll_on_page_changed

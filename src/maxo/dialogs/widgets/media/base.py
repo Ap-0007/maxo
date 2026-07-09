@@ -54,7 +54,7 @@ class Media(Whenable, BaseWidget, MediaWidget):
 
     def find(self, widget_id: str) -> "Media | None":
         # no reimplementation, just change return type
-        return cast("Media | None", super().find(widget_id))
+        return cast(Media | None, super().find(widget_id))
 
 
 class MultiMedia(Media):

@@ -137,7 +137,7 @@ class Text(Iterable[NodeType]):
 
         markup_class: type[MarkupElements] = _MARKUP_MAP.get(
             self.type,
-            cast("type[MarkupElements]", MarkupElement),
+            cast(type[MarkupElements], MarkupElement),
         )
         return markup_class(
             type=self.type,

@@ -205,7 +205,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
-    return typing.cast("Retort", extended)
+    return typing.cast(Retort, extended)
 
 
 def create_retort(

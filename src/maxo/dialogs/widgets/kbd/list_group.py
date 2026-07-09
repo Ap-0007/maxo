@@ -177,9 +177,9 @@ class ManagedListGroup(ManagedScroll, ManagedWidget[ListGroup]):
                 SubManager(
                     widget=self.widget,
                     manager=self.manager,
-                    widget_id=cast("ListGroup", self.widget).widget_id or "",
+                    widget_id=cast(ListGroup, self.widget).widget_id or "",
                     item_id=item_id,
                 ),
             )
-            return cast("Widget", managed)
+            return cast(Widget, managed)
         return None

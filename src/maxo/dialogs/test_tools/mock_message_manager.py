@@ -1,6 +1,5 @@
 import random
 from datetime import UTC, datetime
-from typing import cast
 from uuid import uuid4
 
 from maxo import Bot
@@ -65,6 +64,11 @@ class MockMessageManager(MessageManagerProtocol):
             if attach.type != AttachmentType.INLINE_KEYBOARD
         ]
 
+        # `OldMessage.text` может быть `UnknownText.UNKNOWN`, если сообщение
+        # восстановлено из стека, а не пришло в апдейте.
+        old_text = old_message.text
+        text = old_text if isinstance(old_text, str) else None
+
         message = Message(
             timestamp=datetime.now(UTC),
             recipient=Recipient(
@@ -75,7 +79,7 @@ class MockMessageManager(MessageManagerProtocol):
             body=MessageBody(
                 mid=old_message.message_id,
                 seq=old_message.sequence_id,
-                text=cast("str | None", old_message.text),
+                text=text,
                 attachments=new_attachments,
             ),
         )

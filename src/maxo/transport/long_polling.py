@@ -70,8 +70,8 @@ class LongPolling:
         **workflow_data: Any,
     ) -> None:
         dispatcher = self._dispatcher
-        types = list(
-            types if is_defined(types) else collect_used_updates(self._dispatcher),
+        used_types: list[str] = list(
+            types if is_defined(types) and types else collect_used_updates(dispatcher),
         )
 
         async with self._lock:
@@ -93,7 +93,7 @@ class LongPolling:
                     timeout=timeout,
                     limit=limit,
                     marker=marker,
-                    types=types,
+                    types=used_types,
                     drop_pending_updates=drop_pending_updates,
                 )
 

@@ -64,7 +64,7 @@ class BasePager(Keyboard, ABC):
         if self._scroll:
             return self._scroll.managed(manager)
         assert self._scroll_id is not None  # noqa: S101
-        return cast("ManagedScroll", manager.find(self._scroll_id))
+        return cast(ManagedScroll, manager.find(self._scroll_id))
 
     async def _process_item_callback(
         self,
@@ -327,4 +327,4 @@ class NumberedPager(BasePager):
             )
         if buttons:
             final_buttons.append(buttons)
-        return cast("RawKeyboard", final_buttons)
+        return cast(RawKeyboard, final_buttons)

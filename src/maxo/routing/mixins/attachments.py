@@ -4,6 +4,7 @@ from typing import TypeAlias
 
 from unihttp.http import UploadFile
 
+from maxo import loggers
 from maxo.enums import UploadType
 from maxo.errors.api import RetvalReturnedServerException
 from maxo.omit import is_defined
@@ -98,6 +99,12 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                     attachments.append(VideoAttachmentRequest.factory(token))
                 case UploadType.IMAGE:
                     attachments.append(PhotoAttachmentRequest.factory(token=token))
+                case _:
+                    # Недостижимо по типам, но Макс может прислать новый тип.
+                    loggers.utils.warning(  # type: ignore[unreachable]
+                        "Received unknown attachment type: %s",
+                        type_,
+                    )
 
         return attachments
 

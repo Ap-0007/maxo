@@ -66,7 +66,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             chat_id=chat_id,
             user_id=user_id,
             text=text,
-            attachments=cast("list[AttachmentsRequests | Attachments]", attachments),
+            attachments=cast(list[AttachmentsRequests | Attachments], attachments),
             link=link,
             notify=notify,
             format=format,
@@ -183,7 +183,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             message_id=message_id,
             text=text,
             attachments=cast(
-                "list[AttachmentsRequests | Attachments] | None",
+                list[AttachmentsRequests | Attachments] | None,
                 prepared_attachments,
             ),
             link=link,

@@ -348,7 +348,7 @@ class IntentMiddlewareFactory:
         ctx[EVENT_CONTEXT_KEY] = event_context
         original_data = update.callback.payload
         if original_data:
-            intent_id, _ = remove_intent_id(cast("str", original_data))
+            intent_id, _ = remove_intent_id(cast(str, original_data))
             if intent_id:
                 await self._load_context_by_intent(
                     event=update,

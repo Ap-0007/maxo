@@ -17,7 +17,7 @@ def new_pages_field(fieldname: str) -> PagesGetter:
         widget: "StubScroll",
         manager: DialogManager,
     ) -> int:
-        return cast("int", data.get(fieldname))
+        return cast(int, data.get(fieldname))
 
     return pages_field
 
@@ -28,7 +28,7 @@ def new_pages_magic(f: DialogMagic) -> PagesGetter:
         widget: "StubScroll",
         manager: DialogManager,
     ) -> int:
-        return cast("int", f.resolve(data))
+        return cast(int, f.resolve(data))
 
     return pages_magic
 

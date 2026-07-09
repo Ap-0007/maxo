@@ -94,7 +94,7 @@ class ManagerImpl(DialogManager):
     @property
     def middleware_data(self) -> dict[Any, Any]:
         """Middleware data."""
-        return cast("dict[Any, Any]", self._ctx)
+        return cast(dict[Any, Any], self._ctx)
 
     @property
     def dialog_data(self) -> dict[Any, Any]:
@@ -155,10 +155,10 @@ class ManagerImpl(DialogManager):
 
     def current_stack(self) -> Stack:
         self.check_disabled()
-        return cast("Stack", self._ctx[STACK_KEY])
+        return cast(Stack, self._ctx[STACK_KEY])
 
     def storage(self) -> StorageProxy:
-        return cast("StorageProxy", self._ctx[STORAGE_KEY])
+        return cast(StorageProxy, self._ctx[STORAGE_KEY])
 
     async def _remove_kbd(self) -> None:
         if self.current_stack().last_message_id is None:
@@ -502,7 +502,7 @@ class ManagerImpl(DialogManager):
         widget = self.dialog().find(widget_id)
         if not widget:
             return None
-        return cast("Widget", widget.managed(self))
+        return cast(Widget, widget.managed(self))
 
     def _get_fake_user(self, user_id: int | None = None) -> User:
         """Get User if we have info about him or FakeUser instead."""
@@ -560,7 +560,7 @@ class ManagerImpl(DialogManager):
         chat = self._get_fake_chat(chat_id)
         intent_id = None
         event_context = cast(
-            "EventContext",
+            EventContext,
             self.middleware_data.get(EVENT_CONTEXT_KEY),
         )
         new_event_context = EventContext(
@@ -584,7 +584,7 @@ class ManagerImpl(DialogManager):
             user=user,
             chat_id=new_event_context.chat_id,
             bot=new_event_context.bot,
-            dp=cast("Dispatcher", self._router),
+            dp=cast(Dispatcher, self._router),
             intent_id=intent_id,
             stack_id=stack_id,
             load=load,

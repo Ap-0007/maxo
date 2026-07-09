@@ -182,7 +182,7 @@ class MessageManager(MessageManagerProtocol):
             await bot.edit_message(
                 message_id=old_message.message_id,
                 attachments=cast(
-                    "list[AttachmentsRequests | Attachments]",
+                    list[AttachmentsRequests | Attachments],
                     new_attachments,
                 ),
             )
@@ -249,7 +249,7 @@ class MessageManager(MessageManagerProtocol):
             message_id=old_message.message_id,
             text=new_message.text,
             attachments=cast(
-                "list[AttachmentsRequests | Attachments]",
+                list[AttachmentsRequests | Attachments],
                 attachments,
             ),
             format=new_message.parse_mode,
@@ -274,7 +274,7 @@ class MessageManager(MessageManagerProtocol):
             link=new_message.link_to,
             notify=True,
             attachments=cast(
-                "list[AttachmentsRequests | Attachments]",
+                list[AttachmentsRequests | Attachments],
                 attachments,
             ),
             format=new_message.parse_mode,

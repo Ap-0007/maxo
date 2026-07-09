@@ -24,7 +24,7 @@ class EventProcessorButton(Button, WidgetEventProcessor):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        await self._on_click(cast("MessageCallback", event), self, manager)
+        await self._on_click(cast(MessageCallback, event), self, manager)
 
     async def _on_click(
         self,
