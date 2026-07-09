@@ -115,7 +115,11 @@ class BotClient:
                 LinkedMessage(
                     type=MessageLinkType.REPLY,
                     sender=reply_to.sender,
-                    chat_id=reply_to.recipient.chat_id or Omitted(),
+                    chat_id=(
+                        Omitted()
+                        if reply_to.recipient.chat_id is None
+                        else reply_to.recipient.chat_id
+                    ),
                     message=reply_to.body,
                 )
                 if reply_to
