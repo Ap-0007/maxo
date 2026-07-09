@@ -47,7 +47,7 @@ def test_actionable_find_and_repr(mock_manager: DialogManager) -> None:
     assert widget.find("missing") is None
     assert repr(widget) == "<Actionable id=widget.id>"
     assert widget.get_widget_data(mock_manager, "default") == "default"
-    assert widget.set_widget_data(mock_manager, "value") is None
+    widget.set_widget_data(mock_manager, "value")
     assert widget.get_widget_data(mock_manager, "default") == "value"
 
 

@@ -265,7 +265,7 @@ async def test_process_item_callback(mock_manager: DialogManager) -> None:
 
     await list_group.set_page(Mock(), 2, mock_manager)
     await pager._process_item_callback(
-        callback.callback,
+        callback,
         "1",
         cast(DialogProtocol, Mock()),
         mock_manager,

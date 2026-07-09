@@ -16,13 +16,9 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class MockChatFacade(ChatMethodsFacade):
-    def __init__(self, bot, chat_id: int) -> None:
+    def __init__(self, bot: Bot, chat_id: int) -> None:
         self._bot = bot
         self._chat_id = chat_id
-
-    @property
-    def bot(self) -> Bot:
-        return self._bot
 
     @property
     def chat_id(self) -> int:

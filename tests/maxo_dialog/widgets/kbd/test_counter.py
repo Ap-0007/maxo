@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import Counter
@@ -122,7 +122,7 @@ async def test_process_plus_callback(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "+", None, mock_manager)
+    await counter._process_item_callback(callback, "+", Mock(), mock_manager)
 
     assert counter.get_value(mock_manager) == 1
 
@@ -145,7 +145,7 @@ async def test_process_minus_callback(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "-", None, mock_manager)
+    await counter._process_item_callback(callback, "-", Mock(), mock_manager)
 
     assert counter.get_value(mock_manager) == 4
 
@@ -169,7 +169,7 @@ async def test_process_text_callback(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "", None, mock_manager)
+    await counter._process_item_callback(callback, "", Mock(), mock_manager)
 
     on_text_click.assert_called_once()
 
@@ -193,7 +193,7 @@ async def test_cycle_max_overflow(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "+", None, mock_manager)
+    await counter._process_item_callback(callback, "+", Mock(), mock_manager)
 
     assert counter.get_value(mock_manager) == 0
 
@@ -217,7 +217,7 @@ async def test_cycle_min_underflow(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "-", None, mock_manager)
+    await counter._process_item_callback(callback, "-", Mock(), mock_manager)
 
     assert counter.get_value(mock_manager) == 10
 
@@ -241,7 +241,7 @@ async def test_on_click_callback(mock_manager: DialogManager) -> None:
         ),
     )
 
-    await counter._process_item_callback(callback, "+", None, mock_manager)
+    await counter._process_item_callback(callback, "+", Mock(), mock_manager)
 
     on_click.assert_called_once()
 

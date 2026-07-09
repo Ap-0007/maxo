@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from maxo import Bot
 from maxo.omit import Omitted
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 from maxo.types.get_subscriptions_result import GetSubscriptionsResult
@@ -9,12 +10,8 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class MockSubscriptionFacade(SubscriptionMethodsFacade):
-    def __init__(self, bot):
+    def __init__(self, bot: Bot) -> None:
         self._bot = bot
-
-    @property
-    def bot(self):
-        return self._bot
 
 
 @pytest.fixture

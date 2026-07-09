@@ -168,7 +168,7 @@ async def test_process_item_callback(mock_manager: DialogManager) -> None:
     result = await list_group._process_item_callback(
         callback,
         "a:button",
-        None,
+        Mock(),
         mock_manager,
     )
 

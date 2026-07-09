@@ -30,7 +30,7 @@ async def on_pizza(
     widget: ConfirmButton,
     manager: DialogManager,
 ) -> None:
-    await callback.message.answer("Пицца заказана, жди курьера 🍕")
+    await callback.unsafe_message.answer("Пицца заказана, жди курьера 🍕")
     manager.show_mode = ShowMode.SEND
 
 
@@ -39,7 +39,7 @@ async def on_pizza_cancel(
     widget: ConfirmButton,
     manager: DialogManager,
 ) -> None:
-    await callback.message.answer("Пицца уже в печи, жаль =(")
+    await callback.unsafe_message.answer("Пицца уже в печи, жаль =(")
     manager.show_mode = ShowMode.SEND
 
 
@@ -48,7 +48,7 @@ async def on_sushi(
     widget: ConfirmButton,
     manager: DialogManager,
 ) -> None:
-    await callback.message.answer("Роллы заказаны, жди рыбу 🐡")
+    await callback.unsafe_message.answer("Роллы заказаны, жди рыбу 🐡")
     manager.show_mode = ShowMode.SEND
 
 

@@ -52,6 +52,8 @@ BUTTON_SELECTED_TEXT = Format("[{value}]")
 class TimeSelect(Keyboard):
     """Виджет выбора времени с отдельными клавиатурами для часов и минут."""
 
+    widget_id: str
+
     def __init__(
         self,
         id: str,
@@ -115,6 +117,10 @@ class TimeSelect(Keyboard):
             value,
         )
 
+    def _own_payload(self) -> str:
+        """`id` обязателен для `TimeSelect`, поэтому payload всегда строка."""
+        return self.widget_id
+
     async def _render_keyboard(
         self,
         data: dict[Any, Any],
@@ -127,7 +133,7 @@ class TimeSelect(Keyboard):
             [
                 CallbackButton(
                     text=await self.hour_header.render_text(data, manager),
-                    payload=self._own_payload() or "",
+                    payload=self._own_payload(),
                 ),
             ],
         )
@@ -149,7 +155,7 @@ class TimeSelect(Keyboard):
             [
                 CallbackButton(
                     text=await self.minute_header.render_text(data, manager),
-                    payload=self._own_payload() or "",
+                    payload=self._own_payload(),
                 ),
             ],
         )

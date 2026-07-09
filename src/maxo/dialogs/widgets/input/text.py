@@ -5,6 +5,7 @@ from typing import (
     Generic,
     Protocol,
     TypeVar,
+    cast,
 )
 
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
@@ -15,6 +16,7 @@ from maxo.dialogs.widgets.widget_event import (
     ensure_event_processor,
 )
 from maxo.routing.updates import MessageCreated
+from maxo.types.message_body import MessageBody
 
 from .base import BaseInput
 
@@ -73,7 +75,8 @@ class TextInput(BaseInput, Generic[T]):
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
-        if not message.message.body.text:
+        body = cast(MessageBody | None, message.message.body)
+        if body is None or not body.text:
             return False
 
         if self.filter is not None and not await self.filter.call(
@@ -82,7 +85,7 @@ class TextInput(BaseInput, Generic[T]):
         ):
             return False
         try:
-            value = self.type_factory(message.message.body.text)
+            value = self.type_factory(body.text)
         except ValueError as err:
             await self.on_error.process_event(
                 message,
@@ -92,7 +95,7 @@ class TextInput(BaseInput, Generic[T]):
             )
         else:
             # store original text
-            self.set_widget_data(manager, message.message.body.text)
+            self.set_widget_data(manager, body.text)
             await self.on_success.process_event(
                 message,
                 self.managed(manager),
