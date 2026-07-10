@@ -1,9 +1,9 @@
 from abc import ABC
 from collections.abc import Callable, Coroutine, MutableSequence, Sequence
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.filters import AlwaysTrueFilter
+from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces import Filter, Handler, Observer
 from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
@@ -16,10 +16,6 @@ _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 
 _HandlerT = TypeVar("_HandlerT", bound=Handler[Any, Any])
 _HandlerFnT = TypeVar("_HandlerFnT", bound=Callable[..., Coroutine[Any, Any, Any]])
-
-_Params = ParamSpec("_Params")
-_ReturnType = TypeVar("_ReturnType")
-_HandlerFunc = Callable[[_Params], _ReturnType]
 
 
 class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
@@ -39,7 +35,7 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     def __init__(self) -> None:
         self._handlers = []
-        self._filter = AlwaysTrueFilter()
+        self._filter = combine_filters()
         self._middleware = MiddlewareManagerFacade()
         self._state = EmptyObserverState()
 
@@ -68,17 +64,17 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     def __call__(
         self,
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         def wrapper(handler_fn: _HandlerFnT) -> _HandlerFnT:
-            return self.handler(handler_fn, filter)
+            return self.handler(handler_fn, *filters)
 
         return wrapper
 
-    def filter(self, filter: Filter[_UpdateT]) -> None:
+    def filter(self, *filters: Filter[_UpdateT]) -> None:
         self._state.ensure_add_filter()
 
-        self._filter = filter
+        self._filter = combine_filters(*filters)
 
     async def execute_filter(self, ctx: Ctx) -> bool:
         return await self._filter(ctx["update"], ctx)

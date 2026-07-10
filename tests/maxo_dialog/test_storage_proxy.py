@@ -1,8 +1,14 @@
-from maxo.dialogs.api.entities import Stack
+from typing import Any
+
+import pytest
+
+from maxo.dialogs.api.entities import AccessSettings, Stack
+from maxo.dialogs.api.exceptions import UnknownIntent, UnknownState
 from maxo.dialogs.context.storage import StorageProxy
 from maxo.dialogs.test_tools.bot_client import FakeBot
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
 from maxo.enums import ChatType
+from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.types import (
@@ -113,3 +119,92 @@ async def test_save_load_stack_with_all_attachments() -> None:
     assert button.payload == "test_payload"
     assert loaded_stack.last_attachments[7].payload.token == "share_token"  # noqa: S105
     assert loaded_stack.last_attachments[8].latitude == 55.7558
+
+
+def make_proxy(state_groups: dict[str, Any] | None = None) -> StorageProxy:
+    return StorageProxy(
+        storage=JsonMemoryStorage(),
+        events_isolation=SimpleEventIsolation(
+            key_builder=DefaultKeyBuilder(with_destiny=True),
+        ),
+        user_id=456,
+        chat_id=123,
+        chat_type=ChatType.DIALOG,
+        bot=FakeBot(),
+        state_groups=state_groups if state_groups is not None else {"SG": SG},
+    )
+
+
+class SG(StatesGroup):
+    first = State()
+
+
+async def test_remove_context_clears_data() -> None:
+    proxy = make_proxy()
+    stack = Stack()
+    context = stack.push(SG.first, {})
+    await proxy.save_context(context)
+
+    await proxy.remove_context(context.id)
+
+    with pytest.raises(UnknownIntent):
+        await proxy.load_context(context.id)
+
+
+async def test_remove_stack_clears_data() -> None:
+    proxy = make_proxy()
+    stack = Stack()
+    stack.push(SG.first, {})
+    await proxy.save_stack(stack)
+
+    await proxy.remove_stack(stack.id)
+
+    assert (await proxy.load_stack(stack.id)).empty()
+
+
+async def test_save_stack_ignores_none() -> None:
+    await make_proxy().save_stack(None)
+
+
+async def test_save_context_ignores_none() -> None:
+    await make_proxy().save_context(None)
+
+
+def test_state_of_unknown_group() -> None:
+    with pytest.raises(UnknownState, match="Unknown state group"):
+        make_proxy(state_groups={})._state("Missing:first")
+
+
+def test_state_of_unknown_state_in_known_group() -> None:
+    with pytest.raises(UnknownState, match="Unknown state"):
+        make_proxy()._state("SG:missing")
+
+
+def test_state_of_known_state() -> None:
+    assert make_proxy()._state("SG:first") == SG.first
+
+
+def test_parse_access_settings_none() -> None:
+    assert make_proxy()._parse_access_settings(None) is None
+
+
+def test_parse_access_settings_fills_defaults() -> None:
+    settings = make_proxy()._parse_access_settings({"custom": "x"})
+
+    assert settings is not None
+    assert settings.user_ids == []
+    assert settings.custom == "x"
+
+
+def test_dump_access_settings_none() -> None:
+    assert make_proxy()._dump_access_settings(None) is None
+
+
+def test_dump_access_settings_roundtrip() -> None:
+    proxy = make_proxy()
+    dumped = proxy._dump_access_settings(AccessSettings(user_ids=[1], custom="c"))
+
+    assert dumped == {"user_ids": [1], "custom": "c"}
+    parsed = proxy._parse_access_settings(dumped)
+    assert parsed is not None
+    assert parsed.user_ids == [1]

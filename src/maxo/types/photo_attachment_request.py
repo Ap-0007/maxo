@@ -37,6 +37,7 @@ class PhotoAttachmentRequest(AttachmentRequest):
             photos: Токены, полученные после загрузки изображений
 
         """
+        photos_tokens: Omittable[list[PhotoToken] | None]
         if is_defined(photos):
             photos_tokens = [PhotoToken(token=photo_token) for photo_token in photos]
         else:

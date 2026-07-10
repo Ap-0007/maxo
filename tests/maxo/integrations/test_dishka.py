@@ -47,7 +47,7 @@ def bot() -> Bot:
     return MagicMock(spec=Bot)
 
 
-async def test_dishka_auto_inject(update: MessageCreated, bot: Bot):
+async def test_dishka_auto_inject(update: MessageCreated, bot: Bot) -> None:
     # 1. Create dependencies
     service_mock = MagicMock(spec=MyService)
     service_mock.do_something.return_value = "mocked_done"
@@ -110,7 +110,7 @@ async def test_dishka_no_auto_inject(update: MessageCreated, bot: Bot) -> None:
     async def my_handler(
         message: MessageCreated,
         service: FromDishka[MyService],
-    ):
+    ) -> None:
         await handler_mock(service.do_something())
 
     # 7. Trigger dispatcher

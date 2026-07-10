@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 from adaptix import Chain, P, Retort, dumper, loader
 from adaptix.type_tools import exec_type_checking
 from unihttp.markers import QueryMarker
-from unihttp.serializers.adaptix import DEFAULT_RETORT, for_marker
+from unihttp.serializers.adaptix.marker_tools import for_marker
+from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
@@ -161,7 +162,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
         ):
             method = dataclasses.replace(
                 method,
-                disable_link_preview=defaults.disable_link_preview,
+                disable_link_preview=defaults.disable_link_preview,  # type: ignore[arg-type]
             )
         return method
 
@@ -176,7 +177,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     exec_type_checking(base)
     exec_type_checking(message)
 
-    return DEFAULT_RETORT.extend(
+    extended = DEFAULT_RETORT.extend(
         recipe=[
             TAG_PROVIDERS,
             dumper(
@@ -185,7 +186,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
-                lambda item: int(item),
+                int,
             ),
             dumper(
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
@@ -204,6 +205,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
+    return typing.cast(Retort, extended)
 
 
 def create_retort(
@@ -217,7 +219,7 @@ def create_retort(
         retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
         retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
 
-    return typing.cast(Retort, retort)
+    return retort
 
 
 def create_retort_with_bot(
@@ -239,4 +241,4 @@ def create_retort_with_bot(
         retort = warming_up_retort(retort, warming_up=WarmingUpType.TYPES)
         retort = warming_up_retort(retort, warming_up=WarmingUpType.METHOD)
 
-    return typing.cast(Retort, retort)
+    return retort

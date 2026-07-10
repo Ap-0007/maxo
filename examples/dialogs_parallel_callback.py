@@ -51,7 +51,7 @@ class ParallelDialog(Dialog):
         dialog_manager: DialogManager,
     ) -> None:
         old_context = dialog_manager.current_context()
-        _, payload = remove_intent_id(callback.callback.payload)
+        _, payload = remove_intent_id(callback.callback.unsafe_payload)
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
@@ -114,7 +114,7 @@ key_builder = DefaultKeyBuilder(with_destiny=True)
 dp = Dispatcher(key_builder=key_builder)
 
 
-@dp.message_created(CommandStart())
+@dp.message_created(CommandStart())  # type: ignore[arg-type]
 @dp.bot_started()
 async def start(_: Any, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(DialogSG.A, mode=StartMode.RESET_STACK)

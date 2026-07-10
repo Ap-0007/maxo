@@ -1,13 +1,21 @@
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
+import pytest
+
 from maxo.bot import Bot
 from maxo.enums import ChatStatus, ChatType
+from maxo.omit import Omitted
 from maxo.types.chat import Chat
 from maxo.types.chat_list import ChatList
 from maxo.utils.iterators.chats import ChatsIterator
 
 TOKEN = "f9LHod"  # noqa: S105
+
+
+@pytest.fixture
+def bot() -> Bot:
+    return Bot(token=TOKEN, warming_up=False)
 
 
 def create_chat(chat_id: int) -> Chat:
@@ -21,8 +29,7 @@ def create_chat(chat_id: int) -> Chat:
     )
 
 
-async def test_chats_iterator_single_page():
-    bot = Bot(token=TOKEN)
+async def test_chats_iterator_single_page(bot: Bot) -> None:
     bot.get_chats = AsyncMock(
         side_effect=[
             ChatList(chats=[create_chat(1), create_chat(2)], marker=None),
@@ -39,8 +46,7 @@ async def test_chats_iterator_single_page():
     assert bot.get_chats.await_count == 2
 
 
-async def test_chats_iterator_multiple_pages():
-    bot = Bot(token=TOKEN)
+async def test_chats_iterator_multiple_pages(bot: Bot) -> None:
     bot.get_chats = AsyncMock(
         side_effect=[
             ChatList(chats=[create_chat(1), create_chat(2)], marker=123),
@@ -60,8 +66,7 @@ async def test_chats_iterator_multiple_pages():
     assert bot.get_chats.await_count == 3
 
 
-async def test_chats_iterator_no_chats():
-    bot = Bot(token=TOKEN)
+async def test_chats_iterator_no_chats(bot: Bot) -> None:
     bot.get_chats = AsyncMock(return_value=ChatList(chats=[], marker=None))
 
     iterator = ChatsIterator(bot=bot)
@@ -69,3 +74,21 @@ async def test_chats_iterator_no_chats():
 
     assert len(chats) == 0
     bot.get_chats.assert_awaited_once()
+
+
+async def test_chats_iterator_passes_marker_from_previous_page(bot: Bot) -> None:
+    bot.get_chats = AsyncMock(
+        side_effect=[
+            ChatList(chats=[create_chat(1)], marker=123),
+            ChatList(chats=[create_chat(2)], marker=None),
+            ChatList(chats=[], marker=None),
+        ],
+    )
+
+    iterator = ChatsIterator(bot=bot)
+    _ = [chat async for chat in iterator]
+
+    markers = [c.kwargs["marker"] for c in bot.get_chats.await_args_list]
+    assert markers[0] == Omitted()
+    assert markers[1] == 123
+    assert markers[2] is None

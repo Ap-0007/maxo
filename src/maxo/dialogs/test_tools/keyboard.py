@@ -1,6 +1,7 @@
 import re
 from typing import Protocol
 
+from maxo.omit import is_defined
 from maxo.types import CallbackButton, InlineButtons, Message
 
 
@@ -24,9 +25,10 @@ class InlineButtonTextLocator:
             return None
         for row in message.body.keyboard.buttons:
             for button in row:
-                if not hasattr(button, "text"):
+                text = getattr(button, "text", None)
+                if text is None or not is_defined(text):
                     continue
-                if self.regex.fullmatch(button.text):
+                if self.regex.fullmatch(text):
                     return button
         return None
 

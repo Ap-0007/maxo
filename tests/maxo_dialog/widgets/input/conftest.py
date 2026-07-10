@@ -15,9 +15,9 @@ from maxo.types.photo_attachment_payload import PhotoAttachmentPayload
 def create_text_message(text: str) -> MessageCreated:
     """Create a text message for testing."""
     return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
             body=MessageBody(mid="test_mid", seq=1, text=text),
         ),
@@ -35,9 +35,9 @@ def create_photo_message() -> MessageCreated:
         ),
     )
     return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
             body=MessageBody(mid="test_mid", seq=1, text=None, attachments=[photo]),
         ),
@@ -47,9 +47,9 @@ def create_photo_message() -> MessageCreated:
 def create_message_no_body() -> MessageCreated:
     """Create a message without body for testing."""
     return MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
             # cast нужен, чтобы проверить runtime-ветку TextInput для body=None.
             body=cast(MessageBody, None),

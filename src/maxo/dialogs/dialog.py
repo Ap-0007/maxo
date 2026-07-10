@@ -3,8 +3,8 @@ import dataclasses
 from collections.abc import Awaitable, Callable
 from typing import (
     Any,
-    ParamSpec,
     TypeVar,
+    cast,
 )
 
 from maxo import Router, loggers
@@ -30,10 +30,9 @@ from .utils import remove_intent_id
 from .widgets.data import PreviewAwareGetter
 from .widgets.utils import GetterVariant, ensure_data_getter
 
-OnDialogEvent = Callable[[Any, DialogManager], Awaitable]
-OnResultEvent = Callable[[Data, Any, DialogManager], Awaitable]
+OnDialogEvent = Callable[[Any, DialogManager], Awaitable[Any]]
+OnResultEvent = Callable[[Data, Any, DialogManager], Awaitable[Any]]
 _W = TypeVar("_W", bound=Widget)
-_P = ParamSpec("_P")
 
 
 class Dialog(Router, DialogProtocol):
@@ -100,9 +99,9 @@ class Dialog(Router, DialogProtocol):
 
     async def _process_callback(
         self,
-        callback: OnDialogEvent | None,
-        *args: _P.args,
-        **kwargs: _P.kwargs,
+        callback: Callable[..., Awaitable[Any]] | None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         if callback:
             await callback(*args, **kwargs)
@@ -122,7 +121,7 @@ class Dialog(Router, DialogProtocol):
     async def load_data(
         self,
         manager: DialogManager,
-    ) -> dict:
+    ) -> dict[Any, Any]:
         data = await manager.load_data()
         data.update(await self.getter(**manager.middleware_data))
         return data
@@ -158,7 +157,7 @@ class Dialog(Router, DialogProtocol):
         dialog_manager: DialogManager,
     ) -> None:
         old_context = dialog_manager.current_context()
-        _, payload = remove_intent_id(callback.callback.payload)
+        _, payload = remove_intent_id(callback.callback.unsafe_payload)
 
         cleaned_callback = dataclasses.replace(callback.callback, payload=payload)
         cleaned_event = dataclasses.replace(callback, callback=cleaned_callback)
@@ -257,7 +256,7 @@ class Dialog(Router, DialogProtocol):
         for w in self.windows.values():
             widget = w.find(widget_id)
             if widget:
-                return widget
+                return cast(_W, widget)
         return None
 
     def __repr__(self) -> str:

@@ -2,6 +2,8 @@ import io
 from collections.abc import AsyncIterator
 from http.cookies import SimpleCookie
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,6 +16,9 @@ from maxo.bot.api_client import MaxApiClient
 from maxo.bot.methods import AddMembers
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
+
+if TYPE_CHECKING:
+    from unihttp.serialize import RequestDumper, ResponseLoader
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -178,10 +183,22 @@ async def test_handle_error(
         cookies=SimpleCookie(),
         raw_response=AsyncMock(),
     )
-    method: MaxoMethod[object] = MaxoMethod()
+    method: MaxoMethod[Any] = MaxoMethod()
     with pytest.raises(error_class):
         api_client.handle_error(response, method)
 
+
+async def test_validate_response_ok(api_client: MaxApiClient) -> None:
+    response = HTTPResponse(
+        status_code=200,
+        data={"success": True},
+        headers=CIMultiDict(),
+        cookies=SimpleCookie(),
+        raw_response=AsyncMock(),
+    )
+    method: MaxoMethod[Any] = MaxoMethod()
+    api_client.validate_response(response, method)
+    assert response.status_code == 200
 
 async def test_handle_error_with_non_dict_payload(api_client: MaxApiClient) -> None:
     response = HTTPResponse(

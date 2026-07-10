@@ -1,5 +1,6 @@
 import io
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -103,17 +104,64 @@ async def test_bot_silent_call_method(
 
 
 async def test_bot_download(bot: Bot) -> None:
-    downloaded = io.BytesIO(b"downloaded")
     with patch.object(
         bot,
         "_state",
         MagicMock(),
-    ) as mock_state:
-        mock_state.api_client.download = AsyncMock(return_value=downloaded)
-        result = await bot.download("https://example.com/file")
+    ) as mock_state:  # Patch private attribute
+        mock_state.api_client.download = AsyncMock(return_value="downloaded")
+        result: Any = await bot.download("https://example.com/file")
         assert result is downloaded
         mock_state.api_client.download.assert_awaited_once()
 
+
+async def test_bot_defaults_and_retort(bot: Bot) -> None:
+    assert bot.retort is not None
+    assert bot.defaults is not None
+
+
+async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
+    await bot.close()
+
+    assert isinstance(bot.state, EmptyBotState)
+
+
+async def test_close_twice_is_noop() -> None:
+    bot = Bot(token=TOKEN, warming_up=False)
+    api_client = AsyncMock()
+    bot._state = RunningBotState(info=MagicMock(), api_client=api_client)
+
+    await bot.close()
+    await bot.close()
+
+    api_client.close.assert_awaited_once()
+
+
+async def test_bot_async_context_manager() -> None:
+    bot = Bot(token=TOKEN, warming_up=False)
+
+    with (
+        patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
+        patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
+    ):
+        async with bot as entered:
+            assert entered is bot
+
+    mock_start.assert_awaited_once()
+    mock_close.assert_awaited_once()
+
+
+async def test_context_without_auto_close(bot: Bot) -> None:
+    with (
+        patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock),
+        patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
+    ):
+        async with bot.context(auto_close=False):
+            pass
+
+    mock_close.assert_not_awaited()
+async def test_bot_download(bot: Bot) -> None:
+    downloaded = io.BytesIO(b"downloaded")
 
 async def test_bot_upload_media_resumable(bot: Bot) -> None:
     file = BufferedInputFile.file(b"payload", "f.bin")

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from maxo import loggers
 from maxo.dialogs.api.entities import (
@@ -129,7 +129,7 @@ def event_context_from_aiogd(event: DialogUpdateEvent) -> EventContext:
     )
 
 
-def event_context_from_error(event: ErrorEvent, ctx: Ctx) -> EventContext:
+def event_context_from_error(event: ErrorEvent[Any, Any], ctx: Ctx) -> EventContext:
     if isinstance(event.event, MessageCreated):
         return event_context_from_message(event.event, ctx)
     if isinstance(event.event, MessageCallback):
@@ -348,7 +348,7 @@ class IntentMiddlewareFactory:
         ctx[EVENT_CONTEXT_KEY] = event_context
         original_data = update.callback.payload
         if original_data:
-            intent_id, _ = remove_intent_id(original_data)
+            intent_id, _ = remove_intent_id(cast(str, original_data))
             if intent_id:
                 await self._load_context_by_intent(
                     event=update,
@@ -472,8 +472,8 @@ async def context_saver_middleware(
     next: NextMiddleware[MaxUpdate],
 ) -> Any:
     result = await next(ctx)
-    proxy: StorageProxy = ctx.get(STORAGE_KEY)
-    if proxy:
+    proxy: StorageProxy | None = ctx.get(STORAGE_KEY)
+    if proxy is not None:
         await proxy.save_context(ctx.get(CONTEXT_KEY))
         await proxy.save_stack(ctx.get(STACK_KEY))
     return result
@@ -484,16 +484,16 @@ async def context_unlocker_middleware(
     ctx: Ctx,
     next: NextMiddleware[MaxUpdate],
 ) -> Any:
-    proxy: StorageProxy = ctx.get(STORAGE_KEY)
+    proxy: StorageProxy | None = ctx.get(STORAGE_KEY)
     try:
         result = await next(ctx)
     finally:
-        if proxy:
+        if proxy is not None:
             await proxy.unlock()
     return result
 
 
-class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
+class IntentErrorMiddleware(BaseMiddleware[ErrorEvent[Any, Any]]):
     def __init__(
         self,
         registry: DialogRegistryProtocol,
@@ -507,7 +507,7 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
 
     def _is_error_supported(
         self,
-        event: ErrorEvent,
+        event: ErrorEvent[Any, Any],
         ctx: Ctx,
     ) -> bool:
         update = event.update.update
@@ -557,7 +557,7 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
 
     async def __call__(
         self,
-        update: ErrorEvent,
+        update: ErrorEvent[Any, Any],
         ctx: Ctx,
         next: NextMiddleware[ErrorEvent[Any, Any]],
     ) -> Any:
@@ -605,10 +605,14 @@ class IntentErrorMiddleware(BaseMiddleware[ErrorEvent]):
                 await proxy.unlock()
             return await next(ctx)
         finally:
-            proxy: StorageProxy = ctx.get(STORAGE_KEY)
-            if proxy:
-                await proxy.unlock()
+            stored_proxy: StorageProxy | None = ctx.get(STORAGE_KEY)
+            if stored_proxy is not None:
+                # Сначала сохраняем, потом снимаем лок, как в
+                # context_saver_middleware + context_unlocker_middleware.
+                # Иначе параллельный апдейт того же пользователя захватит лок
+                # и прочитает ещё не сохранённые context/stack.
                 context = ctx.get(CONTEXT_KEY)
                 if context is not None:
-                    await proxy.save_context(context)
-                await proxy.save_stack(ctx.get(STACK_KEY))
+                    await stored_proxy.save_context(context)
+                await stored_proxy.save_stack(ctx.get(STACK_KEY))
+                await stored_proxy.unlock()

@@ -51,16 +51,16 @@ def valid_init_data() -> str:
     return generate_test_init_data(TOKEN, TEST_DATA)
 
 
-def test_check_webapp_signature_valid(valid_init_data: str):
+def test_check_webapp_signature_valid(valid_init_data: str) -> None:
     assert check_webapp_signature(TOKEN, valid_init_data) is True
 
 
-def test_check_webapp_signature_invalid():
+def test_check_webapp_signature_invalid() -> None:
     assert check_webapp_signature(TOKEN, "hash=invalid&...some_other_data") is False
     assert check_webapp_signature(TOKEN, "some_other_data") is False
 
 
-def test_parse_webapp_init_data(valid_init_data: str):
+def test_parse_webapp_init_data(valid_init_data: str) -> None:
     parsed_data = parse_webapp_init_data(valid_init_data)
     assert isinstance(parsed_data, WebAppInitData)
     assert parsed_data.query_id == "test_query_id"
@@ -79,11 +79,11 @@ def test_parse_webapp_init_data(valid_init_data: str):
     assert parsed_data.chat.type == "private"
 
 
-def test_safe_parse_webapp_init_data_valid(valid_init_data: str):
+def test_safe_parse_webapp_init_data_valid(valid_init_data: str) -> None:
     parsed_data = safe_parse_webapp_init_data(TOKEN, valid_init_data)
     assert isinstance(parsed_data, WebAppInitData)
 
 
-def test_safe_parse_webapp_init_data_invalid():
+def test_safe_parse_webapp_init_data_invalid() -> None:
     with pytest.raises(ValueError, match="Invalid init data signature"):
         safe_parse_webapp_init_data(TOKEN, "hash=invalid&...some_other_data")

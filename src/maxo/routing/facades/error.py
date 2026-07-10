@@ -18,7 +18,7 @@ class ErrorEventFacade(
         return self._update.exception
 
     @property
-    def update(self) -> MaxoUpdate[_UpdateT]:
+    def update(self) -> MaxoUpdate[_UpdateT]:  # type: ignore[override]
         return self._update.update
 
     @property

@@ -73,6 +73,8 @@ class UserRepo:
             await db.commit()
 
             db_id = cursor.lastrowid
+            if db_id is None:
+                raise RuntimeError("Не удалось получить id созданного пользователя")
             return DbUser(
                 id=DbId(db_id),
                 external_id=external_id,

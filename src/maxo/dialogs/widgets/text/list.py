@@ -9,7 +9,8 @@ from maxo.dialogs.widgets.common.items import ItemsGetterVariant, get_items_gett
 from .base import Text
 
 
-class List(Text, BaseScroll):
+# Text и BaseScroll образуют diamond inheritance, который mypy не принимает
+class List(Text, BaseScroll):  # type: ignore[misc]
     def __init__(
         self,
         field: TextWidget,
@@ -20,6 +21,11 @@ class List(Text, BaseScroll):
         page_size: int | None = None,
         on_page_changed: OnPageChangedVariants = None,
     ) -> None:
+        # Постраничный `List` хранит номер страницы в `widget_data` по `id`.
+        # Без `id` все такие виджеты делили бы один ключ и затирали друг друга.
+        if page_size is not None and id is None:
+            raise ValueError("`List` с `page_size` требует `id`")
+
         Text.__init__(self, when=when)
         BaseScroll.__init__(self, id=id, on_page_changed=on_page_changed)
         self.field = field

@@ -7,7 +7,8 @@ from maxo.dialogs.widgets.common import (
     OnPageChangedVariants,
     WhenCondition,
 )
-from maxo.types import Callback, CallbackButton
+from maxo.routing.updates import MessageCallback
+from maxo.types import CallbackButton
 
 from .base import Keyboard
 from .group import Group
@@ -87,8 +88,8 @@ class ScrollingGroup(Group, BaseScroll):
     async def _render_page(
         self,
         page: int,
-        keyboard: list[list[CallbackButton]],
-    ) -> list[list[CallbackButton]]:
+        keyboard: RawKeyboard,
+    ) -> RawKeyboard:
         pages = self._get_page_count(keyboard)
         last_page = pages - 1
         current_page = min(last_page, page)
@@ -114,7 +115,7 @@ class ScrollingGroup(Group, BaseScroll):
 
     async def _process_item_callback(
         self,
-        callback: Callback,
+        callback: MessageCallback,
         data: str,
         dialog: DialogProtocol,
         manager: DialogManager,

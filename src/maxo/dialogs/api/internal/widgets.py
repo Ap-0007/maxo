@@ -12,7 +12,7 @@ from maxo.dialogs.api.entities import MarkupVariant, MediaAttachment
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.dialogs.api.protocols import DialogProtocol
 from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.types import InlineButtons
+from maxo.types.buttons import InlineButtons
 
 
 @runtime_checkable
@@ -113,7 +113,7 @@ class InputWidget(Widget, Protocol):
         raise NotImplementedError
 
 
-DataGetter = Callable[..., Awaitable[dict]]
+DataGetter = Callable[..., Awaitable[dict[Any, Any]]]
 
 
 @runtime_checkable

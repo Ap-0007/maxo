@@ -7,45 +7,37 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 set shell := ["sh", "-c"]
 
-lint:
-    just ruff
-    just codespell
-    just slots
-    just bandit
+
+alias tests := test
+alias tests-all := test-all
+
+# Все линтеры, кроме mypy
+lint: ruff codespell slots bandit
 
 ruff:
-    ruff check --fix .
+    uv run ruff check --fix .
 
 codespell:
-    codespell src examples
+    uv run codespell src examples
 
 [unix]
 slots:
-    PYTHONPATH=src slotscheck -m maxo
+    PYTHONPATH=src uv run slotscheck -m maxo
 
 [windows]
 slots:
-    $env:PYTHONPATH="src"; slotscheck -m maxo
+    $env:PYTHONPATH="src"; uv run slotscheck -m maxo
 
 bandit:
-    bandit src -r
+    uv run bandit -c pyproject.toml src -r
 
 mypy:
-    mypy
+    uv run mypy --config-file pyproject.toml
 
-test:
-    pytest --cov src
-
-tests:
-    just test
+test *args:
+    uv run pytest tests/ --cov=src --cov-report=term {{ args }}
 
 test-all:
-    nox
+    uv run nox
 
-tests-all:
-    just test-all
-
-all:
-    just lint
-    just mypy
-    just test-all
+all: lint mypy test-all

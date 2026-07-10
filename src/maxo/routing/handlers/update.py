@@ -4,7 +4,7 @@ from functools import partial
 from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.filters.always import AlwaysTrueFilter
+from maxo.routing.filters.logic import combine_filters
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
 from maxo.routing.updates.base import BaseUpdate
@@ -14,7 +14,7 @@ _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)
 
 
 @runtime_checkable
-class UpdateHandlerFn(Protocol[_UpdateT, _ReturnT_co]):
+class UpdateHandlerFn(Protocol[_UpdateT, _ReturnT_co]):  # type: ignore[misc]
     async def __call__(
         self,
         update: _UpdateT,
@@ -39,12 +39,9 @@ class UpdateHandler(
     def __init__(
         self,
         handler_fn: UpdateHandlerFn[_UpdateT, _ReturnT_co],
-        filter: Filter[_UpdateT] | None = None,
+        *filters: Filter[_UpdateT],
     ) -> None:
-        if filter is None:
-            filter = AlwaysTrueFilter()
-
-        self._filter = filter
+        self._filter = combine_filters(*filters)
         self._handler_fn = handler_fn
         self._awaitable = inspect.isawaitable(
             handler_fn,
@@ -75,4 +72,5 @@ class UpdateHandler(
         ctx["update"] = update
         if self._awaitable:
             return await wrapped()
-        return await asyncio.to_thread(wrapped)
+        # В этой ветке хендлер синхронный, несмотря на async-сигнатуру протокола.
+        return await asyncio.to_thread(wrapped)  # type: ignore[arg-type]

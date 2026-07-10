@@ -1,6 +1,12 @@
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter
-from maxo.routing.filters.logic import AndFilter, InvertFilter, OrFilter
+from maxo.routing.filters.logic import (
+    AndFilter,
+    InvertFilter,
+    OrFilter,
+    combine_filters,
+)
+from maxo.routing.interfaces.filter import Filter
 from maxo.routing.updates.base import BaseUpdate
 
 TrueF = AlwaysTrueFilter
@@ -47,3 +53,36 @@ def test_invert_inlining() -> None:
     inverted_filter = InvertFilter(InvertFilter(f1))
     assert inverted_filter._filter is f1
     assert inverted_filter._inlined is True
+
+
+def test_combine_filters_empty_returns_always_true() -> None:
+    combined: Filter[BaseUpdate] = combine_filters()
+    assert isinstance(combined, AlwaysTrueFilter)
+
+
+def test_combine_filters_only_none_returns_always_true() -> None:
+    combined: Filter[BaseUpdate] = combine_filters(None, None)
+    assert isinstance(combined, AlwaysTrueFilter)
+
+
+def test_combine_filters_single_returns_same_filter() -> None:
+    f1 = FalseF()
+    assert combine_filters(f1) is f1
+
+
+def test_combine_filters_single_ignores_none() -> None:
+    f1 = FalseF()
+    assert combine_filters(None, f1, None) is f1
+
+
+def test_combine_filters_multiple_returns_and_filter() -> None:
+    f1 = TrueF()
+    f2 = FalseF()
+    combined = combine_filters(f1, f2)
+    assert isinstance(combined, AndFilter)
+    assert combined._filters == [f1, f2]
+
+
+async def test_combine_filters_multiple_behaves_as_and() -> None:
+    assert await combine_filters(TrueF(), TrueF())(BaseUpdate(), Ctx({})) is True
+    assert await combine_filters(TrueF(), FalseF())(BaseUpdate(), Ctx({})) is False

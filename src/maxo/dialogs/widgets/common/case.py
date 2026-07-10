@@ -1,5 +1,5 @@
 from collections.abc import Callable, Hashable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from maxo.dialogs import DialogManager
 from maxo.dialogs.integrations.magic_filter import DialogMagic
@@ -20,11 +20,13 @@ def new_case_field(fieldname: str) -> Selector[T]:
 
 
 def new_magic_selector(f: DialogMagic) -> Selector[T]:
-    def when_magic(
+    def magic_selector(
         data: dict[Any, Any],
         widget: T,
         manager: DialogManager,
-    ) -> bool:
-        return f.resolve(data)
+    ) -> Hashable:
+        # Значение magic-фильтра - это ключ ветки `Case`, а не предикат,
+        # поэтому его нельзя приводить к `bool`.
+        return cast(Hashable, f.resolve(data))
 
-    return when_magic
+    return magic_selector

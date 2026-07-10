@@ -31,7 +31,7 @@ class SharedFSMContextMiddleware(BaseMiddleware):
     ) -> Any:
         data["fsm_storage"] = self.storage
 
-        current_user: DbUser = data.get("current_user")
+        current_user: DbUser | None = data.get("current_user")
         if current_user is None:
             return await handler(event, data)
 

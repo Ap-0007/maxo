@@ -1,6 +1,6 @@
 from collections import deque
 from collections.abc import AsyncIterator
-from typing import Self
+from typing import Self, cast
 
 from maxo.bot.bot import Bot
 from maxo.omit import Omittable, Omitted
@@ -8,6 +8,8 @@ from maxo.types.chat import Chat
 
 
 class ChatsIterator(AsyncIterator[Chat]):
+    _marker: Omittable[int | None]
+
     __slots__ = ("_bot", "_chats", "_count", "_marker")
 
     def __init__(
@@ -30,7 +32,10 @@ class ChatsIterator(AsyncIterator[Chat]):
             return self._chats.popleft()
 
         while True:
-            result = await self._bot.get_chats(count=self._count, marker=self._marker)
+            result = await self._bot.get_chats(
+                count=self._count,
+                marker=cast(int | Omitted, self._marker),
+            )
 
             if not result.chats:
                 raise StopAsyncIteration

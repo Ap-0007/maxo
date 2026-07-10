@@ -8,18 +8,18 @@ class CompositeGetter:
     def __init__(self, *getters: DataGetter) -> None:
         self.getters: list[DataGetter] = list(getters)
 
-    async def __call__(self, **kwargs: Any) -> dict:
-        data = {}
+    async def __call__(self, **kwargs: Any) -> dict[Any, Any]:
+        data: dict[Any, Any] = {}
         for g in self.getters:
             data.update(await g(**kwargs))
         return data
 
 
 class StaticGetter:
-    def __init__(self, data: dict) -> None:
+    def __init__(self, data: dict[Any, Any]) -> None:
         self.data = data
 
-    async def __call__(self, **kwargs: Any) -> dict:
+    async def __call__(self, **kwargs: Any) -> dict[Any, Any]:
         return self.data
 
 
@@ -28,7 +28,11 @@ class PreviewAwareGetter:
         self.normal_getter = normal_getter
         self.preview_getter = preview_getter
 
-    async def __call__(self, dialog_manager: DialogManager, **kwargs: Any) -> dict:
+    async def __call__(
+        self,
+        dialog_manager: DialogManager,
+        **kwargs: Any,
+    ) -> dict[Any, Any]:
         if dialog_manager.is_preview():
             return await self.preview_getter(
                 dialog_manager=dialog_manager,

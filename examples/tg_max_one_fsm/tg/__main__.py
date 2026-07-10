@@ -118,7 +118,7 @@ async def main() -> None:
     redis_url = os.environ["REDIS_URL"]
 
     db_path = (Path(__file__).parent.parent / "db.sqlite").resolve()
-    user_repo = UserRepo(db_path)
+    user_repo = UserRepo(str(db_path))
     await user_repo.create_table()
 
     key_builder = DefaultKeyBuilder(prefix="fsm", separator=":", with_bot_id=False)

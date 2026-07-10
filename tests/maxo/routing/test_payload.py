@@ -1,24 +1,32 @@
 import dataclasses
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import Enum, auto
+from enum import Enum, StrEnum, auto
 from fractions import Fraction
 from typing import Any, Optional, Union
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
 from magic_filter import F
 
+from maxo.enums import ChatType
 from maxo.integrations.magic_filter import MagicFilter
-from maxo.routing.filters.payload import Payload, _check_field_is_nullable
-from maxo.types import User
+from maxo.omit import Omitted
+from maxo.routing.filters.payload import (
+    MessageCallbackFilter,
+    Payload,
+    _check_field_is_nullable,
+)
+from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import Callback, Message, MessageBody, Recipient, User
 
 
 class MyIntEnum(Enum):
     FOO = auto()
 
 
-class MyStringEnum(str, Enum):
+class MyStringEnum(StrEnum):
     FOO = "FOO"
 
 
@@ -380,3 +388,90 @@ class TestPayload:
         filter_object = MyPayload.filter(MagicFilter(F.foo == "test"))
         assert isinstance(filter_object.filter, MagicFilter)
         assert filter_object.payload is MyPayload
+
+
+async def test_message_callback_filter_ignores_foreign_update() -> None:
+    # Фильтр может быть по ошибке зарегистрирован на другом типе апдейта -
+    # он должен не сработать, а не уронить обработчик
+    filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
+    update = MessageCreated(
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        message=Message(
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            recipient=Recipient(chat_type=ChatType.CHAT, chat_id=1),
+            body=MessageBody(mid="m", seq=1, text="hi"),
+        ),
+    )
+
+    assert await filter_(update, {}) is False  # type: ignore[arg-type]
+
+
+def make_callback(payload: Any = "test:v:1") -> MessageCallback:
+    return MessageCallback(
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        callback=Callback(
+            callback_id="c",
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            payload=payload,
+            user=User(
+                user_id=1,
+                is_bot=False,
+                first_name="U",
+                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+            ),
+        ),
+    )
+
+
+class TestMessageCallbackFilterCall:
+    async def test_rejects_omitted_payload(self) -> None:
+        filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
+
+        assert await filter_(make_callback(Omitted()), {}) is False  # type: ignore[arg-type]
+
+    async def test_rejects_unparsable_payload(self) -> None:
+        filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
+
+        assert await filter_(make_callback("other:1"), {}) is False  # type: ignore[arg-type]
+
+    async def test_accepts_and_stores_payload(self) -> None:
+        filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
+        ctx: dict[str, Any] = {}
+
+        assert await filter_(make_callback("test:v:1"), ctx) is True  # type: ignore[arg-type]
+        assert ctx["payload"] == MyPayload(foo="v", bar=1)
+
+    async def test_inner_filter_passes(self) -> None:
+        filter_ = MessageCallbackFilter(
+            payload=MyPayload,
+            filter=AsyncMock(return_value=True),
+        )
+        ctx: dict[str, Any] = {}
+
+        assert await filter_(make_callback(), ctx) is True  # type: ignore[arg-type]
+        assert "payload" in ctx
+
+    async def test_inner_filter_rejects_and_clears_payload(self) -> None:
+        filter_ = MessageCallbackFilter(
+            payload=MyPayload,
+            filter=AsyncMock(return_value=False),
+        )
+        ctx: dict[str, Any] = {}
+
+        assert await filter_(make_callback(), ctx) is False  # type: ignore[arg-type]
+        assert "payload" not in ctx
+
+    async def test_inner_filter_error_clears_payload(self) -> None:
+        filter_ = MessageCallbackFilter(
+            payload=MyPayload,
+            filter=AsyncMock(side_effect=RuntimeError("boom")),
+        )
+        ctx: dict[str, Any] = {}
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await filter_(make_callback(), ctx)  # type: ignore[arg-type]
+
+        assert "payload" not in ctx
+
+    def test_str_contains_payload_name(self) -> None:
+        assert "MyPayload" in str(MessageCallbackFilter(payload=MyPayload, filter=None))

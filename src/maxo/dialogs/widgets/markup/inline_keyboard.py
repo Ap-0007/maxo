@@ -1,9 +1,9 @@
 from typing import Any
 
 from maxo.dialogs import DialogManager
+from maxo.dialogs.api.entities import MarkupVariant
 from maxo.dialogs.api.internal.widgets import (
     MarkupFactory,
-    MarkupVariant,
     RawKeyboard,
 )
 from maxo.dialogs.utils import add_intent_id

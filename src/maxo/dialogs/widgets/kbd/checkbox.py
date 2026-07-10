@@ -11,13 +11,14 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.types import Callback, CallbackButton
+from maxo.routing.updates import MessageCallback
+from maxo.types import CallbackButton
 
 from .base import Keyboard
 
 OnStateChanged = Callable[
     [ChatEvent, "ManagedCheckbox", DialogManager],
-    Awaitable,
+    Awaitable[Any],
 ]
 OnStateChangedVariant = OnStateChanged | WidgetEventProcessor | None
 
@@ -58,7 +59,7 @@ class BaseCheckbox(Keyboard, ABC):
 
     async def _process_item_callback(
         self,
-        callback: Callback,
+        callback: MessageCallback,
         data: str,
         dialog: DialogProtocol,
         manager: DialogManager,

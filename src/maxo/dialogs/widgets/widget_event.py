@@ -18,9 +18,12 @@ class WidgetEventProcessor:
     ) -> None:
         raise NotImplementedError
 
+    def __bool__(self) -> bool:
+        return True
+
 
 class SimpleEventProcessor(WidgetEventProcessor):
-    def __init__(self, callback: Callable) -> None:
+    def __init__(self, callback: Callable[..., Any] | None) -> None:
         self.callback = callback
 
     async def process_event(
@@ -31,12 +34,15 @@ class SimpleEventProcessor(WidgetEventProcessor):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        if self.callback:
+        if self.callback is not None:
             await self.callback(event, source, manager, *args, **kwargs)
+
+    def __bool__(self) -> bool:
+        return self.callback is not None
 
 
 def ensure_event_processor(
-    processor: Callable | WidgetEventProcessor | None,
+    processor: Callable[..., Any] | WidgetEventProcessor | None,
 ) -> WidgetEventProcessor:
     if isinstance(processor, WidgetEventProcessor):
         return processor

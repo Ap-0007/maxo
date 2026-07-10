@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 
@@ -67,11 +68,15 @@ def test_create_deep_link_encoded() -> None:
 
 def test_create_start_link() -> None:
     bot = MockBot(username="testbot")
-    link = deeplink.create_start_link(bot=bot, payload="test")
+    link = deeplink.create_start_link(bot=cast("Bot", bot), payload="test")
     assert link == "https://max.ru/testbot?start=test"
 
 
 def test_create_startapp_link() -> None:
     bot = MockBot(username="testbot")
-    link = deeplink.create_startapp_link(bot=bot, payload="test", app_name="testapp")
+    link = deeplink.create_startapp_link(
+        bot=cast("Bot", bot),
+        payload="test",
+        app_name="testapp",
+    )
     assert link == "https://max.ru/testbot/testapp?startapp=test"

@@ -8,7 +8,7 @@ from maxo.types.message import Message
 from maxo.types.user import User
 
 
-class MessageCallbackFacade(
+class MessageCallbackFacade(  # type: ignore[misc]
     BaseUpdateFacade[MessageCallback],
     CallbackMethodsFacade,
     MessageMethodsFacade,

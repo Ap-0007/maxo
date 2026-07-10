@@ -77,7 +77,7 @@ async def handle_deeplink(
     current_user: DbUser,
 ) -> None:
     try:
-        shared_id_to_link = SharedId(int(command.args))
+        shared_id_to_link = SharedId(int(command.args or ""))
         await user_repo.link_accounts(
             current_user=current_user,
             shared_id_to_link=shared_id_to_link,

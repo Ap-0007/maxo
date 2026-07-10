@@ -8,7 +8,7 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.omit import Omittable, Omitted
+from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.updates import MessageCallback
 from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButton
 
@@ -21,6 +21,8 @@ OnClick: TypeAlias = Callable[
 
 
 class Button(Keyboard):
+    widget_id: str
+
     def __init__(
         self,
         text: TextWidget,
@@ -31,6 +33,10 @@ class Button(Keyboard):
         super().__init__(id=id, when=when)
         self.text = text
         self.on_click = ensure_event_processor(on_click)
+
+    def _own_payload(self) -> str:
+        """`id` обязателен для `Button`, поэтому payload всегда строка."""
+        return self.widget_id
 
     async def _process_own_callback(
         self,
@@ -90,12 +96,14 @@ class WebApp(Keyboard):
         self,
         text: TextWidget,
         web_app: TextWidget,
+        payload: Omittable[TextWidget] = Omitted(),
         contact_id: Omittable[int] = Omitted(),
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)
         self.text = text
         self.web_app = web_app
+        self.payload = payload
         self.contact_id = contact_id
 
     async def _render_keyboard(
@@ -106,11 +114,16 @@ class WebApp(Keyboard):
         text = await self.text.render_text(data, manager)
         web_app = await self.web_app.render_text(data, manager)
 
+        payload: Omittable[str] = Omitted()
+        if is_defined(self.payload):
+            payload = await self.payload.render_text(data, manager)
+
         return [
             [
                 OpenAppButton(
                     text=text,
                     web_app=web_app,
+                    payload=payload,
                     contact_id=self.contact_id,
                 ),
             ],

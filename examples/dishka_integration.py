@@ -9,6 +9,7 @@ import os
 
 from dishka import (
     AsyncContainer,
+    BaseScope,
     FromDishka,
     Provider,
     Scope,
@@ -29,7 +30,7 @@ class GreeterService:
 
 
 class AppProvider(Provider):
-    scope = Scope.APP
+    scope: BaseScope | None = Scope.APP
 
     @provide
     def bot(self) -> Bot:

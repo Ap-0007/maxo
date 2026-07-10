@@ -284,6 +284,6 @@ def warming_up_retort(
         assert_never(warming_up)
 
     for tp in types:
-        retort_method(tp)
+        retort_method(tp)  # type: ignore[arg-type]
 
     return retort

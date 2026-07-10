@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 from maxo.dialogs.api.exceptions import InvalidWidgetIdError
 from maxo.dialogs.api.protocols import DialogManager
@@ -19,7 +19,7 @@ class Actionable(BaseWidget):
         self.widget_id = id
 
     def find(self, widget_id: str) -> Optional["Actionable"]:
-        """Find nested widget or current one by id."""
+        """Найти вложенный виджет или текущий по `id`."""
         if self.widget_id is not None and self.widget_id == widget_id:
             return self
         return None
@@ -29,19 +29,23 @@ class Actionable(BaseWidget):
         manager: DialogManager,
         default: T,
     ) -> Any | T:
-        """Get data for current widget id, setting default if needed."""
-        return manager.current_context().widget_data.setdefault(
-            self.widget_id,
-            default,
-        )
+        """Получить данные виджета по его `id`, подставив `default` при отсутствии."""
+        assert self.widget_id is not None  # noqa: S101
+        widget_data = cast(dict[str, Any], manager.current_context().widget_data)
+        return widget_data.setdefault(self.widget_id, default)
 
     def set_widget_data(
         self,
         manager: DialogManager,
         value: T,
-    ) -> T:
-        """Set data for current widget id."""
-        manager.current_context().widget_data[self.widget_id] = value
+    ) -> None:
+        """Записать данные виджета по его `id`."""
+        assert self.widget_id is not None  # noqa: S101
+        widget_data = cast(
+            dict[str, Any],
+            manager.current_context().widget_data,
+        )
+        widget_data[self.widget_id] = value
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} id={self.widget_id}>"
