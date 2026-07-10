@@ -220,7 +220,11 @@ class MessageCallbackFilter(BaseFilter[MessageCallback]):
         update: MessageCallback,
         ctx: Ctx,
     ) -> bool:
-        if not isinstance(update, MessageCallback) or is_not_defined(update.payload):
+        if not isinstance(update, MessageCallback):
+            # Проверка типа защищает от регистрации фильтра на чужом апдейте:
+            # без неё обращение к `update.payload` роняет обработчик.
+            return False  # type: ignore[unreachable]
+        if is_not_defined(update.payload):
             return False
         try:
             payload = self.payload.unpack(update.payload)

@@ -18,7 +18,7 @@ def create_message(text: str, user_id: int | None = 1) -> Message:
             last_activity_time=datetime.now(UTC),
         )
         if user_id is not None
-        else None
+        else Omitted()
     )
     return Message(
         body=MessageBody(seq=1, mid="1", text=text),
@@ -28,7 +28,7 @@ def create_message(text: str, user_id: int | None = 1) -> Message:
     )
 
 
-def test_message_created_constructor():
+def test_message_created_constructor() -> None:
     message = create_message("Hello")
     message_created = MessageCreated(
         message=message,
@@ -40,7 +40,7 @@ def test_message_created_constructor():
     assert message_created.type == UpdateType.MESSAGE_CREATED
 
 
-def test_message_created_unsafe_user_locale_defined():
+def test_message_created_unsafe_user_locale_defined() -> None:
     message = create_message("Hello")
     message_created = MessageCreated(
         message=message,
@@ -50,7 +50,7 @@ def test_message_created_unsafe_user_locale_defined():
     assert message_created.unsafe_user_locale == "en-US"
 
 
-def test_message_created_unsafe_user_locale_omitted():
+def test_message_created_unsafe_user_locale_omitted() -> None:
     message = create_message("Hello")
     message_created = MessageCreated(
         message=message,
@@ -61,7 +61,7 @@ def test_message_created_unsafe_user_locale_omitted():
         _ = message_created.unsafe_user_locale
 
 
-def test_message_created_text_property():
+def test_message_created_text_property() -> None:
     message = create_message("Test message text")
     message_created = MessageCreated(
         message=message,
@@ -70,7 +70,7 @@ def test_message_created_text_property():
     assert message_created.text == "Test message text"
 
 
-def test_message_created_user_id_property():
+def test_message_created_user_id_property() -> None:
     message_with_user = create_message("Test", user_id=123)
     message_created_with_user = MessageCreated(
         message=message_with_user,

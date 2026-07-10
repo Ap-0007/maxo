@@ -38,16 +38,16 @@ async def test_validation_radio(mock_manager: DialogManager) -> None:
         type_factory=validate_datetime,
         items=[
             (
-                int(datetime(2024, 5, 26, tzinfo=UTC).timestamp()),
-                datetime(2024, 5, 26, tzinfo=UTC),
+                int(datetime(2026, 5, 26, tzinfo=UTC).timestamp()),
+                datetime(2026, 5, 26, tzinfo=UTC),
             ),
             (
-                int(datetime(2024, 5, 30, tzinfo=UTC).timestamp()),
-                datetime(2024, 5, 30, tzinfo=UTC),
+                int(datetime(2026, 5, 30, tzinfo=UTC).timestamp()),
+                datetime(2026, 5, 30, tzinfo=UTC),
             ),
             (
-                int(datetime(2022, 3, 11, tzinfo=UTC).timestamp()),
-                datetime(2022, 3, 11, tzinfo=UTC),
+                int(datetime(2026, 3, 11, tzinfo=UTC).timestamp()),
+                datetime(2026, 3, 11, tzinfo=UTC),
             ),
         ],
     )
@@ -57,17 +57,17 @@ async def test_validation_radio(mock_manager: DialogManager) -> None:
 
     await radio.set_checked(
         cast(ChatEvent, Mock()),
-        int(datetime(2024, 5, 30, tzinfo=UTC).timestamp()),
+        int(datetime(2026, 5, 30, tzinfo=UTC).timestamp()),
         mock_manager,
     )
 
     assert radio.is_checked(
-        int(datetime(2024, 5, 30, tzinfo=UTC).timestamp()),
+        int(datetime(2026, 5, 30, tzinfo=UTC).timestamp()),
         mock_manager,
     )
 
     current_checked_date = radio.get_checked(mock_manager)
-    assert current_checked_date == datetime(2024, 5, 30, tzinfo=UTC)
+    assert current_checked_date == datetime(2026, 5, 30, tzinfo=UTC)
 
 
 async def test_on_state_changed_radio(mock_manager: DialogManager) -> None:

@@ -42,7 +42,9 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
         if keyboard is not None:
             attachments.append(
                 InlineKeyboardAttachmentRequest(
-                    payload=InlineKeyboardAttachmentRequestPayload(buttons=keyboard),
+                    payload=InlineKeyboardAttachmentRequestPayload(
+                        buttons=[list(row) for row in keyboard],
+                    ),
                 ),
             )
 
@@ -98,7 +100,11 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                 case UploadType.IMAGE:
                     attachments.append(PhotoAttachmentRequest.factory(token=token))
                 case _:
-                    loggers.utils.warning("Received unknown attachment type: %s", type_)
+                    # Недостижимо по типам, но Макс может прислать новый тип.
+                    loggers.utils.warning(  # type: ignore[unreachable]
+                        "Received unknown attachment type: %s",
+                        type_,
+                    )
 
         return attachments
 

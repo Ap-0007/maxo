@@ -28,7 +28,7 @@ async def data_getter(
     **__: Any,
 ) -> dict[str, Any]:
     checkbox = cast(ManagedCheckbox, dialog_manager.find(CHECKBOX_ID))
-    radio = cast(ManagedRadio, dialog_manager.find(EMOJI_ID))
+    radio = cast("ManagedRadio[str]", dialog_manager.find(EMOJI_ID))
     return {
         "option": checkbox.is_checked(),
         "emoji": radio.get_checked() or "-",

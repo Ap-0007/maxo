@@ -1,5 +1,7 @@
 from typing import Any, cast
 
+import pytest
+
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Const, Format, List
 
@@ -66,3 +68,15 @@ def test_list_accepts_callable_items_getter() -> None:
     widget = List(Const("item"), items=items_getter)
 
     assert widget.items_getter({"items": ["a"]}) == ["a"]
+
+
+def test_list_requires_id_when_paginated() -> None:
+    # без id все постраничные List делили бы один ключ в widget_data
+    with pytest.raises(ValueError, match="page_size"):
+        List(Const("x"), items=lambda _data: [1, 2], page_size=2)
+
+
+def test_list_without_id_and_page_size_has_no_widget_id() -> None:
+    widget = List(Const("x"), items=lambda _data: [1, 2])
+
+    assert widget.widget_id is None

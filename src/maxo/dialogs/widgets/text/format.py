@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.common import WhenCondition
@@ -13,7 +13,7 @@ class _FormatDataStub:
 
     def __getitem__(self, item: Any) -> "_FormatDataStub":
         if item in self.data:
-            return self.data[item]
+            return cast(_FormatDataStub, self.data[item])
         if not self.name:
             return _FormatDataStub(item)
         return _FormatDataStub(f"{self.name}[{item}]")

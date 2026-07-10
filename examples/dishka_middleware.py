@@ -9,7 +9,14 @@ import logging
 import os
 from typing import Any
 
-from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
+from dishka import (
+    AsyncContainer,
+    BaseScope,
+    Provider,
+    Scope,
+    make_async_container,
+    provide,
+)
 
 from maxo import Bot, Ctx, Dispatcher
 from maxo.integrations.dishka import CONTAINER_NAME, setup_dishka
@@ -24,7 +31,7 @@ class GreeterService:
 
 
 class AppProvider(Provider):
-    scope = Scope.APP
+    scope: BaseScope | None = Scope.APP
 
     @provide
     def bot(self) -> Bot:
@@ -47,7 +54,7 @@ class GreetingMiddleware(BaseMiddleware[MessageCreated]):
         ctx: Ctx,
         next: NextMiddleware[MessageCreated],
     ) -> Any:
-        container = ctx.get(CONTAINER_NAME)
+        container: AsyncContainer = ctx[CONTAINER_NAME]
         greeter = await container.get(GreeterService)
         name = "гость"
         ctx["greeting"] = greeter.greet(name)

@@ -83,7 +83,11 @@ class AttachmentRequestBuilder:
         return self
 
     def add_inline_keyboard(self, buttons: Sequence[Sequence[InlineButtons]]) -> Self:
-        self._items.append(InlineKeyboardAttachmentRequest.factory(buttons=buttons))
+        self._items.append(
+            InlineKeyboardAttachmentRequest.factory(
+                buttons=[list(row) for row in buttons],
+            ),
+        )
         return self
 
     def add_location(self, latitude: Decimal, longitude: Decimal) -> Self:

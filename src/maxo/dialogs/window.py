@@ -10,6 +10,7 @@ from maxo.dialogs.api.entities import (
     NewMessage,
 )
 from maxo.dialogs.api.internal import Widget, WindowProtocol
+from maxo.enums import ChatType
 from maxo.enums.text_format import TextFormat
 from maxo.fsm import State
 from maxo.omit import Omittable, Omitted
@@ -141,7 +142,7 @@ class Window(WindowProtocol):
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
-        if self.keyboard:
+        if self.keyboard:  # type: ignore[truthy-bool]
             return await self.keyboard.process_callback(callback, dialog, manager)
         return False
 
@@ -169,13 +170,16 @@ class Window(WindowProtocol):
         try:
             media = await self.render_media(current_data, manager)
 
-            keyboard = await self.render_kbd(current_data, manager)
-            if not any(row for row in keyboard):
+            keyboard: MarkupVariant | None = await self.render_kbd(
+                current_data,
+                manager,
+            )
+            if keyboard is not None and not any(row for row in keyboard):
                 keyboard = None
 
             return NewMessage(
                 recipient=Recipient(
-                    chat_type=event_context.chat_type,
+                    chat_type=event_context.chat_type or ChatType.CHAT,
                     chat_id=event_context.chat_id,
                     user_id=event_context.user_id,
                 ),

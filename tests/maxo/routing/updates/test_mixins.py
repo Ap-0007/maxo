@@ -12,7 +12,7 @@ from maxo.routing.mixins.message import MessageMethodsFacade
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 
 
-def test_deprecation_warning():
+def test_deprecation_warning() -> None:
     with pytest.warns(
         DeprecationWarning,
         match="Миксины были перенесены из `maxo.routing.updates.mixins`",
@@ -22,7 +22,7 @@ def test_deprecation_warning():
     importlib.reload(maxo.routing.updates.mixins)
 
 
-def test_all_mixins_are_exported():
+def test_all_mixins_are_exported() -> None:
     import maxo.routing.updates.mixins
 
     assert hasattr(maxo.routing.updates.mixins, "AttachmentsFacade")

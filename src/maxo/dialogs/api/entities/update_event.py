@@ -33,7 +33,7 @@ class DialogUpdateEvent(BaseUpdate):
     intent_id: str | None
     stack_id: str | None
     show_mode: ShowMode | None = None
-    bot: Bot
+    bot: Bot  # type: ignore[override]
 
     # Для частичной совместимости с `MaxUpdate`
     @property

@@ -62,7 +62,7 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
             updates: list[Updates] = []
             for raw_upd in raw.get("updates", []):
                 try:
-                    updates.append(response_loader.load(raw_upd, Updates))
+                    updates.append(response_loader.load(raw_upd, Updates))  # type: ignore[arg-type]
                 except LoadError:
                     loggers.methods.warning(
                         "Пропуск незагружаемого апдейта. Сообщите об этой ошибке в "

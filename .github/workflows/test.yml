@@ -36,6 +36,9 @@ jobs:
         with:
           version: 0.11.23
 
+      - name: Install just
+        uses: extractions/setup-just@v3
+
       - name: Install dependencies with ${{ matrix.dependency-resolution }} resolution
         run: |
           uv sync --all-groups --resolution ${{ matrix.dependency-resolution }}
@@ -43,7 +46,7 @@ jobs:
       - name: Run tests with coverage
         id: pytest
         run: |
-          uv run pytest tests/ --cov=src --cov-report=xml --cov-report=term
+          just test --cov-report=xml
 
       - name: Upload coverage.xml artifact
         uses: actions/upload-artifact@v6

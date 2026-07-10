@@ -28,7 +28,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 import dataclasses
 import textwrap
 from collections.abc import Generator, Iterable, Iterator
-from typing import Any, ClassVar, Self, TypeAlias
+from typing import Any, ClassVar, Self, TypeAlias, cast
 
 from maxo.enums import MarkupElementType
 from maxo.types.emphasized_markup import EmphasizedMarkup
@@ -135,7 +135,10 @@ class Text(Iterable[NodeType]):
         if self.type is None:
             raise ValueError("Node without type can't be rendered as entity")
 
-        markup_class: type[MarkupElements] = _MARKUP_MAP.get(self.type, MarkupElement)
+        markup_class: type[MarkupElements] = _MARKUP_MAP.get(
+            self.type,
+            cast(type[MarkupElements], MarkupElement),
+        )
         return markup_class(
             type=self.type,
             from_=offset,
@@ -257,49 +260,49 @@ class Text(Iterable[NodeType]):
 
 
 class Bold(Text):
-    type = MarkupElementType.STRONG
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.STRONG
 
 
 class Italic(Text):
-    type = MarkupElementType.EMPHASIZED
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.EMPHASIZED
 
 
 class Underline(Text):
-    type = MarkupElementType.UNDERLINE
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.UNDERLINE
 
 
 class Strikethrough(Text):
-    type = MarkupElementType.STRIKETHROUGH
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.STRIKETHROUGH
 
 
 class BlockQuote(Text):
-    type = MarkupElementType.QUOTE
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.QUOTE
 
 
 class Monospaced(Text):
-    type = MarkupElementType.MONOSPACED
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.MONOSPACED
 
 
 class Link(Text):
-    type = MarkupElementType.LINK
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.LINK
 
     def __init__(self, *body: NodeType, url: str, **params: Any) -> None:
         super().__init__(*body, url=url, **params)
 
 
 class Mention(Text):
-    type = MarkupElementType.USER_MENTION
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.USER_MENTION
 
     def __init__(self, *body: NodeType, user_id: int, **params: Any) -> None:
         super().__init__(*body, user_id=user_id, **params)
 
 
 class Heading(Text):
-    type = MarkupElementType.HEADING
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.HEADING
 
 
 class Highlighted(Text):
-    type = MarkupElementType.HIGHLIGHTED
+    type: ClassVar[MarkupElementType | None] = MarkupElementType.HIGHLIGHTED
 
 
 NODE_TYPES: dict[MarkupElementType | None, type[Text]] = {

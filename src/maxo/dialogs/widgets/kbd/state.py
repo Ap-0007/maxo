@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.entities import ChatEvent, Data, ShowMode, StartMode
 from maxo.dialogs.api.internal import TextWidget
@@ -24,7 +24,7 @@ class EventProcessorButton(Button, WidgetEventProcessor):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        await self._on_click(event, self, manager)
+        await self._on_click(cast(MessageCallback, event), self, manager)
 
     async def _on_click(
         self,

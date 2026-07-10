@@ -1,6 +1,7 @@
+from maxo.dialogs.api.internal.widgets import DataGetter
+
 from .data_context import (
     CompositeGetter,
-    DataGetter,
     PreviewAwareGetter,
     StaticGetter,
 )

@@ -47,11 +47,11 @@ uv run pytest tests/path/test_file.py::test_name -v
 uv run ruff check --no-fix src/maxo/path.py tests/path/test_file.py
 ```
 
-В дереве есть  `justfile`. Если `just` установлен и dev-окружение активно,
-его можно использовать как локальный shortcut:
+В дереве есть  `justfile`, и CI запускает линтеры и тесты именно через него.
+Все рецепты сами вызывают `uv run`, поэтому активировать venv не нужно:
 
 ```bash
-just lint
+just lint       # ruff + codespell + slotscheck + bandit
 just mypy
 just test
 just test-all
@@ -63,7 +63,11 @@ just all
 - `pyproject.toml` задает `ruff` c `fix = true`, поэтому для проверки без
   изменений используй `--no-fix`.
 - Рецепт `just ruff` запускает `ruff check --fix .` и может менять файлы.
-  Для проверки без правок используй `uv run ruff check --no-fix .`.
+  Поэтому `lint.yml` зовет линтеры напрямую через `uv run`, а не через just:
+  иначе CI чинил бы найденное и зеленел. Для проверки без правок локально -
+  `uv run ruff check --no-fix .`.
+- `just test` принимает дополнительные аргументы pytest, например
+  `just test --cov-report=xml` (так делает CI) или `just test -k dialogs`.
 - `pytest` в проекте работает с `asyncio_mode = auto`.
 - CI проверяет lint на Python `3.14` и тесты на Python `3.12`, `3.13`, `3.14`
   с разрешением зависимостей `lowest-direct` и `highest`.
@@ -866,14 +870,17 @@ uv run sphinx-build -b html docs docs/_build/html
 ## CI и качество
 
 - `.github/workflows/lint.yml` запускает Python `3.14`, установку через
-  `uv pip install -e . --group=dev --system`, `ruff check --no-fix .` и
-  `mypy --config-file pyproject.toml`.
+  `uv sync --all-groups`, затем отдельными шагами через `uv run`:
+  `ruff check --no-fix .`, `mypy --config-file pyproject.toml`,
+  `codespell src examples`, `slotscheck -m maxo`, `bandit -c pyproject.toml src -r`.
 - `.github/workflows/test.yml` запускает Python `3.12`, `3.13`, `3.14` с
-  dependency resolution `lowest-direct` и `highest`, затем pytest с coverage.
+  dependency resolution `lowest-direct` и `highest`, затем
+  `just test --cov-report=xml`. Матрицу версий гоняет сам GitHub Actions,
+  поэтому `just test-all` (nox) в CI не используется.
 - `.github/workflows/relator.yml` отправляет уведомления о новых issues и PR в
   Telegram через закрепленный action `reagento/relator`.
-- Локальный `just lint` дополнительно запускает `codespell`, `slotscheck` и
-  `bandit`. Учитывай их при изменении пользовательского текста, `__slots__`,
+- `just lint` запускает `codespell`, `slotscheck` и `bandit` наравне с `ruff`.
+  Учитывай их при изменении пользовательского текста, `__slots__`,
   dataclass-моделей и security-sensitive кода.
 - `black` есть в lint-группе, но форматирование проекта задает `ruff format`.
   Не переформатируй весь репозиторий без отдельной задачи.

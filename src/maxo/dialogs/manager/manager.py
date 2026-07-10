@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from maxo import Ctx, loggers
+from maxo import Ctx, Dispatcher, loggers
 from maxo.dialogs.api.entities import (
     DEFAULT_STACK_ID,
     EVENT_CONTEXT_KEY,
@@ -92,12 +92,12 @@ class ManagerImpl(DialogManager):
         return self._event
 
     @property
-    def middleware_data(self) -> dict:
+    def middleware_data(self) -> dict[Any, Any]:
         """Middleware data."""
-        return self._ctx
+        return cast(dict[Any, Any], self._ctx)
 
     @property
-    def dialog_data(self) -> dict:
+    def dialog_data(self) -> dict[Any, Any]:
         """Dialog data for current context."""
         return self.current_context().dialog_data
 
@@ -114,7 +114,7 @@ class ManagerImpl(DialogManager):
                 "method to access methods from background tasks",
             )
 
-    async def load_data(self) -> dict:
+    async def load_data(self) -> dict[Any, Any]:
         context = self.current_context()
         if self._getter:
             data = await self._getter(**self.middleware_data)
@@ -134,8 +134,6 @@ class ManagerImpl(DialogManager):
     def dialog(self) -> DialogProtocol:
         self.check_disabled()
         current = self.current_context()
-        if not current:
-            raise RuntimeError
         return self._registry.find_dialog(current.state)
 
     def current_context(self) -> Context:
@@ -157,10 +155,10 @@ class ManagerImpl(DialogManager):
 
     def current_stack(self) -> Stack:
         self.check_disabled()
-        return self._ctx[STACK_KEY]
+        return cast(Stack, self._ctx[STACK_KEY])
 
     def storage(self) -> StorageProxy:
-        return self._ctx[STORAGE_KEY]
+        return cast(StorageProxy, self._ctx[STORAGE_KEY])
 
     async def _remove_kbd(self) -> None:
         if self.current_stack().last_message_id is None:
@@ -436,7 +434,7 @@ class ManagerImpl(DialogManager):
                 sequence_id=current_message.body.seq,
                 attachments=current_message.body.attachments or [],
             )
-        if not stack or not stack.last_message_id:
+        if not stack.last_message_id:
             return None
         return OldMessage(
             text=UnknownText.UNKNOWN,
@@ -446,7 +444,7 @@ class ManagerImpl(DialogManager):
                 chat_type=ChatType.CHAT,  # TODO: Узнать тип чата?
             ),
             message_id=stack.last_message_id,
-            sequence_id=stack.last_sequence_id,
+            sequence_id=stack.last_sequence_id or 0,
             attachments=stack.last_attachments,
         )
 
@@ -459,18 +457,18 @@ class ManagerImpl(DialogManager):
             return self._get_message_from_callback(event)
 
         stack = self.current_stack()
-        if not stack or not stack.last_message_id:
+        if not stack.last_message_id:
             return None
         event_context: EventContext = self.middleware_data[EVENT_CONTEXT_KEY]
         return OldMessage(
             text=UnknownText.UNKNOWN,
             recipient=Recipient(
                 chat_id=event_context.chat_id,
-                chat_type=event_context.chat_type,
+                chat_type=event_context.chat_type or ChatType.CHAT,
                 user_id=event_context.user_id,
             ),
             message_id=stack.last_message_id,
-            sequence_id=stack.last_sequence_id,
+            sequence_id=stack.last_sequence_id or 0,
             attachments=stack.last_attachments,
         )
 
@@ -493,7 +491,7 @@ class ManagerImpl(DialogManager):
 
     async def update(
         self,
-        data: dict | None = None,
+        data: dict[Any, Any] | None = None,
         show_mode: ShowMode | None = None,
     ) -> None:
         if data:
@@ -504,16 +502,16 @@ class ManagerImpl(DialogManager):
         widget = self.dialog().find(widget_id)
         if not widget:
             return None
-        return widget.managed(self)
+        return cast(Widget, widget.managed(self))
 
     def _get_fake_user(self, user_id: int | None = None) -> User:
         """Get User if we have info about him or FakeUser instead."""
         # TODO: Сделать нормально, это нейрослоп
-        if isinstance(self.event, MessageCreated):
-            current_user = self.event.message.unsafe_sender
+        event = self.event.event if isinstance(self.event, ErrorEvent) else self.event
+        if isinstance(event, MessageCreated):
+            current_user = event.message.unsafe_sender
         else:
-            current_user = self.event.user
-        ###
+            current_user = event.user
 
         if user_id is None or user_id == current_user.id:
             return current_user
@@ -542,7 +540,7 @@ class ManagerImpl(DialogManager):
             )
         return FakeChat(
             chat_id=chat_id,
-            type="",
+            type=ChatType.CHAT,
             is_public=False,
             last_event_time=datetime.now(UTC),
             participants_count=1,
@@ -560,7 +558,7 @@ class ManagerImpl(DialogManager):
         chat = self._get_fake_chat(chat_id)
         intent_id = None
         event_context = cast(
-            "EventContext",
+            EventContext,
             self.middleware_data.get(EVENT_CONTEXT_KEY),
         )
         new_event_context = EventContext(
@@ -581,14 +579,14 @@ class ManagerImpl(DialogManager):
                 stack_id = DEFAULT_STACK_ID
 
         return BgManager(
-            user=new_event_context.user,
+            user=user,
             chat_id=new_event_context.chat_id,
             bot=new_event_context.bot,
-            dp=self._router,
+            dp=cast(Dispatcher, self._router),
             intent_id=intent_id,
             stack_id=stack_id,
             load=load,
-            chat_type=new_event_context.chat_type,
+            chat_type=new_event_context.chat_type or ChatType.CHAT,
         )
 
     @asynccontextmanager

@@ -11,7 +11,7 @@ from maxo.dialogs.widgets.common import (
 from .base import Text
 
 
-class ScrollingText(Text, BaseScroll):
+class ScrollingText(Text, BaseScroll):  # type: ignore[misc]
     def __init__(
         self,
         text: TextWidget,

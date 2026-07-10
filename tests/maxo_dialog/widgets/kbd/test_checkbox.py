@@ -7,7 +7,7 @@ from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.widgets.kbd import Checkbox
 from maxo.dialogs.widgets.text import Const
 from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, User
+from maxo.types import Callback, CallbackButton, User
 
 
 async def test_check_checkbox(mock_manager: DialogManager) -> None:
@@ -51,8 +51,10 @@ async def test_render_keyboard_checked(mock_manager: DialogManager) -> None:
 
     assert len(keyboard) == 1
     assert len(keyboard[0]) == 1
-    assert keyboard[0][0].text == "✓  Checked"
-    assert "check:1" in keyboard[0][0].payload
+    button = keyboard[0][0]
+    assert isinstance(button, CallbackButton)
+    assert button.text == "✓  Checked"
+    assert "check:1" in button.payload
 
 
 async def test_render_keyboard_unchecked(mock_manager: DialogManager) -> None:
@@ -67,8 +69,10 @@ async def test_render_keyboard_unchecked(mock_manager: DialogManager) -> None:
 
     assert len(keyboard) == 1
     assert len(keyboard[0]) == 1
-    assert keyboard[0][0].text == "Unchecked"
-    assert "check:0" in keyboard[0][0].payload
+    button = keyboard[0][0]
+    assert isinstance(button, CallbackButton)
+    assert button.text == "Unchecked"
+    assert "check:0" in button.payload
 
 
 async def test_process_item_callback_toggle(mock_manager: DialogManager) -> None:
@@ -83,21 +87,21 @@ async def test_process_item_callback_toggle(mock_manager: DialogManager) -> None
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="check:0",
         ),
     )
 
     assert not checkbox.is_checked(mock_manager)
 
-    await checkbox._process_item_callback(callback.callback, "0", None, mock_manager)
+    await checkbox._process_item_callback(callback, "0", Mock(), mock_manager)
 
     assert checkbox.is_checked(mock_manager)
 
@@ -115,19 +119,19 @@ async def test_on_click_callback(mock_manager: DialogManager) -> None:
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="check:0",
         ),
     )
 
-    await checkbox._process_item_callback(callback.callback, "0", None, mock_manager)
+    await checkbox._process_item_callback(callback, "0", Mock(), mock_manager)
 
     on_click.assert_called_once()
 

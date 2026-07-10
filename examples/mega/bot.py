@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import Any
 
 from bot_dialogs import states
 from bot_dialogs.about import about_dialog
@@ -38,7 +39,10 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
     )
 
 
-async def on_unknown_intent(event: ErrorEvent, dialog_manager: DialogManager) -> None:
+async def on_unknown_intent(
+    event: ErrorEvent[Any, Any],
+    dialog_manager: DialogManager,
+) -> None:
     # Example of handling UnknownIntent Error and starting new dialog.
     logger.error("Restarting dialog: %s", event.exception)
     if isinstance(event.event, MessageCallback):

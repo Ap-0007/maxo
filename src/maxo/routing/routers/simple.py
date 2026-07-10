@@ -72,7 +72,7 @@ class Router(BaseRouter):
 
         self.after_shutdown = SignalObserver[AfterShutdown]()
 
-        self._observers = {
+        self._observers: dict[Any, Observer[Any, Any, Any]] = {
             BotAddedToChat: self.bot_added_to_chat,
             BotRemovedFromChat: self.bot_removed_from_chat,
             BotStarted: self.bot_started,

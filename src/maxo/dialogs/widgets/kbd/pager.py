@@ -6,7 +6,8 @@ from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedScroll, Scroll, WhenCondition
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.types import Callback, CallbackButton
+from maxo.routing.updates import MessageCallback
+from maxo.types import CallbackButton
 
 from .base import Keyboard
 
@@ -20,7 +21,7 @@ class PageDirection(Enum):
 
 
 class PagerData(TypedDict):
-    data: dict
+    data: dict[Any, Any]
     current_page: int
     current_page1: int
     pages: int
@@ -50,6 +51,8 @@ class BasePager(Keyboard, ABC):
         when: WhenCondition = None,
     ) -> None:
         super().__init__(id=id, when=when)
+        self._scroll: Scroll | None
+        self._scroll_id: str | None
         if isinstance(scroll, str):
             self._scroll_id = scroll
             self._scroll = None
@@ -60,11 +63,12 @@ class BasePager(Keyboard, ABC):
     def _find_scroll(self, manager: DialogManager) -> ManagedScroll:
         if self._scroll:
             return self._scroll.managed(manager)
+        assert self._scroll_id is not None  # noqa: S101
         return cast(ManagedScroll, manager.find(self._scroll_id))
 
     async def _process_item_callback(
         self,
-        callback: Callback,
+        callback: MessageCallback,
         data: str,
         dialog: DialogProtocol,
         manager: DialogManager,
@@ -112,7 +116,7 @@ class SwitchPage(BasePager):
         target_page: int,
         current_page: int,
         pages: int,
-    ) -> PagerPageData:
+    ) -> dict[Any, Any]:
         return {
             "data": data,
             "target_page": target_page,
@@ -141,7 +145,7 @@ class SwitchPage(BasePager):
 
     async def _render_keyboard(
         self,
-        data: PagerPageData,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
         return [
@@ -259,7 +263,7 @@ class NumberedPager(BasePager):
         data: dict[Any, Any],
         current_page: int,
         pages: int,
-    ) -> PagerData:
+    ) -> dict[Any, Any]:
         return {
             "data": data,
             "current_page": current_page,
@@ -271,7 +275,7 @@ class NumberedPager(BasePager):
         self,
         data: dict[Any, Any],
         target_page: int,
-    ) -> PagerData:
+    ) -> dict[Any, Any]:
         data = data.copy()
         data["target_page"] = target_page
         data["target_page1"] = target_page + 1
@@ -294,13 +298,13 @@ class NumberedPager(BasePager):
 
     async def _render_keyboard(
         self,
-        data: PagerData,
+        data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
-        buttons = []
+        buttons: list[CallbackButton] = []
         pages = data["pages"]
         current_page = data["current_page"]
-        final_buttons = []
+        final_buttons: list[list[CallbackButton]] = []
 
         for target_page in range(pages):
             if self.length is not None and len(buttons) >= self.length:
@@ -323,4 +327,4 @@ class NumberedPager(BasePager):
             )
         if buttons:
             final_buttons.append(buttons)
-        return final_buttons
+        return cast(RawKeyboard, final_buttons)

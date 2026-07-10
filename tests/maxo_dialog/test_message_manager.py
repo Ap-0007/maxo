@@ -2,7 +2,8 @@
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -24,10 +25,12 @@ from maxo.types import (
     AttachmentsRequests,
     AudioAttachmentRequest,
     Callback,
+    CallbackButton,
     FileAttachmentRequest,
     InlineKeyboardAttachment,
     Message,
     MessageBody,
+    PhotoAttachment,
     PhotoAttachmentRequest,
     Recipient,
     SendMessageResult,
@@ -107,6 +110,10 @@ def _make_callback() -> Callback:
             last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
         ),
     )
+
+
+def _bad_request(message: str) -> MaxBotBadRequestError:
+    return MaxBotBadRequestError(code="400", error="bad_request", message=message)
 
 
 async def test_remove_inline_kbd_skips_refetch() -> None:
@@ -398,3 +405,182 @@ def test_convert_media_warns_for_unknown_media_type() -> None:
 
     with pytest.warns(RuntimeWarning, match="Unknown media attachment type"):
         assert mgr._convert_media(media) is None
+
+
+class TestMessageChanged:
+    def test_text_changed(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert manager._message_changed(_make_new_message("new"), _make_old_message())
+
+    def test_keyboard_forces_change(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.keyboard = [[CallbackButton(text="b", payload="p")]]
+
+        assert manager._message_changed(new, _make_old_message(text="old"))
+
+    def test_link_preview_forces_change(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.link_preview_options = LinkPreviewOptions(is_disabled=True, url=None)
+
+        assert manager._message_changed(new, _make_old_message(text="old"))
+
+    def test_media_appeared(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
+
+        assert manager._message_changed(new, _make_old_message(text="old"))
+
+    def test_nothing_changed(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert not manager._message_changed(
+            _make_new_message("old"),
+            _make_old_message(text="old"),
+        )
+
+    def test_same_media_is_not_a_change(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(
+                    photo_id=1,
+                    token="t",  # noqa: S106
+                    url="http://e.com/a",
+                ),
+            ],
+        )
+
+        assert not manager._message_changed(new, old)
+
+    def test_can_edit_is_always_true(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert manager._can_edit(_make_new_message(), _make_old_message())
+
+
+class TestShowMessage:
+    async def test_edits_when_message_changed(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.edit_message = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        result = await manager.show_message(
+            bot,
+            _make_new_message("new"),
+            _make_old_message("55", text="old"),
+        )
+
+        bot.edit_message.assert_awaited_once()
+        assert result.text == "new"
+
+
+class TestRemoveKbd:
+    async def test_delete_and_send_removes_message(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+
+        await manager.remove_kbd(bot, ShowMode.DELETE_AND_SEND, _make_old_message())
+
+        bot.delete_message.assert_awaited_once()
+
+    async def test_delete_and_send_without_old_message(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+
+        await manager.remove_kbd(bot, ShowMode.DELETE_AND_SEND, None)
+
+        bot.delete_message.assert_not_awaited()
+
+
+class TestRemoveMessageSafe:
+    async def test_ignores_missing_message(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.delete_message = AsyncMock(
+            side_effect=_bad_request("message to delete not found"),
+        )
+
+        await manager.remove_message_safe(bot, _make_old_message(), None)
+
+    async def test_reraises_unknown_error(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.delete_message = AsyncMock(side_effect=_bad_request("boom"))
+
+        with pytest.raises(MaxBotBadRequestError):
+            await manager.remove_message_safe(bot, _make_old_message(), None)
+
+
+class TestEditMessageSafe:
+    async def test_not_modified_maps_to_message_not_modified(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.edit_message = AsyncMock(
+            side_effect=_bad_request("message is not modified"),
+        )
+
+        with pytest.raises(MessageNotModified):
+            await manager.edit_message_safe(
+                bot,
+                _make_new_message(),
+                _make_old_message(),
+            )
+
+    async def test_reraises_unknown_error(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.edit_message = AsyncMock(side_effect=_bad_request("boom"))
+
+        with pytest.raises(MaxBotBadRequestError):
+            await manager.edit_message_safe(
+                bot,
+                _make_new_message(),
+                _make_old_message(),
+            )
+
+    async def test_edit_message_refetches_result(self) -> None:
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        expected = _make_message("55", "edited")
+        bot.get_message_by_id = AsyncMock(return_value=expected)
+
+        result = await manager.edit_message(
+            bot,
+            _make_new_message(),
+            _make_old_message(),
+        )
+
+        assert result is expected
+
+
+class TestBuildAttachments:
+    async def test_splits_files_and_ready_attachments(self, tmp_path: Path) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        media = [
+            MediaAttachment(
+                type=AttachmentType.IMAGE,
+                media_id=MediaId(token="tok"),  # noqa: S106
+            ),
+            MediaAttachment(type=AttachmentType.IMAGE, path=tmp_path / "pic.png"),
+            MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
+        ]
+
+        with patch(
+            "maxo.dialogs.manager.message_manager.DialogAttachmentsFacade",
+        ) as facade_cls:
+            facade_cls.return_value.build_attachments = AsyncMock(return_value=[])
+            await manager._build_attachments(bot, keyboard=None, media=media)
+
+        kwargs = facade_cls.return_value.build_attachments.await_args.kwargs
+        assert len(kwargs["files"]) == 1
+        assert all(isinstance(f, FSInputFile) for f in kwargs["files"])
+        assert len(kwargs["base"]) == 2

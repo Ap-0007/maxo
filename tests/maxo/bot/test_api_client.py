@@ -1,5 +1,8 @@
 import io
+from collections.abc import AsyncGenerator
 from http.cookies import SimpleCookie
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +11,9 @@ from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.methods.base import MaxoMethod
+
+if TYPE_CHECKING:
+    from unihttp.serialize import RequestDumper, ResponseLoader
 from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
@@ -28,7 +34,7 @@ TOKEN = "f9LHod"  # noqa: S105
 def mock_http_response(*chunks: bytes) -> MagicMock:
     mock_response = MagicMock()
 
-    async def chunk_generator():
+    async def chunk_generator() -> AsyncGenerator[bytes, None]:
         for chunk in chunks:
             yield chunk
 
@@ -37,17 +43,17 @@ def mock_http_response(*chunks: bytes) -> MagicMock:
 
 
 @pytest.fixture
-async def api_client():
+async def api_client() -> AsyncGenerator[MaxApiClient, None]:
     client = MaxApiClient(
         token=TOKEN,
-        request_dumper=lambda x: x,
-        response_loader=lambda _, y: y,
+        request_dumper=cast("RequestDumper", lambda x: x),
+        response_loader=cast("ResponseLoader", lambda _, y: y),
     )
     yield client
     await client.close()
 
 
-async def test_api_client_init(api_client: MaxApiClient):
+async def test_api_client_init(api_client: MaxApiClient) -> None:
     assert api_client._token == TOKEN
     assert "Authorization" in api_client._session.headers
     assert api_client._session.headers["Authorization"] == TOKEN
@@ -76,7 +82,7 @@ async def test_handle_error(
     api_client: MaxApiClient,
     status_code: int,
     error_class: type[MaxBotApiError],
-):
+) -> None:
     response = HTTPResponse(
         status_code=status_code,
         data={},
@@ -84,12 +90,12 @@ async def test_handle_error(
         cookies=SimpleCookie(),
         raw_response=AsyncMock(),
     )
-    method = MaxoMethod()
+    method: MaxoMethod[Any] = MaxoMethod()
     with pytest.raises(error_class):
         api_client.handle_error(response, method)
 
 
-async def test_validate_response_ok(api_client: MaxApiClient):
+async def test_validate_response_ok(api_client: MaxApiClient) -> None:
     response = HTTPResponse(
         status_code=200,
         data={"success": True},
@@ -97,12 +103,12 @@ async def test_validate_response_ok(api_client: MaxApiClient):
         cookies=SimpleCookie(),
         raw_response=AsyncMock(),
     )
-    method = MaxoMethod()
+    method: MaxoMethod[Any] = MaxoMethod()
     api_client.validate_response(response, method)
     assert response.status_code == 200
 
 
-async def test_validate_response_error(api_client: MaxApiClient):
+async def test_validate_response_error(api_client: MaxApiClient) -> None:
     response = HTTPResponse(
         status_code=200,
         data={"success": False, "error_code": "some_error"},
@@ -110,12 +116,12 @@ async def test_validate_response_error(api_client: MaxApiClient):
         cookies=SimpleCookie(),
         raw_response=AsyncMock(),
     )
-    method = MaxoMethod()
+    method: MaxoMethod[Any] = MaxoMethod()
     api_client.validate_response(response, method)
     assert response.status_code == 400
 
 
-async def test_download_to_binaryio(api_client: MaxApiClient):
+async def test_download_to_binaryio(api_client: MaxApiClient) -> None:
     mock_response = mock_http_response(b"test ", b"content")
 
     with patch("aiohttp.ClientSession.get") as mock_get:
@@ -134,7 +140,7 @@ async def test_download_to_binaryio(api_client: MaxApiClient):
         mock_get.assert_called_once()
 
 
-async def test_download_to_path(api_client: MaxApiClient, tmp_path):
+async def test_download_to_path(api_client: MaxApiClient, tmp_path: Path) -> None:
     mock_response = mock_http_response(b"test ", b"content")
 
     with patch("aiohttp.ClientSession.get") as mock_get:
@@ -152,7 +158,7 @@ async def test_download_to_path(api_client: MaxApiClient, tmp_path):
         assert file_path.read_bytes() == b"test content"
 
 
-async def test_download_from_attachment_payload(api_client: MaxApiClient):
+async def test_download_from_attachment_payload(api_client: MaxApiClient) -> None:
     mock_response = mock_http_response(b"test ", b"content")
 
     with patch("aiohttp.ClientSession.get") as mock_get:

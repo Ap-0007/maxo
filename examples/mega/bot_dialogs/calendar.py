@@ -5,7 +5,7 @@ from babel.dates import get_day_names, get_month_names
 from magic_filter import F
 
 from maxo.dialogs import ChatEvent, Dialog, DialogManager, Window
-from maxo.dialogs.api.internal import Widget
+from maxo.dialogs.widgets.common import Whenable
 from maxo.dialogs.widgets.kbd import (
     Calendar,
     CalendarScope,
@@ -22,6 +22,7 @@ from maxo.dialogs.widgets.kbd.calendar_kbd import (
     CalendarYearsView,
 )
 from maxo.dialogs.widgets.text import Const, Format, Text
+from maxo.routing.updates import MessageCallback
 
 from . import states
 from .common import MAIN_MENU_BUTTON
@@ -32,28 +33,32 @@ SELECTED_DAYS_KEY = "selected_dates"
 class WeekDay(Text):
     async def _render_text(self, data: dict[str, Any], manager: DialogManager) -> str:
         selected_date: date = data["date"]
-        locale = manager.event.user_locale or None
-        return get_day_names(
-            width="short",
-            context="stand-alone",
-            locale=locale,
-        )[selected_date.weekday()].title()
+        locale = getattr(manager.event, "user_locale", None) or None
+        return str(
+            get_day_names(
+                width="short",
+                context="stand-alone",
+                locale=locale,
+            )[selected_date.weekday()].title(),
+        )
 
 
 class Month(Text):
     async def _render_text(self, data: dict[str, Any], manager: DialogManager) -> str:
         selected_date: date = data["date"]
-        locale = manager.event.user_locale or None
-        return get_month_names(
-            "wide",
-            context="stand-alone",
-            locale=locale,
-        )[selected_date.month].title()
+        locale = getattr(manager.event, "user_locale", None) or None
+        return str(
+            get_month_names(
+                "wide",
+                context="stand-alone",
+                locale=locale,
+            )[selected_date.month].title(),
+        )
 
 
 def is_date_selected(
     data: dict[str, Any],
-    widget: Widget,
+    widget: Whenable,
     manager: DialogManager,
 ) -> bool:
     current_date: date = data["date"]
@@ -93,7 +98,8 @@ async def on_date_clicked(
     selected_date: date,
     /,
 ) -> None:
-    await callback.callback_answer(str(selected_date))
+    if isinstance(callback, MessageCallback):
+        await callback.callback_answer(str(selected_date))
 
 
 async def on_date_selected(

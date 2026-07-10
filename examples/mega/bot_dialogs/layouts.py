@@ -21,7 +21,7 @@ LAYOUTS_MAIN_MENU_BUTTON = SwitchTo(
     state=states.Layouts.MAIN,
 )
 
-SELECT = Select(
+SELECT: Select[str] = Select(
     text=Format("{item}"),
     id="sel",
     items=["Apple", "Banana", "Orange", "Pear"],

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.api.internal import Widget
@@ -40,7 +40,7 @@ class Scroll(Widget, Protocol):
 
 class ManagedScroll(ManagedWidget[Scroll]):
     @add_exception_note
-    async def get_page_count(self, data: dict) -> int:
+    async def get_page_count(self, data: dict[Any, Any]) -> int:
         return await self.widget.get_page_count(data, self.manager)
 
     async def get_page(self) -> int:
@@ -56,7 +56,7 @@ class ManagedScroll(ManagedWidget[Scroll]):
 
 OnPageChanged = Callable[
     [ChatEvent, ManagedScroll, DialogManager],
-    Awaitable,
+    Awaitable[Any],
 ]
 OnPageChangedVariants = OnPageChanged | WidgetEventProcessor | None
 
@@ -64,7 +64,7 @@ OnPageChangedVariants = OnPageChanged | WidgetEventProcessor | None
 class BaseScroll(Actionable, Scroll, ABC):
     def __init__(
         self,
-        id: str,
+        id: str | None = None,
         on_page_changed: OnPageChangedVariants = None,
     ) -> None:
         super().__init__(id=id)
@@ -106,7 +106,7 @@ def sync_scroll(
         if isinstance(scroll_id, str):
             scroll_ids = (scroll_id,)
         for id_ in scroll_ids:
-            other_scroll: ManagedScroll = dialog_manager.find(id_)
+            other_scroll = cast(ManagedScroll, dialog_manager.find(id_))
             await other_scroll.set_page(page=page)
 
     return sync_scroll_on_page_changed

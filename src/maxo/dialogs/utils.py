@@ -1,5 +1,5 @@
-from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from collections.abc import Awaitable, Callable, Coroutine
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 from maxo.dialogs.api.internal import RawKeyboard
 from maxo.types import (
@@ -133,9 +133,12 @@ def add_intent_id(keyboard: RawKeyboard, intent_id: str) -> None:
     for row in keyboard:
         for button in row:
             if isinstance(button, CallbackButton):
-                button.payload = intent_payload(
-                    intent_id,
-                    button.payload,
+                button.payload = (
+                    intent_payload(
+                        intent_id,
+                        button.payload,
+                    )
+                    or ""
                 )
 
 
@@ -150,8 +153,10 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def add_exception_note(f: Callable[P, R]) -> Callable[P, R]:
-    async def inner(self: Any, *args: P.args, **kwargs: P.kwargs) -> R:
+def add_exception_note(
+    f: Callable[Concatenate[Any, P], Awaitable[R]],
+) -> Callable[Concatenate[Any, P], Coroutine[Any, Any, R]]:
+    async def inner(self: Any, /, *args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return await f(self, *args, **kwargs)
         except Exception as e:

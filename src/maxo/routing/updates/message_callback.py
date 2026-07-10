@@ -11,7 +11,7 @@ from maxo.types.message import Message
 from maxo.types.user import User
 
 
-class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):
+class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):  # type: ignore[misc]
     """
     Вы получите это событие, как только пользователь нажмёт кнопку
 

@@ -71,7 +71,7 @@ async def reset_multi_select(
     widget: Any,
     manager: DialogManager,
 ) -> None:
-    await cast(ManagedMultiselect, manager.find("multi")).reset_checked()
+    await cast("ManagedMultiselect[str]", manager.find("multi")).reset_checked()
 
 
 menu_window = Window(

@@ -52,6 +52,8 @@ BUTTON_SELECTED_TEXT = Format("[{value}]")
 class TimeSelect(Keyboard):
     """Виджет выбора времени с отдельными клавиатурами для часов и минут."""
 
+    widget_id: str
+
     def __init__(
         self,
         id: str,
@@ -115,12 +117,16 @@ class TimeSelect(Keyboard):
             value,
         )
 
+    def _own_payload(self) -> str:
+        """`id` обязателен для `TimeSelect`, поэтому payload всегда строка."""
+        return self.widget_id
+
     async def _render_keyboard(
         self,
         data: dict[Any, Any],
         manager: DialogManager,
     ) -> RawKeyboard:
-        rows = []
+        rows: RawKeyboard = []
         old_hour, old_minute = self.get_widget_data(manager, (None, None))
 
         rows.append(
@@ -132,7 +138,7 @@ class TimeSelect(Keyboard):
             ],
         )
         for hour_row in self._rows(0, 24, 1, self.hour_width):
-            rows.append(  # noqa: PERF401
+            rows.append(
                 [
                     await self._render_button(
                         data=data,
@@ -155,7 +161,7 @@ class TimeSelect(Keyboard):
         )
 
         for minute_row in self._rows(0, 60, self.minute_precision, self.minute_width):
-            rows.append(  # noqa: PERF401
+            rows.append(
                 [
                     await self._render_button(
                         data=data,
@@ -186,7 +192,7 @@ class TimeSelect(Keyboard):
         )
 
     def _rows(self, start: int, stop: int, step: int, width: int) -> list[list[int]]:
-        rows = [[]]
+        rows: list[list[int]] = [[]]
         for i in range(start, stop, step):
             if len(rows[-1]) >= width:
                 rows.append([])

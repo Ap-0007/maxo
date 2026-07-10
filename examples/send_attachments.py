@@ -1,10 +1,13 @@
 import logging
 import os
+from typing import cast
 
 from maxo import Bot, Dispatcher
+from maxo.omit import Omitted
 from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
 from maxo.types import UpdateContext
+from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.utils.upload_media import FSInputFile
 
 dp = Dispatcher()
@@ -30,18 +33,23 @@ async def attachments_handler(
         sent_attachments = bot_message.body.attachments or []
 
         # Отправка через AttachmetsRequests
-        requests = [attachment.to_request() for attachment in sent_attachments]
+        requests: list[AttachmentsRequests | Attachments] = [
+            attachment.to_request() for attachment in sent_attachments
+        ]
         await message.bot.send_message(
-            user_id=update_context.user_id,
-            chat_id=update_context.chat_id,
+            user_id=update_context.user_id or Omitted(),
+            chat_id=update_context.chat_id or Omitted(),
             attachments=requests,
         )
 
         # Отправка через Attachmets
         await message.bot.send_message(
-            user_id=update_context.user_id,
-            chat_id=update_context.chat_id,
-            attachments=bot_message.body.attachments,
+            user_id=update_context.user_id or Omitted(),
+            chat_id=update_context.chat_id or Omitted(),
+            attachments=cast(
+                "list[AttachmentsRequests | Attachments] | None",
+                bot_message.body.attachments,
+            ),
         )
 
 

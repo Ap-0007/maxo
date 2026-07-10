@@ -19,7 +19,7 @@ class StaticMedia(Media):
         url: TextWidget | str | None = None,
         type: AttachmentType = AttachmentType.IMAGE,
         use_pipe: bool = False,
-        media_params: dict | None = None,
+        media_params: dict[Any, Any] | None = None,
         when: WhenCondition = None,
     ) -> None:
         super().__init__(when=when)

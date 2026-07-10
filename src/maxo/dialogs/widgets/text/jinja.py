@@ -32,7 +32,7 @@ class Jinja(Text):
             env: Environment = manager.middleware_data[JINJA_ENV_FIELD]
         else:
             bot = manager.middleware_data.get("bot")
-            env: Environment = getattr(bot, JINJA_ENV_FIELD, default_env)
+            env = getattr(bot, JINJA_ENV_FIELD, default_env)
         template = env.get_template(self.template_text)
 
         if env.is_async:

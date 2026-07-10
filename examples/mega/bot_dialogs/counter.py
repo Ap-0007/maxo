@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from maxo.dialogs import Dialog, DialogManager, Window
+from maxo.dialogs import ChatEvent, Dialog, DialogManager, Window
 from maxo.dialogs.widgets.kbd import Counter, ManagedCounter
 from maxo.dialogs.widgets.text import Const, Progress
 from maxo.routing.updates import MessageCallback
@@ -21,11 +21,12 @@ async def getter(dialog_manager: DialogManager, **__: Any) -> dict[str, Any]:
 
 
 async def on_text_click(
-    callback: MessageCallback,
-    widget: ManagedCounter,
+    event: ChatEvent,
+    counter: ManagedCounter,
     dialog_manager: DialogManager,
 ) -> None:
-    await callback.callback_answer(f"Value: {widget.get_value()}")
+    if isinstance(event, MessageCallback):
+        await event.callback_answer(f"Value: {counter.get_value()}")
 
 
 counter_dialog = Dialog(

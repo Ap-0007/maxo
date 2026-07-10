@@ -1,11 +1,11 @@
 from collections.abc import Iterable
 from itertools import chain
-from typing import Any
+from typing import Any, cast
 
 from maxo.dialogs.api.internal import ButtonVariant, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import WhenCondition
-from maxo.types import Callback, CallbackButton
+from maxo.routing.updates import MessageCallback
 
 from .base import Keyboard
 
@@ -25,11 +25,11 @@ class Group(Keyboard):
     def find(self, widget_id: str) -> Keyboard | None:
         widget = super().find(widget_id)
         if widget:
-            return widget
+            return cast(Keyboard, widget)
         for btn in self.buttons:
             widget = btn.find(widget_id)
             if widget:
-                return widget
+                return cast(Keyboard, widget)
         return None
 
     async def _render_keyboard(
@@ -52,13 +52,13 @@ class Group(Keyboard):
 
     def _wrap_kbd(
         self,
-        kbd: Iterable[CallbackButton],
+        kbd: Iterable[ButtonVariant],
     ) -> RawKeyboard:
         res: RawKeyboard = []
         row: list[ButtonVariant] = []
         for b in kbd:
             row.append(b)
-            if len(row) >= self.width:
+            if self.width is not None and len(row) >= self.width:
                 res.append(row)
                 row = []
         if row:
@@ -67,7 +67,7 @@ class Group(Keyboard):
 
     async def _process_other_callback(
         self,
-        callback: Callback,
+        callback: MessageCallback,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:

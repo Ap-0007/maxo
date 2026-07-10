@@ -3,7 +3,7 @@ from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from unittest.mock import ANY, AsyncMock, call, patch
 
 import pytest
@@ -16,6 +16,7 @@ from maxo.bot.state import RunningBotState
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
+from maxo.routing.updates.updates import Updates
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
 from tests.constants import TOKEN
@@ -83,7 +84,10 @@ async def test_handles_load_error_and_skips_update(
     initial_marker = 10
     mock_api_client.call_method.side_effect = [
         LoadError("Test LoadError"),
-        UpdateList(updates=[MockUpdate(timestamp=100)], marker=initial_marker + 2),
+        UpdateList(
+            updates=cast("list[Updates]", [MockUpdate(timestamp=100)]),
+            marker=initial_marker + 2,
+        ),
         CancelledError,
     ]
 
@@ -195,3 +199,53 @@ async def test_handles_general_exception(
         )
         mock_api_client.call_method.assert_called_once()
         mock_feed_max_update.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "types",
+    [Omitted(), []],
+    ids=["omitted", "empty-list"],
+)
+async def test_start_collects_used_updates_when_types_not_given(
+    mock_bot: Bot,
+    types: Any,
+) -> None:
+    # Пустой список, как и Omitted(), означает "посчитать по роутерам",
+    # иначе бот молча перестаёт получать апдейты
+    dispatcher = Dispatcher()
+
+    @dispatcher.message_created()
+    async def _handler(update: Any) -> None: ...
+
+    long_polling = LongPolling(dispatcher=dispatcher)
+
+    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        return
+        yield  # pragma: no cover
+
+    with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
+        await long_polling.start(mock_bot, types=types, auto_close_bot=False)
+
+    assert spy.call_args.kwargs["types"] == ["message_created"]
+
+
+async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    @dispatcher.message_created()
+    async def _handler(update: Any) -> None: ...
+
+    long_polling = LongPolling(dispatcher=dispatcher)
+
+    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        return
+        yield  # pragma: no cover
+
+    with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
+        await long_polling.start(
+            mock_bot,
+            types=["bot_started"],
+            auto_close_bot=False,
+        )
+
+    assert spy.call_args.kwargs["types"] == ["bot_started"]

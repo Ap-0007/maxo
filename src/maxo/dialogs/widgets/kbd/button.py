@@ -21,6 +21,8 @@ OnClick: TypeAlias = Callable[
 
 
 class Button(Keyboard):
+    widget_id: str
+
     def __init__(
         self,
         text: TextWidget,
@@ -31,6 +33,10 @@ class Button(Keyboard):
         super().__init__(id=id, when=when)
         self.text = text
         self.on_click = ensure_event_processor(on_click)
+
+    def _own_payload(self) -> str:
+        """`id` обязателен для `Button`, поэтому payload всегда строка."""
+        return self.widget_id
 
     async def _process_own_callback(
         self,
