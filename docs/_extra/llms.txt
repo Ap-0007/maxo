@@ -18,6 +18,7 @@
 - [Сигналы](https://maxo.readthedocs.io/ru/latest/pages/event-handling/signals.html): Сигналы жизненного цикла (startup, shutdown).
 - [Long-polling](https://maxo.readthedocs.io/ru/latest/pages/event-handling/long-polling.html): Получение апдейтов через long-polling.
 - [Webhooks](https://maxo.readthedocs.io/ru/latest/pages/event-handling/webhooks.html): Вебхуки через `aiohttp` или `fastapi`.
+- [Инъекция бота в типы (BotMixin)](https://maxo.readthedocs.io/ru/latest/pages/event-handling/bot-mixin.html): Как `MaxoType`-объекты получают доступ к `bot` и как настроить ретроту.
 
 ## Диалоги (maxo.dialogs)
 
@@ -28,10 +29,15 @@
 - [Переходы](https://maxo.readthedocs.io/ru/latest/pages/dialogs/transitions.html): Переход между окнами, switch_to, start, done.
 - [Данные и контекст](https://maxo.readthedocs.io/ru/latest/pages/dialogs/data_and_context.html): `dialog_data`, `getter`, передача состояния между окнами.
 - [Background Manager](https://maxo.readthedocs.io/ru/latest/pages/dialogs/background_manager.html): Управление диалогом из внешнего кода.
+- [Тестирование диалогов](https://maxo.readthedocs.io/ru/latest/pages/dialogs/testing.html): Тесты в памяти через `BotClient` и `MockMessageManager` без реального API.
+- [Превью диалогов](https://maxo.readthedocs.io/ru/latest/pages/dialogs/preview.html): HTML-превью окон и PNG-диаграмма переходов.
 
 ## API Reference
 
 - [Bot API](https://maxo.readthedocs.io/ru/latest/pages/botapi/index.html): Полная API-справка по типам, методам, апдейтам и енумам, сгенерированная из официальной документации MAX.
+- [Omitted](https://maxo.readthedocs.io/ru/latest/pages/botapi/omitted.html): Различие «не передано» и `None` через sentinel `Omitted` и guard-функции.
+- [Форматирование текста](https://maxo.readthedocs.io/ru/latest/pages/botapi/text_formatting.html): HTML/Markdown и программное построение текста через `maxo.utils.formatting`.
+- [Полезные заметки](https://maxo.readthedocs.io/ru/latest/pages/useful_notes.html): Особенности поведения MAX Bot API.
 
 ## Optional
 

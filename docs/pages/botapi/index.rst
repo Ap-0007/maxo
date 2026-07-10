@@ -12,6 +12,7 @@ Bot API
 * :doc:`omitted` - паттерн ``Omitted`` для различения «не передано» и ``None`` в параметрах методов.
 * :doc:`enums` - перечисления и константы, обеспечивающие строгую типизацию параметров и событий.
 * :doc:`updates` - модели обновлений (событий), получаемых ботом (``MessageCreated``, ``MessageCallback`` и др.).
+* :doc:`text_formatting` - форматирование текста сообщений (HTML, Markdown и программное построение через ``maxo.utils.formatting``).
 
 .. toctree::
    :hidden:

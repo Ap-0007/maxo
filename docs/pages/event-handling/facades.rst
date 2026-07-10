@@ -23,7 +23,7 @@
 Основные возможности
 --------------------
 
-- **Быстрые ответы**: методы ``answer_text``, ``reply_text``, ``answer_photo`` и т.д. автоматически подставляют нужные ID.
+- **Быстрые ответы**: методы ``answer_text``, ``reply_text``, ``send_media`` и другие автоматически подставляют нужные ID.
 - **Управление клавиатурами**: методы для быстрой отправки или редактирования клавиатур.
 - **Доступ к боту**: через свойство ``facade.bot`` всегда доступен экземпляр бота.
 
@@ -39,7 +39,7 @@
 
 .. code-block:: python
 
-    from maxo.routing.updates.mixins.attachments import MediaInput
+    from maxo.routing.mixins.attachments import MediaInput
 
 Загрузка файла
 ~~~~~~~~~~~~~~

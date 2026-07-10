@@ -62,10 +62,10 @@
 
     settings_router = Router()
     profile_router = Router()
-    
+
     # Роутер профиля включает в себя роутер настроек
     profile_router.include(settings_router)
-    
+
     # Диспетчер включает роутер профиля
     dispatcher.include(profile_router)
 
@@ -79,6 +79,7 @@
 .. code-block:: python
 
     from maxo import Router
+    from maxo.enums import ChatType
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import BaseFilter
     from maxo.routing.updates import MessageCreated
@@ -86,7 +87,7 @@
     class IsGroupChat(BaseFilter[MessageCreated]):
         """Пропускает только сообщения из групповых чатов."""
         async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
-            return update.message.recipient.chat_type == "chat"
+            return update.message.recipient.chat_type == ChatType.CHAT
 
     # Создаём роутер и навешиваем фильтр на все его message_created обработчики
     group_router = Router(name="group")
