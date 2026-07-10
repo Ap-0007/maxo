@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from maxo import Bot
 from maxo.omit import Omitted
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 from maxo.types.get_subscriptions_result import GetSubscriptionsResult
@@ -10,12 +9,12 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class MockSubscriptionFacade(SubscriptionMethodsFacade):
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: MagicMock) -> None:
         self._bot = bot
 
 
 @pytest.fixture
-def mock_bot():
+def mock_bot() -> MagicMock:
     bot = MagicMock()
     bot.get_subscriptions = AsyncMock(
         return_value=GetSubscriptionsResult(subscriptions=[]),
@@ -27,18 +26,24 @@ def mock_bot():
 
 
 @pytest.fixture
-def facade(mock_bot):
+def facade(mock_bot: MagicMock) -> MockSubscriptionFacade:
     return MockSubscriptionFacade(mock_bot)
 
 
-async def test_get_subscriptions(facade, mock_bot) -> None:
+async def test_get_subscriptions(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     result = await facade.get_subscriptions()
 
     mock_bot.get_subscriptions.assert_called_once_with()
     assert isinstance(result, GetSubscriptionsResult)
 
 
-async def test_get_updates_no_params(facade, mock_bot) -> None:
+async def test_get_updates_no_params(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_updates()
 
     mock_bot.get_updates.assert_called_once_with(
@@ -49,7 +54,10 @@ async def test_get_updates_no_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_updates_with_limit(facade, mock_bot) -> None:
+async def test_get_updates_with_limit(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_updates(limit=100)
 
     mock_bot.get_updates.assert_called_once_with(
@@ -60,7 +68,10 @@ async def test_get_updates_with_limit(facade, mock_bot) -> None:
     )
 
 
-async def test_get_updates_with_all_params(facade, mock_bot) -> None:
+async def test_get_updates_with_all_params(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_updates(
         limit=50,
         marker=12345,
@@ -76,7 +87,10 @@ async def test_get_updates_with_all_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_updates_with_none_marker(facade, mock_bot) -> None:
+async def test_get_updates_with_none_marker(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_updates(marker=None)
 
     mock_bot.get_updates.assert_called_once_with(
@@ -87,7 +101,10 @@ async def test_get_updates_with_none_marker(facade, mock_bot) -> None:
     )
 
 
-async def test_subscribe_minimal(facade, mock_bot) -> None:
+async def test_subscribe_minimal(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     result = await facade.subscribe(url="https://example.com/webhook")
 
     mock_bot.subscribe.assert_called_once_with(
@@ -98,7 +115,10 @@ async def test_subscribe_minimal(facade, mock_bot) -> None:
     assert result.success is True
 
 
-async def test_subscribe_with_secret(facade, mock_bot) -> None:
+async def test_subscribe_with_secret(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.subscribe(
         url="https://example.com/webhook",
         secret="my_secret",  # noqa: S106
@@ -111,7 +131,10 @@ async def test_subscribe_with_secret(facade, mock_bot) -> None:
     )
 
 
-async def test_subscribe_with_all_params(facade, mock_bot) -> None:
+async def test_subscribe_with_all_params(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.subscribe(
         url="https://example.com/webhook",
         secret="my_secret",  # noqa: S106
@@ -125,7 +148,10 @@ async def test_subscribe_with_all_params(facade, mock_bot) -> None:
     )
 
 
-async def test_unsubscribe(facade, mock_bot) -> None:
+async def test_unsubscribe(
+    facade: MockSubscriptionFacade,
+    mock_bot: MagicMock,
+) -> None:
     result = await facade.unsubscribe(url="https://example.com/webhook")
 
     mock_bot.unsubscribe.assert_called_once_with(url="https://example.com/webhook")

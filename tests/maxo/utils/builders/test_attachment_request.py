@@ -17,7 +17,7 @@ from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.builders.attachment_request import AttachmentRequestBuilder
 
 
-def test_attachment_request_builder_add_image_url():
+def test_attachment_request_builder_add_image_url() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_image(url="https://example.com/image.jpg")
     attachments = builder.build()
@@ -26,7 +26,7 @@ def test_attachment_request_builder_add_image_url():
     assert attachments[0].payload.url == "https://example.com/image.jpg"
 
 
-def test_attachment_request_builder_add_image_token():
+def test_attachment_request_builder_add_image_token() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_image(token="photo_token_123")
     attachments = builder.build()
@@ -35,7 +35,7 @@ def test_attachment_request_builder_add_image_token():
     assert attachments[0].payload.token == "photo_token_123"
 
 
-def test_attachment_request_builder_add_image_token_with_photos():
+def test_attachment_request_builder_add_image_token_with_photos() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_image(token="photo_token_456", photos=["id1", "id2"])
     attachments = builder.build()
@@ -47,7 +47,7 @@ def test_attachment_request_builder_add_image_token_with_photos():
     assert photos[0].token == "id1"
 
 
-def test_attachment_request_builder_add_video():
+def test_attachment_request_builder_add_video() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_video(token="video_token_123")
     attachments = builder.build()
@@ -56,7 +56,7 @@ def test_attachment_request_builder_add_video():
     assert attachments[0].payload.token == "video_token_123"
 
 
-def test_attachment_request_builder_add_audio():
+def test_attachment_request_builder_add_audio() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_audio(token="audio_token_123")
     attachments = builder.build()
@@ -65,7 +65,7 @@ def test_attachment_request_builder_add_audio():
     assert attachments[0].payload.token == "audio_token_123"
 
 
-def test_attachment_request_builder_add_file():
+def test_attachment_request_builder_add_file() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_file(token="file_token_123")
     attachments = builder.build()
@@ -74,7 +74,7 @@ def test_attachment_request_builder_add_file():
     assert attachments[0].payload.token == "file_token_123"
 
 
-def test_attachment_request_builder_add_sticker():
+def test_attachment_request_builder_add_sticker() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_sticker(code="sticker_code_123")
     attachments = builder.build()
@@ -83,7 +83,7 @@ def test_attachment_request_builder_add_sticker():
     assert attachments[0].payload.code == "sticker_code_123"
 
 
-def test_attachment_request_builder_add_contact():
+def test_attachment_request_builder_add_contact() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_contact(
         name="Kirill Lesovoy",
@@ -100,7 +100,7 @@ def test_attachment_request_builder_add_contact():
     assert attachments[0].payload.vcf_phone == "+79123456789"
 
 
-def test_attachment_request_builder_add_inline_keyboard():
+def test_attachment_request_builder_add_inline_keyboard() -> None:
     builder = AttachmentRequestBuilder()
     buttons = [[CallbackButton(text="button", payload="data")]]
     builder.add_inline_keyboard(buttons=buttons)
@@ -110,7 +110,7 @@ def test_attachment_request_builder_add_inline_keyboard():
     assert attachments[0].payload.buttons == buttons
 
 
-def test_attachment_request_builder_add_location():
+def test_attachment_request_builder_add_location() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_location(latitude=Decimal("12.34"), longitude=Decimal("56.78"))
     attachments = builder.build()
@@ -120,7 +120,7 @@ def test_attachment_request_builder_add_location():
     assert attachments[0].longitude == 56.78
 
 
-def test_attachment_request_builder_add_share_url():
+def test_attachment_request_builder_add_share_url() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_share(url="https://example.com/share")
     attachments = builder.build()
@@ -129,7 +129,7 @@ def test_attachment_request_builder_add_share_url():
     assert attachments[0].payload.url == "https://example.com/share"
 
 
-def test_attachment_request_builder_add_share_token():
+def test_attachment_request_builder_add_share_token() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_share(token="share_token_123")
     attachments = builder.build()
@@ -138,7 +138,7 @@ def test_attachment_request_builder_add_share_token():
     assert attachments[0].payload.token == "share_token_123"
 
 
-def test_attachment_request_builder_multiple_items():
+def test_attachment_request_builder_multiple_items() -> None:
     builder = AttachmentRequestBuilder()
     builder.add_image(url="http://example.com/image.jpg")
     builder.add_video(token="video_token_123")

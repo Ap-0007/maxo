@@ -12,7 +12,7 @@ from tests.constants import TOKEN
 
 
 class MockMaxBotApiError(MaxBotApiError):
-    def __init__(self, message: str, code: str = "", error: str = ""):
+    def __init__(self, message: str, code: str = "", error: str = "") -> None:
         self.message = message
         self.code = code
         self.error = error
@@ -52,7 +52,7 @@ async def test_bot_start_and_close() -> None:
         mock_api_client.close.assert_awaited_once()
 
 
-async def test_bot_context(bot: Bot):
+async def test_bot_context(bot: Bot) -> None:
     with (
         patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
         patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close,
@@ -62,7 +62,7 @@ async def test_bot_context(bot: Bot):
         mock_close.assert_awaited_once()
 
 
-async def test_bot_call_method(bot: Bot):
+async def test_bot_call_method(bot: Bot) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(return_value="test_result")
         result: Any = await bot.call_method(MagicMock())
@@ -70,7 +70,10 @@ async def test_bot_call_method(bot: Bot):
         mock_state.api_client.call_method.assert_awaited_once()
 
 
-async def test_bot_silent_call_method(bot: Bot, caplog):
+async def test_bot_silent_call_method(
+    bot: Bot,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(
             side_effect=MockMaxBotApiError("test error"),
@@ -79,7 +82,7 @@ async def test_bot_silent_call_method(bot: Bot, caplog):
         assert "Failed to make answer" in caplog.text
 
 
-async def test_bot_download(bot: Bot):
+async def test_bot_download(bot: Bot) -> None:
     with patch.object(
         bot,
         "_state",

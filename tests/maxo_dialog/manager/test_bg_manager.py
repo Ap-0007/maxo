@@ -22,7 +22,7 @@ from maxo.enums import ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.types import Chat, ChatMembersList, User
 
-NOW = datetime(2024, 1, 1, tzinfo=UTC)
+NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 class SG(StatesGroup):

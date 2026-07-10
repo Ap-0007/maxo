@@ -22,7 +22,7 @@ def create_chat(chat_id: int) -> Chat:
     )
 
 
-async def test_chats_iterator_single_page():
+async def test_chats_iterator_single_page() -> None:
     bot = Bot(token=TOKEN)
     bot.get_chats = AsyncMock(
         side_effect=[
@@ -40,7 +40,7 @@ async def test_chats_iterator_single_page():
     assert bot.get_chats.await_count == 2
 
 
-async def test_chats_iterator_multiple_pages():
+async def test_chats_iterator_multiple_pages() -> None:
     bot = Bot(token=TOKEN)
     bot.get_chats = AsyncMock(
         side_effect=[
@@ -61,7 +61,7 @@ async def test_chats_iterator_multiple_pages():
     assert bot.get_chats.await_count == 3
 
 
-async def test_chats_iterator_no_chats():
+async def test_chats_iterator_no_chats() -> None:
     bot = Bot(token=TOKEN)
     bot.get_chats = AsyncMock(return_value=ChatList(chats=[], marker=None))
 
@@ -72,7 +72,7 @@ async def test_chats_iterator_no_chats():
     bot.get_chats.assert_awaited_once()
 
 
-async def test_chats_iterator_passes_marker_from_previous_page():
+async def test_chats_iterator_passes_marker_from_previous_page() -> None:
     bot = Bot(token=TOKEN)
     bot.get_chats = AsyncMock(
         side_effect=[

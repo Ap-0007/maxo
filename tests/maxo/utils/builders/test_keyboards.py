@@ -169,7 +169,7 @@ def test_constructor_invalid_keyboard() -> None:
         )
 
 
-def test_return_self(keyboard_builder) -> None:
+def test_return_self(keyboard_builder: KeyboardBuilder) -> None:
     assert keyboard_builder.add() is keyboard_builder
     assert keyboard_builder.row() is keyboard_builder
     assert keyboard_builder.adjust(1) is keyboard_builder

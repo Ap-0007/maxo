@@ -163,16 +163,16 @@ async def test_callback_handler_swallows_cancel_event() -> None:
         side_effect=CancelEventProcessing,
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="c",
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="p",
             user=User(
                 user_id=1,
                 is_bot=False,
                 first_name="U",
-                last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
             ),
         ),
     )

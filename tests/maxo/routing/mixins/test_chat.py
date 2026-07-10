@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from maxo import Bot
 from maxo.enums import TextFormat
 from maxo.omit import Omitted
 from maxo.routing.mixins.chat import ChatMethodsFacade
@@ -16,7 +15,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class MockChatFacade(ChatMethodsFacade):
-    def __init__(self, bot: Bot, chat_id: int) -> None:
+    def __init__(self, bot: MagicMock, chat_id: int) -> None:
         self._bot = bot
         self._chat_id = chat_id
 
@@ -26,7 +25,7 @@ class MockChatFacade(ChatMethodsFacade):
 
 
 @pytest.fixture
-def mock_bot():
+def mock_bot() -> MagicMock:
     bot = MagicMock()
     bot.send_message = AsyncMock(
         return_value=SendMessageResult(message=MagicMock(spec=Message)),
@@ -39,29 +38,32 @@ def mock_bot():
 
 
 @pytest.fixture
-def facade(mock_bot):
+def facade(mock_bot: MagicMock) -> MockChatFacade:
     return MockChatFacade(mock_bot, chat_id=12345)
 
 
-async def test_chat_id_property(facade) -> None:
+async def test_chat_id_property(facade: MockChatFacade) -> None:
     assert facade.chat_id == 12345
 
 
-async def test_get_chat(facade, mock_bot) -> None:
+async def test_get_chat(facade: MockChatFacade, mock_bot: MagicMock) -> None:
     result = await facade.get_chat()
 
     mock_bot.get_chat.assert_called_once_with(chat_id=12345)
     assert isinstance(result, Chat)
 
 
-async def test_leave_chat(facade, mock_bot) -> None:
+async def test_leave_chat(facade: MockChatFacade, mock_bot: MagicMock) -> None:
     result = await facade.leave_chat()
 
     mock_bot.leave_chat.assert_called_once_with(chat_id=12345)
     assert result.success is True
 
 
-async def test_get_members_no_params(facade, mock_bot) -> None:
+async def test_get_members_no_params(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_members()
 
     mock_bot.get_members.assert_called_once_with(
@@ -72,7 +74,10 @@ async def test_get_members_no_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_members_with_count(facade, mock_bot) -> None:
+async def test_get_members_with_count(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_members(count=50)
 
     mock_bot.get_members.assert_called_once_with(
@@ -83,7 +88,10 @@ async def test_get_members_with_count(facade, mock_bot) -> None:
     )
 
 
-async def test_get_members_with_all_params(facade, mock_bot) -> None:
+async def test_get_members_with_all_params(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_members(count=100, marker=555, user_ids=[1, 2, 3])
 
     mock_bot.get_members.assert_called_once_with(
@@ -94,7 +102,10 @@ async def test_get_members_with_all_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_messages_no_params(facade, mock_bot) -> None:
+async def test_get_messages_no_params(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_messages()
 
     mock_bot.get_messages.assert_called_once_with(
@@ -106,7 +117,10 @@ async def test_get_messages_no_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_messages_with_count(facade, mock_bot) -> None:
+async def test_get_messages_with_count(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_messages(count=20)
 
     mock_bot.get_messages.assert_called_once_with(
@@ -118,9 +132,12 @@ async def test_get_messages_with_count(facade, mock_bot) -> None:
     )
 
 
-async def test_get_messages_with_datetime_params(facade, mock_bot) -> None:
-    from_time = datetime(2024, 1, 1, tzinfo=UTC)
-    to_time = datetime(2024, 1, 31, tzinfo=UTC)
+async def test_get_messages_with_datetime_params(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
+    from_time = datetime(2026, 1, 1, tzinfo=UTC)
+    to_time = datetime(2026, 1, 31, tzinfo=UTC)
 
     await facade.get_messages(from_=from_time, to=to_time)
 
@@ -133,7 +150,10 @@ async def test_get_messages_with_datetime_params(facade, mock_bot) -> None:
     )
 
 
-async def test_get_messages_with_message_ids(facade, mock_bot) -> None:
+async def test_get_messages_with_message_ids(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     await facade.get_messages(message_ids=["mid1", "mid2", "mid3"])
 
     mock_bot.get_messages.assert_called_once_with(
@@ -145,7 +165,10 @@ async def test_get_messages_with_message_ids(facade, mock_bot) -> None:
     )
 
 
-async def test_send_message_minimal(facade, mock_bot) -> None:
+async def test_send_message_minimal(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     with patch.object(
         facade,
         "build_attachments",
@@ -168,7 +191,10 @@ async def test_send_message_minimal(facade, mock_bot) -> None:
         assert isinstance(result, Message)
 
 
-async def test_send_message_with_all_params(facade, mock_bot) -> None:
+async def test_send_message_with_all_params(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     with patch.object(
         facade,
         "build_attachments",
@@ -207,7 +233,10 @@ async def test_send_message_with_all_params(facade, mock_bot) -> None:
         )
 
 
-async def test_send_message_without_attachments(facade, mock_bot) -> None:
+async def test_send_message_without_attachments(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     with patch.object(
         facade,
         "build_attachments",
@@ -220,7 +249,10 @@ async def test_send_message_without_attachments(facade, mock_bot) -> None:
         mock_build.assert_called_once_with(base=[], keyboard=None, files=None)
 
 
-async def test_send_message_with_keyboard_only(facade, mock_bot) -> None:
+async def test_send_message_with_keyboard_only(
+    facade: MockChatFacade,
+    mock_bot: MagicMock,
+) -> None:
     with patch.object(
         facade,
         "build_attachments",

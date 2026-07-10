@@ -15,6 +15,7 @@ from dishka import (
     make_async_container,
     provide,
 )
+from dishka.entities.scope import BaseScope
 
 from maxo import Bot, Dispatcher
 from maxo.integrations.dishka import setup_dishka
@@ -29,7 +30,7 @@ class GreeterService:
 
 
 class AppProvider(Provider):
-    scope = Scope.APP
+    scope: BaseScope | None = Scope.APP
 
     @provide
     def bot(self) -> Bot:

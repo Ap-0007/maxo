@@ -165,24 +165,6 @@ enable_error_code = [
     "deprecated",
 ]
 
-# Тесты: pytest-фикстуры и тела тестов без аннотаций - это норма
-# (ruff там тоже игнорирует ANN), поэтому ослабляем строгость по аннотациям.
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-disallow_untyped_decorators = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-warn_unreachable = false
-
-# Примеры: демонстрационный код, ослабляем строгость по декораторам и
-# наследованию от нетипизированных классов (например, dishka Provider).
-[[tool.mypy.overrides]]
-module = ["examples.*"]
-disallow_untyped_decorators = false
-disallow_subclassing_any = false
-warn_unreachable = false
-disable_error_code = ["mutable-override"]
-
 [tool.codespell]
 skip = "examples/mega/bot_dialogs/scrolls.py"
 

@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
@@ -32,7 +31,7 @@ from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import ErrorEvent, MessageCallback, MessageCreated
+from maxo.routing.updates import ErrorEvent, MessageCallback
 from maxo.types import (
     Callback,
     CallbackButton,
@@ -41,10 +40,8 @@ from maxo.types import (
     MessageButton,
     Recipient,
     UpdateContext,
-    User,
 )
-
-NOW = datetime(2024, 1, 1, tzinfo=UTC)
+from tests.maxo_dialog.conftest import NOW, make_message_created, make_user
 
 
 class SG(StatesGroup):
@@ -54,22 +51,6 @@ class SG(StatesGroup):
 
 class Other(StatesGroup):
     only = State()
-
-
-def make_user() -> User:
-    return User(user_id=1, is_bot=False, first_name="U", last_activity_time=NOW)
-
-
-def make_message_created() -> MessageCreated:
-    return MessageCreated(
-        timestamp=NOW,
-        message=Message(
-            timestamp=NOW,
-            sender=make_user(),
-            recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
-            body=MessageBody(mid="m", seq=1, text="hi"),
-        ),
-    )
 
 
 def make_callback(with_message: bool = True) -> MessageCallback:
@@ -189,10 +170,15 @@ class TestContextAccess:
         assert make_manager().is_preview() is False
 
     def test_middleware_data_and_event(self) -> None:
-        manager = make_manager()
+        event = make_message_created()
+        manager = make_manager(event=event)
 
-        assert manager.middleware_data is manager._ctx
-        assert isinstance(manager.event, MessageCreated)
+        assert manager.middleware_data[UPDATE_CONTEXT_KEY] == UpdateContext(
+            chat_id=10,
+            user_id=1,
+            type=ChatType.DIALOG,
+        )
+        assert manager.event is event
 
     async def test_load_data_without_getter(self) -> None:
         data = await make_manager().load_data()

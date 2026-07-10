@@ -83,7 +83,7 @@ class FakeManager(DialogManager):
                 user_id=1,
                 is_bot=False,
                 first_name="Fake",
-                last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
             ),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
             bot=Bot("", warming_up=False),
@@ -297,14 +297,14 @@ async def create_button(
         user_id=1,
         is_bot=False,
         first_name="",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(18, 1, 1, tzinfo=UTC),
     )
     message_callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload=callback,
         ),
     )

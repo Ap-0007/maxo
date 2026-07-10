@@ -121,14 +121,14 @@ async def test_scrolling_group_process_item_callback(
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="scroll:1",
         ),
     )

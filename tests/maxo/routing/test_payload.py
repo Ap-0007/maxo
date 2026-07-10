@@ -395,9 +395,9 @@ async def test_message_callback_filter_ignores_foreign_update() -> None:
     # он должен не сработать, а не уронить обработчик
     filter_ = MessageCallbackFilter(payload=MyPayload, filter=None)
     update = MessageCreated(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         message=Message(
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             recipient=Recipient(chat_type=ChatType.CHAT, chat_id=1),
             body=MessageBody(mid="m", seq=1, text="hi"),
         ),
@@ -408,16 +408,16 @@ async def test_message_callback_filter_ignores_foreign_update() -> None:
 
 def make_callback(payload: Any = "test:v:1") -> MessageCallback:
     return MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="c",
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload=payload,
             user=User(
                 user_id=1,
                 is_bot=False,
                 first_name="U",
-                last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
             ),
         ),
     )

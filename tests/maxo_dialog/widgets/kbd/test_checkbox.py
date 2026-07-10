@@ -87,14 +87,14 @@ async def test_process_item_callback_toggle(mock_manager: DialogManager) -> None
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="check:0",
         ),
     )
@@ -119,14 +119,14 @@ async def test_on_click_callback(mock_manager: DialogManager) -> None:
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2024, 1, 1, tzinfo=UTC),
+        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
     )
     callback = MessageCallback(
-        timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             payload="check:0",
         ),
     )

@@ -1,3 +1,5 @@
+# mypy: disable-error-code="untyped-decorator"
+# mypy: disable-error-code="misc"
 import asyncio
 import logging
 import os

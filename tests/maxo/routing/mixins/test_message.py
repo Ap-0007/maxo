@@ -18,7 +18,7 @@ from maxo.types import (
     User,
 )
 
-NOW = datetime(2024, 1, 1, tzinfo=UTC)
+NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 class MockMessageFacade(MessageMethodsFacade):

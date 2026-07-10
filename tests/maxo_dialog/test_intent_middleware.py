@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -50,7 +49,6 @@ from maxo.routing.updates import (
     BotStarted,
     BotStopped,
     MessageCallback,
-    MessageCreated,
     UserAddedToChat,
     UserRemovedFromChat,
 )
@@ -60,23 +58,12 @@ from maxo.types import (
     MessageBody,
     Recipient,
     UpdateContext,
-    User,
 )
-
-NOW = datetime(2024, 1, 1, tzinfo=UTC)
+from tests.maxo_dialog.conftest import NOW, make_message_created, make_user
 
 
 class SG(StatesGroup):
     first = State()
-
-
-def make_user(user_id: int = 1) -> User:
-    return User(
-        user_id=user_id,
-        is_bot=False,
-        first_name="U",
-        last_activity_time=NOW,
-    )
 
 
 def make_ctx(bot: Any = None) -> dict[Any, Any]:
@@ -86,18 +73,6 @@ def make_ctx(bot: Any = None) -> dict[Any, Any]:
         UPDATE_CONTEXT_KEY: UpdateContext(chat_id=10, user_id=1, type=ChatType.DIALOG),
         EVENT_FROM_USER_KEY: make_user(),
     }
-
-
-def make_message_created(text: str = "hi") -> MessageCreated:
-    return MessageCreated(
-        timestamp=NOW,
-        message=Message(
-            timestamp=NOW,
-            sender=make_user(),
-            recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
-            body=MessageBody(mid="m", seq=1, text=text),
-        ),
-    )
 
 
 def make_message_callback(payload: str = "data") -> MessageCallback:
