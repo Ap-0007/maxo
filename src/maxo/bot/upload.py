@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Never
@@ -8,7 +7,7 @@ from aiohttp import ClientError, ClientSession
 from aiohttp.hdrs import CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE
 from unihttp.serialize import ResponseLoader
 
-from maxo.backoff import BackoffConfig
+from maxo.backoff import Backoff, BackoffConfig
 from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
@@ -30,6 +29,12 @@ DEFAULT_NOT_READY_BACKOFF = BackoffConfig(
     factor=1.6,
     jitter=0.1,
 )
+DEFAULT_CHUNK_BACKOFF = BackoffConfig(
+    min_delay=0.5,
+    max_delay=5.0,
+    factor=2.0,
+    jitter=0.1,
+)
 
 
 class UploadMethod(StrEnum):
@@ -48,8 +53,7 @@ class UploadConfig(MaxoType):
 
     chunk_size: int = 10 * _MIB
     chunk_retries: int = 3
-    chunk_retry_base_delay: float = 0.5
-    chunk_retry_max_delay: float = 5.0
+    chunk_backoff: BackoffConfig = DEFAULT_CHUNK_BACKOFF
 
     not_ready_backoff: BackoffConfig = DEFAULT_NOT_READY_BACKOFF
     not_ready_max_retries: int = 10
@@ -72,9 +76,6 @@ class UploadConfig(MaxoType):
             size / _MIB
         )
         return min(delay, self.processing_max_delay)
-
-
-DEFAULT_UPLOAD_CONFIG = UploadConfig()
 
 
 async def resumable_upload(
@@ -123,6 +124,11 @@ async def resumable_upload(
         )
         offset += len(chunk)
 
+    if offset != size:
+        # Файл изменился между замером размера и чтением
+        msg = f"Размер файла изменился во время загрузки: {size} -> {offset} байт"
+        raise ValueError(msg)
+
     return _parse_result(final_body, response_loader, json_loads)
 
 
@@ -135,7 +141,7 @@ async def _send_chunk(
     config: UploadConfig,
     json_loads: Callable[[bytes], Any],
 ) -> bytes:
-    attempt = 0
+    backoff = Backoff(config.chunk_backoff)
     while True:
         try:
             async with session.post(url, data=chunk, headers=headers) as response:
@@ -145,16 +151,16 @@ async def _send_chunk(
                 # 1xx/3xx/4xx считаем неретраибельными, ретраим только 5xx.
                 if (
                     response.status < _SERVER_ERROR_STATUS
-                    or attempt >= config.chunk_retries
+                    or backoff.counter >= config.chunk_retries
                 ):
                     _raise_upload_error(response.status, body, json_loads)
-        except ClientError:
-            if attempt >= config.chunk_retries:
+        # aiohttp кидает голый TimeoutError, он не наследник ClientError.
+        except (ClientError, TimeoutError):
+            if backoff.counter >= config.chunk_retries:
                 raise
 
-        attempt += 1
-        delay = config.chunk_retry_base_delay * 2**attempt
-        await asyncio.sleep(min(delay, config.chunk_retry_max_delay))
+        backoff.next()
+        await backoff.sleep()
 
 
 def _raise_upload_error(
@@ -162,8 +168,6 @@ def _raise_upload_error(
     body: bytes,
     json_loads: Callable[[bytes], Any],
 ) -> Never:
-    code = ""
-    message = ""
     raw_data: object = body
     try:
         data = json_loads(body)
@@ -175,7 +179,7 @@ def _raise_upload_error(
             raise_api_error(status, data)
         message = str(data)
     raise MaxBotApiError(
-        code=code,
+        code="",
         error=f"upload failed with status {status}",
         message=message,
         raw_data=raw_data,

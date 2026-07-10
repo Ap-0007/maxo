@@ -12,6 +12,7 @@ from maxo.errors.api import (
     MaxBotBadRequestError,
     MaxBotForbiddenError,
     MaxBotTooManyRequestsError,
+    _extract_api_error,
 )
 
 FAST_BACKOFF = BackoffConfig(min_delay=0.0, max_delay=0.01, factor=2.0, jitter=0.0)
@@ -40,6 +41,18 @@ def test_is_attachment_not_ready_by_code() -> None:
 def test_is_attachment_not_ready_by_message() -> None:
     error = MaxBotBadRequestError("", "", "something not.processed yet")
     assert is_attachment_not_ready(error) is True
+
+
+def test_is_attachment_not_ready_from_real_api_payload() -> None:
+    payload = {
+        "error_code": "proto.payload",
+        "error_data": NOT_READY_CODE,
+        "message": "cannot process attachment",
+    }
+    code, error, message = _extract_api_error(payload)
+    built = MaxBotBadRequestError(code, error, message, payload)
+
+    assert is_attachment_not_ready(built) is True
 
 
 def test_is_attachment_not_ready_false_for_other() -> None:

@@ -22,7 +22,12 @@ class InputFile(ABC):
         raise NotImplementedError
 
     async def size(self) -> int:
-        """Размер файла в байтах."""
+        """
+        Размер файла в байтах.
+
+        Переопредели вместе со `stream()`, если файл большой: иначе загрузка
+        прочитает его дважды и целиком в память.
+        """
         return len(await self.read())
 
     async def stream(self, chunk_size: int) -> AsyncIterator[bytes]:

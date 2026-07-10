@@ -9,9 +9,9 @@ NOT_READY_MESSAGE_MARK = "not.processed"
 
 
 def is_attachment_not_ready(error: MaxBotBadRequestError) -> bool:
-    code = error.code or ""
-    message = error.message or ""
-    return code == NOT_READY_CODE or NOT_READY_MESSAGE_MARK in message
+    if NOT_READY_CODE in {error.code or "", error.error or ""}:
+        return True
+    return NOT_READY_MESSAGE_MARK in (error.message or "")
 
 
 class AttachmentNotReadyRetryMiddleware:

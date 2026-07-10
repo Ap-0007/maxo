@@ -286,6 +286,67 @@ async def test_network_error_is_retried_then_reraised() -> None:
     assert len(session.calls) == 2
 
 
+async def test_timeout_is_retried_then_succeeds() -> None:
+    # aiohttp кидает голый TimeoutError, он не наследник ClientError.
+    session = _FakeSession(
+        [
+            TimeoutError("timed out"),
+            _FakeResponse(200, b'{"token": "tok"}'),
+        ],
+    )
+
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        result = await _run(session, b"hello", 1024, chunk_retries=3)
+
+    assert result is not None
+    assert result.token == "tok"  # noqa: S105
+    assert len(session.calls) == 2
+
+
+async def test_timeout_is_reraised_after_retries() -> None:
+    session = _FakeSession([TimeoutError("timed out"), TimeoutError("timed out")])
+
+    with (
+        patch("asyncio.sleep", new_callable=AsyncMock),
+        pytest.raises(TimeoutError),
+    ):
+        await _run(session, b"hello", 1024, chunk_retries=1)
+
+    assert len(session.calls) == 2
+
+
+async def test_first_retry_waits_backoff_min_delay() -> None:
+    session = _FakeSession(
+        [
+            _FakeResponse(500, b"temporary"),
+            _FakeResponse(200, b'{"token": "tok"}'),
+        ],
+    )
+
+    with patch("asyncio.sleep", new_callable=AsyncMock) as sleep_mock:
+        await _run(session, b"hello", 1024, chunk_retries=3)
+
+    # Первая пауза - ровно `min_delay`, а не удвоенная.
+    first_delay = sleep_mock.await_args_list[0].args[0]
+    assert first_delay == UploadConfig().chunk_backoff.min_delay
+
+
+async def test_size_mismatch_raises() -> None:
+    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    file = BufferedInputFile.file(b"hello", "f.bin")
+
+    # Файл «усох» между замером размера и стримом.
+    with pytest.raises(ValueError, match="изменился во время загрузки"):
+        await resumable_upload(
+            url="https://upload.example/upload.do",
+            file=file,
+            session=session,  # type: ignore[arg-type]
+            response_loader=_Retort(),
+            json_loads=json.loads,
+            size=999,
+        )
+
+
 async def test_server_error_is_raised_after_retries() -> None:
     session = _FakeSession(
         [

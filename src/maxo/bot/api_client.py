@@ -55,12 +55,6 @@ from maxo.utils.upload_media import InputFile
 _CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
 
 
-def _build_ssl_context() -> ssl.SSLContext:
-    ssl_context = ssl.create_default_context()
-    ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
-    return ssl_context
-
-
 class MaxApiClient(AiohttpAsyncClient):
     def __init__(
         self,
@@ -85,10 +79,7 @@ class MaxApiClient(AiohttpAsyncClient):
             connector = TCPConnector(ssl=self._get_ssl_context())
             session = ClientSession(connector=connector)
 
-        if AUTHORIZATION not in session.headers:
-            session.headers[AUTHORIZATION] = self._token
-        if USER_AGENT not in session.headers:
-            session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
+        _apply_auth_headers(session, self._token)
 
         not_ready_retry = AttachmentNotReadyRetryMiddleware(
             max_retries=self._upload_config.not_ready_max_retries,
@@ -140,8 +131,7 @@ class MaxApiClient(AiohttpAsyncClient):
         """Отдельная сессия с одним соединением для resumable-загрузки."""
         connector = TCPConnector(ssl=self._get_ssl_context(), limit=1)
         session = ClientSession(connector=connector)
-        session.headers[AUTHORIZATION] = self._token
-        session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
+        _apply_auth_headers(session, self._token)
         return session
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
@@ -258,3 +248,16 @@ class MaxApiClient(AiohttpAsyncClient):
         if seek is True:
             destination.seek(0)
         return destination
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    ssl_context = ssl.create_default_context()
+    ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
+    return ssl_context
+
+
+def _apply_auth_headers(session: ClientSession, token: str) -> None:
+    if AUTHORIZATION not in session.headers:
+        session.headers[AUTHORIZATION] = token
+    if USER_AGENT not in session.headers:
+        session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
