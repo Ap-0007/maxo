@@ -443,6 +443,24 @@ def test_should_use_resumable_auto_by_threshold() -> None:
     assert config.should_use_resumable(100) is True
 
 
+def test_default_everyday_files_stay_single() -> None:
+    # Обычные загрузки (фото, документы, короткие видео) должны идти тем же
+    # single-путём, что и до появления resumable, - без заметной разницы
+    config = UploadConfig()
+    assert config.should_use_resumable(1 * _MIB) is False
+    assert config.should_use_resumable(config.resumable_threshold - 1) is False
+
+
+def test_default_chunk_equals_threshold_so_boundary_is_one_request() -> None:
+    # Инвариант: файл ровно на пороге уходит одним куском (одним запросом),
+    # как прежний single-аплоад - переход в resumable незаметен
+    config = UploadConfig()
+    assert config.chunk_size == config.resumable_threshold
+    assert config.should_use_resumable(config.resumable_threshold) is True
+    chunks = -(-config.resumable_threshold // config.chunk_size)
+    assert chunks == 1
+
+
 @pytest.mark.parametrize("upload_type", [UploadType.IMAGE, UploadType.VIDEO])
 def test_estimated_delay_zero_for_instant_types(upload_type: UploadType) -> None:
     assert UploadConfig().estimated_processing_delay(upload_type, 100 * _MIB) == 0.0

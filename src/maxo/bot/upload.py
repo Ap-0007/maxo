@@ -50,9 +50,9 @@ class UploadConfig(MaxoType):
     """Настройки загрузки медиа для `Bot(upload_config=...)`."""
 
     method: UploadMethod = UploadMethod.AUTO
-    resumable_threshold: int = 20 * _MIB
+    resumable_threshold: int = 50 * _MIB
 
-    chunk_size: int = 10 * _MIB
+    chunk_size: int = 50 * _MIB
     chunk_retries: int = 3
     chunk_backoff: BackoffConfig = DEFAULT_CHUNK_BACKOFF
 
@@ -78,7 +78,6 @@ class UploadConfig(MaxoType):
             raise ValueError("`processing_delay_per_mib` should not be negative")
         if self.processing_max_delay < 0:
             raise ValueError("`processing_max_delay` should not be negative")
-
 
     def should_use_resumable(self, size: int) -> bool:
         if self.method is UploadMethod.RESUMABLE:
