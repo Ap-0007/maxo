@@ -1,6 +1,5 @@
 import io
 from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -104,13 +103,14 @@ async def test_bot_silent_call_method(
 
 
 async def test_bot_download(bot: Bot) -> None:
+    downloaded = io.BytesIO(b"downloaded")
     with patch.object(
         bot,
         "_state",
         MagicMock(),
-    ) as mock_state:  # Patch private attribute
-        mock_state.api_client.download = AsyncMock(return_value="downloaded")
-        result: Any = await bot.download("https://example.com/file")
+    ) as mock_state:
+        mock_state.api_client.download = AsyncMock(return_value=downloaded)
+        result = await bot.download("https://example.com/file")
         assert result is downloaded
         mock_state.api_client.download.assert_awaited_once()
 
@@ -160,8 +160,7 @@ async def test_context_without_auto_close(bot: Bot) -> None:
             pass
 
     mock_close.assert_not_awaited()
-async def test_bot_download(bot: Bot) -> None:
-    downloaded = io.BytesIO(b"downloaded")
+
 
 async def test_bot_upload_media_resumable(bot: Bot) -> None:
     file = BufferedInputFile.file(b"payload", "f.bin")
