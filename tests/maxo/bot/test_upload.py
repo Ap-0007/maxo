@@ -218,6 +218,9 @@ async def test_stream_is_closed_when_chunk_fails() -> None:
         {"chunk_retries": -1},
         {"not_ready_max_retries": -1},
         {"resumable_threshold": -1},
+        {"processing_base_delay": -1},
+        {"processing_delay_per_mib": -1},
+        {"processing_max_delay": -1},
     ],
 )
 def test_upload_config_rejects_invalid_values(kwargs: dict[str, int]) -> None:
