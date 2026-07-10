@@ -1,5 +1,5 @@
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from anyio import Path as AsyncPath, open_file
@@ -59,7 +59,7 @@ class FSInputFile(InputFile):
     async def size(self) -> int:
         return (await AsyncPath(self._path).stat()).st_size
 
-    async def stream(self, chunk_size: int) -> AsyncIterator[bytes]:
+    async def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
         async with await open_file(self._path, "rb") as file:
             while chunk := await file.read(chunk_size):
                 yield chunk

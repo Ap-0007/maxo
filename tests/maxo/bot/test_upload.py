@@ -1,5 +1,5 @@
 import json
-from collections.abc import Iterable
+from collections.abc import AsyncGenerator, Iterable
 from typing import Any
 from unittest.mock import AsyncMock, patch
 from urllib.parse import unquote
@@ -9,14 +9,17 @@ from aiohttp import ClientConnectionError
 
 from maxo.bot.upload import UploadConfig, UploadMethod, resumable_upload
 from maxo.enums import UploadType
-from maxo.errors.api import (
+from maxo.errors import (
     MaxBotApiError,
     MaxBotBadRequestError,
+    MaxBotNetworkError,
+    MaxBotTimeoutError,
     MaxBotTooManyRequestsError,
     MaxBotUnsupportedMediaTypeError,
+    MaxoError,
 )
 from maxo.types.upload_media_result import UploadMediaResult
-from maxo.utils.upload_media import BufferedInputFile
+from maxo.utils.upload_media import BufferedInputFile, InputFile
 
 _MIB = 1024 * 1024
 
@@ -165,13 +168,61 @@ async def test_explicit_total_skips_size_call() -> None:
     assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
 
 
-async def test_redirect_status_raises_without_retry() -> None:
-    session = _FakeSession([_FakeResponse(302, b"redirect")])
+class _TrackingInputFile(InputFile):
+    """Считает, закрыли ли `stream()` - у `FSInputFile` там открытый файл."""
+
+    def __init__(self) -> None:
+        self.closed = False
+
+    @property
+    def file_name(self) -> str:
+        return "f.bin"
+
+    @property
+    def type(self) -> UploadType:
+        return UploadType.FILE
+
+    async def read(self) -> bytes:
+        return b"abcdefghij"
+
+    async def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
+        data = await self.read()
+        try:
+            for start in range(0, len(data), chunk_size):
+                yield data[start : start + chunk_size]
+        finally:
+            self.closed = True
+
+
+async def test_stream_is_closed_when_chunk_fails() -> None:
+    session = _FakeSession([_FakeResponse(400, b"nope")])
+    file = _TrackingInputFile()
 
     with pytest.raises(MaxBotApiError):
-        await _run(session, b"hello", 1024)
+        await resumable_upload(
+            url="https://upload.example/upload.do",
+            file=file,
+            session=session,  # type: ignore[arg-type]
+            response_loader=_Retort(),
+            json_loads=json.loads,
+            config=UploadConfig(chunk_size=4),
+        )
 
-    assert len(session.calls) == 1
+    assert file.closed is True
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"chunk_size": 0},
+        {"chunk_retries": -1},
+        {"not_ready_max_retries": -1},
+        {"resumable_threshold": -1},
+    ],
+)
+def test_upload_config_rejects_invalid_values(kwargs: dict[str, int]) -> None:
+    with pytest.raises(ValueError, match="should"):
+        UploadConfig(**kwargs)  # type: ignore[arg-type]
 
 
 async def test_default_config_is_used() -> None:
@@ -279,11 +330,13 @@ async def test_network_error_is_retried_then_reraised() -> None:
 
     with (
         patch("asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(ClientConnectionError),
+        pytest.raises(MaxBotNetworkError, match="boom") as exc_info,
     ):
         await _run(session, b"hello", 1024, chunk_retries=1)
 
     assert len(session.calls) == 2
+    # Исходная ошибка aiohttp не теряется.
+    assert isinstance(exc_info.value.__cause__, ClientConnectionError)
 
 
 async def test_timeout_is_retried_then_succeeds() -> None:
@@ -308,11 +361,25 @@ async def test_timeout_is_reraised_after_retries() -> None:
 
     with (
         patch("asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(TimeoutError),
+        pytest.raises(MaxBotTimeoutError, match="timed out") as exc_info,
     ):
         await _run(session, b"hello", 1024, chunk_retries=1)
 
     assert len(session.calls) == 2
+    assert isinstance(exc_info.value.__cause__, TimeoutError)
+
+
+async def test_network_error_is_a_maxo_error() -> None:
+    # Ловить сетевые сбои можно одним `except MaxoError`.
+    assert issubclass(MaxBotNetworkError, MaxoError)
+    assert issubclass(MaxBotTimeoutError, MaxBotNetworkError)
+
+
+async def test_empty_aiohttp_error_message_falls_back_to_class_name() -> None:
+    session = _FakeSession([ClientConnectionError()])
+
+    with pytest.raises(MaxBotNetworkError, match="ClientConnectionError"):
+        await _run(session, b"hello", 1024, chunk_retries=0)
 
 
 async def test_first_retry_waits_backoff_min_delay() -> None:

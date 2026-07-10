@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from maxo.enums import UploadType
 
@@ -30,7 +30,7 @@ class InputFile(ABC):
         """
         return len(await self.read())
 
-    async def stream(self, chunk_size: int) -> AsyncIterator[bytes]:
+    async def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
         """Содержимое файла кусками по `chunk_size` байт."""
         data = await self.read()
         for start in range(0, len(data), chunk_size):

@@ -32,12 +32,13 @@ import ssl
 from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
 
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
 from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
 from aiohttp.http import SERVER_SOFTWARE
 from anyio import open_file
 from unihttp.clients.aiohttp import AiohttpAsyncClient
-from unihttp.http import HTTPResponse
+from unihttp.exceptions import NetworkError, RequestTimeoutError
+from unihttp.http import HTTPRequest, HTTPResponse
 from unihttp.method import BaseMethod
 from unihttp.middlewares import AsyncMiddleware
 from unihttp.serialize import RequestDumper, ResponseLoader
@@ -48,6 +49,7 @@ from maxo.bot.methods import AddMembers
 from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
 from maxo.bot.upload import UploadConfig, resumable_upload
 from maxo.errors.api import raise_api_error
+from maxo.errors.network import MaxBotTimeoutError, to_network_error
 from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
@@ -133,6 +135,15 @@ class MaxApiClient(AiohttpAsyncClient):
         session = ClientSession(connector=connector)
         _apply_auth_headers(session, self._token)
         return session
+
+    async def make_request(self, request: HTTPRequest) -> HTTPResponse:
+        """Приводит транспортные ошибки aiohttp и unihttp к ошибкам `maxo`."""
+        try:
+            return await super().make_request(request)
+        except RequestTimeoutError as error:
+            raise MaxBotTimeoutError(str(error) or type(error).__name__) from error
+        except (NetworkError, ClientError, TimeoutError) as error:
+            raise to_network_error(error) from error
 
     def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
         raise_api_error(response.status_code, response.data)

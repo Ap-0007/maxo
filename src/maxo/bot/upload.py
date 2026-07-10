@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from contextlib import aclosing
 from enum import StrEnum
 from typing import Any, Never
 from urllib.parse import quote
@@ -11,14 +12,14 @@ from maxo.backoff import Backoff, BackoffConfig
 from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
+from maxo.errors.network import to_network_error
 from maxo.types import MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
 _MIB = 1024 * 1024
 _OCTET_STREAM = "application/octet-stream"
-_OK_STATUS = 200
-_REDIRECT_STATUS = 300
+_CLIENT_ERROR_STATUS = 400
 _SERVER_ERROR_STATUS = 500
 
 _INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
@@ -61,6 +62,16 @@ class UploadConfig(MaxoType):
     processing_base_delay: float = 0.5
     processing_delay_per_mib: float = 0.008
     processing_max_delay: float = 30.0
+
+    def __post_init__(self) -> None:
+        if self.chunk_size <= 0:
+            raise ValueError("`chunk_size` should be greater than 0")
+        if self.chunk_retries < 0:
+            raise ValueError("`chunk_retries` should not be negative")
+        if self.not_ready_max_retries < 0:
+            raise ValueError("`not_ready_max_retries` should not be negative")
+        if self.resumable_threshold < 0:
+            raise ValueError("`resumable_threshold` should not be negative")
 
     def should_use_resumable(self, size: int) -> bool:
         if self.method is UploadMethod.RESUMABLE:
@@ -107,22 +118,25 @@ async def resumable_upload(
 
     offset = 0
     final_body = b""
-    async for chunk in file.stream(config.chunk_size):
-        end = offset + len(chunk) - 1
-        headers: dict[str, str] = {
-            CONTENT_TYPE: _OCTET_STREAM,
-            CONTENT_DISPOSITION: disposition,
-            CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
-        }
-        final_body = await _send_chunk(
-            session=session,
-            url=url,
-            chunk=chunk,
-            headers=headers,
-            config=config,
-            json_loads=json_loads,
-        )
-        offset += len(chunk)
+    # aclosing: при ошибке `async for` не закрывает генератор, а у
+    # `FSInputFile.stream` внутри него остаётся открытый файл.
+    async with aclosing(file.stream(config.chunk_size)) as chunks:
+        async for chunk in chunks:
+            end = offset + len(chunk) - 1
+            headers: dict[str, str] = {
+                CONTENT_TYPE: _OCTET_STREAM,
+                CONTENT_DISPOSITION: disposition,
+                CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
+            }
+            final_body = await _send_chunk(
+                session=session,
+                url=url,
+                chunk=chunk,
+                headers=headers,
+                config=config,
+                json_loads=json_loads,
+            )
+            offset += len(chunk)
 
     if offset != size:
         # Файл изменился между замером размера и чтением
@@ -146,18 +160,18 @@ async def _send_chunk(
         try:
             async with session.post(url, data=chunk, headers=headers) as response:
                 body = await response.read()
-                if _OK_STATUS <= response.status < _REDIRECT_STATUS:
+                if response.status < _CLIENT_ERROR_STATUS:
                     return body
-                # 1xx/3xx/4xx считаем неретраибельными, ретраим только 5xx.
+                # 4xx считаем неретраибельными, ретраим только 5xx.
                 if (
                     response.status < _SERVER_ERROR_STATUS
                     or backoff.counter >= config.chunk_retries
                 ):
                     _raise_upload_error(response.status, body, json_loads)
         # aiohttp кидает голый TimeoutError, он не наследник ClientError.
-        except (ClientError, TimeoutError):
+        except (ClientError, TimeoutError) as error:
             if backoff.counter >= config.chunk_retries:
-                raise
+                raise to_network_error(error) from error
 
         backoff.next()
         await backoff.sleep()

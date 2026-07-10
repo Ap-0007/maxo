@@ -6,8 +6,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from adaptix import Retort
-from aiohttp import ClientSession
+from aiohttp import ClientConnectionError, ClientSession
 from multidict import CIMultiDict
+from unihttp.clients.aiohttp import AiohttpAsyncClient
+from unihttp.exceptions import NetworkError, RequestTimeoutError
 from unihttp.http import HTTPResponse
 
 from maxo.bot.api_client import MaxApiClient
@@ -19,12 +21,15 @@ from maxo.errors import (
     MaxBotBadRequestError,
     MaxBotForbiddenError,
     MaxBotMethodNotAllowedError,
+    MaxBotNetworkError,
     MaxBotNotFoundError,
     MaxBotServiceUnavailableError,
+    MaxBotTimeoutError,
     MaxBotTooManyRequestsError,
     MaxBotUnauthorizedError,
     MaxBotUnknownServerError,
     MaxBotUnsupportedMediaTypeError,
+    MaxoError,
 )
 from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
@@ -133,6 +138,52 @@ async def test_ssl_context_is_lazy_with_custom_session() -> None:
         assert first is second
     finally:
         await client.close()
+
+
+@pytest.mark.parametrize(
+    ("raised", "expected"),
+    [
+        (RequestTimeoutError("slow"), MaxBotTimeoutError),
+        (NetworkError("dns"), MaxBotNetworkError),
+        (ClientConnectionError("refused"), MaxBotNetworkError),
+        (TimeoutError("timed out"), MaxBotTimeoutError),
+    ],
+)
+async def test_make_request_wraps_transport_errors(
+    api_client: MaxApiClient,
+    raised: Exception,
+    expected: type[MaxBotNetworkError],
+) -> None:
+    request = MagicMock()
+
+    with (
+        patch.object(
+            AiohttpAsyncClient,
+            "make_request",
+            new_callable=AsyncMock,
+            side_effect=raised,
+        ),
+        pytest.raises(expected) as exc_info,
+    ):
+        await api_client.make_request(request)
+
+    # Наружу торчит только maxo-ошибка, исходная лежит в __cause__.
+    assert isinstance(exc_info.value, MaxoError)
+    assert exc_info.value.__cause__ is raised
+
+
+async def test_make_request_passes_response_through(
+    api_client: MaxApiClient,
+) -> None:
+    response = MagicMock()
+
+    with patch.object(
+        AiohttpAsyncClient,
+        "make_request",
+        new_callable=AsyncMock,
+        return_value=response,
+    ):
+        assert await api_client.make_request(MagicMock()) is response
 
 
 async def test_new_upload_session_uses_dedicated_connector(
