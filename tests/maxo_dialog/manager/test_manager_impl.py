@@ -135,10 +135,12 @@ def make_new_message() -> NewMessage:
 
 
 def registry(manager: ManagerImpl) -> MagicMock:
+    # _registry типизирован как Protocol, в этих тестах используется MagicMock
     return cast(MagicMock, manager._registry)
 
 
 def message_manager(manager: ManagerImpl) -> MagicMock:
+    # message_manager типизирован как Protocol, в этих тестах используется MagicMock
     return cast(MagicMock, manager.message_manager)
 
 
@@ -459,6 +461,16 @@ class TestBackground:
 
         assert isinstance(user, BgManager)
 
+    def test_get_fake_user_unwraps_error_event(self) -> None:
+        inner = make_callback(with_message=False)
+        error_event: Any = ErrorEvent(
+            exception=RuntimeError("x"),
+            update=MaxoUpdate(update=inner),
+        )
+        manager = make_manager(event=error_event)
+
+        assert manager._get_fake_user() is inner.callback.user
+
     def test_get_fake_chat_requires_chat_id_without_update_context(self) -> None:
         manager = make_manager()
         del manager._ctx[UPDATE_CONTEXT_KEY]
@@ -587,6 +599,8 @@ class TestLoadCachedMedia:
         )
         new_message = make_new_message()
         new_message.media = [attachment]
+        # media_id_storage типизирован как Protocol,
+        # в этих тестах используется MagicMock
         cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
             return_value=MediaId(token="tok"),  # noqa: S106
         )
@@ -603,6 +617,8 @@ class TestLoadCachedMedia:
         )
         new_message = make_new_message()
         new_message.media = [attachment]
+        # media_id_storage типизирован как Protocol,
+        # в этих тестах используется MagicMock
         storage = cast(MagicMock, manager.media_id_storage)
         storage.get_media_id = AsyncMock()
 

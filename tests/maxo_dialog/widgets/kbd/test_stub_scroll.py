@@ -5,10 +5,10 @@ from maxo.dialogs.widgets.kbd.stub_scroll import StubScroll
 
 
 class FakeDialogMagic:
-    def __init__(self, value: int) -> None:
+    def __init__(self, value: Any) -> None:
         self._value = value
 
-    def resolve(self, data: Any) -> int:
+    def resolve(self, data: Any) -> Any:
         return self._value
 
 
@@ -33,7 +33,7 @@ async def test_stub_scroll_render_keyboard(mock_manager: DialogManager) -> None:
 
     keyboard = await scroll.render_keyboard({}, mock_manager)
 
-    # StubScroll always returns empty keyboard
+    # StubScroll всегда возвращает пустую клавиатуру
     assert keyboard == [[]]
 
 
@@ -57,7 +57,6 @@ async def test_stub_scroll_with_int_zero(mock_manager: DialogManager) -> None:
 
 
 async def test_stub_scroll_with_magic_filter(mock_manager: DialogManager) -> None:
-    # Create a fake DialogMagic object
     fake_magic = FakeDialogMagic(12)
 
     scroll = StubScroll(id="scroll", pages=fake_magic)

@@ -173,6 +173,7 @@ async def test_controller_transitions(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_main_registers_routes_and_runs_app(monkeypatch: pytest.MonkeyPatch) -> None:
     started: dict[str, Any] = {}
+    monkeypatch.setattr(sys, "path", list(sys.path))
 
     def run_app(app: Any, port: int, print: Any) -> None:
         started["port"] = port

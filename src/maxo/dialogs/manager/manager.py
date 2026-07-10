@@ -507,13 +507,11 @@ class ManagerImpl(DialogManager):
     def _get_fake_user(self, user_id: int | None = None) -> User:
         """Get User if we have info about him or FakeUser instead."""
         # TODO: Сделать нормально, это нейрослоп
-        if isinstance(self.event, MessageCreated):
-            current_user = self.event.message.unsafe_sender
+        event = self.event.event if isinstance(self.event, ErrorEvent) else self.event
+        if isinstance(event, MessageCreated):
+            current_user = event.message.unsafe_sender
         else:
-            event = self.event
-            assert not isinstance(event, ErrorEvent)  # noqa: S101
             current_user = event.user
-        ###
 
         if user_id is None or user_id == current_user.id:
             return current_user

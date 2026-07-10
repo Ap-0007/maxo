@@ -20,6 +20,8 @@ class CallableObject:
     varkw: bool = field(init=False)
 
     def _callable(self) -> CallbackType:
+        # FilterObject.__post_init__ раскрывает DialogMagic,
+        # но тип поля остаётся CallbackVariant
         return cast("CallbackType", self.callback)
 
     def __post_init__(self) -> None:

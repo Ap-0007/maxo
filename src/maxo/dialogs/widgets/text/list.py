@@ -9,6 +9,7 @@ from maxo.dialogs.widgets.common.items import ItemsGetterVariant, get_items_gett
 from .base import Text
 
 
+# Text и BaseScroll образуют diamond inheritance, который mypy не принимает
 class List(Text, BaseScroll):  # type: ignore[misc]
     def __init__(
         self,
