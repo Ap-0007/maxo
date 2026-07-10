@@ -9,8 +9,14 @@ import logging
 import os
 from typing import Any
 
-from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
-from dishka.entities.scope import BaseScope
+from dishka import (
+    AsyncContainer,
+    BaseScope,
+    Provider,
+    Scope,
+    make_async_container,
+    provide,
+)
 
 from maxo import Bot, Ctx, Dispatcher
 from maxo.integrations.dishka import CONTAINER_NAME, setup_dishka

@@ -59,7 +59,8 @@ from maxo.types import (
     Recipient,
     UpdateContext,
 )
-from tests.maxo_dialog.conftest import NOW, make_message_created, make_user
+
+from .conftest import NOW, make_message_created, make_user
 
 
 class SG(StatesGroup):

@@ -9,13 +9,13 @@ import os
 
 from dishka import (
     AsyncContainer,
+    BaseScope,
     FromDishka,
     Provider,
     Scope,
     make_async_container,
     provide,
 )
-from dishka.entities.scope import BaseScope
 
 from maxo import Bot, Dispatcher
 from maxo.integrations.dishka import setup_dishka

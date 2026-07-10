@@ -51,6 +51,9 @@ from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
 from maxo.types.recipient import Recipient
 
+# Превью рендерится без реальных апдейтов, поэтому время фиксировано.
+FAKE_TIME = datetime(2026, 1, 1, tzinfo=UTC)
+
 
 @dataclass
 class RenderButton:
@@ -83,7 +86,7 @@ class FakeManager(DialogManager):
                 user_id=1,
                 is_bot=False,
                 first_name="Fake",
-                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+                last_activity_time=FAKE_TIME,
             ),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
             bot=Bot("", warming_up=False),
@@ -297,14 +300,14 @@ async def create_button(
         user_id=1,
         is_bot=False,
         first_name="",
-        last_activity_time=datetime(18, 1, 1, tzinfo=UTC),
+        last_activity_time=FAKE_TIME,
     )
     message_callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=FAKE_TIME,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=FAKE_TIME,
             payload=callback,
         ),
     )

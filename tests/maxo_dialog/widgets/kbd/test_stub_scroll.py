@@ -5,10 +5,12 @@ from maxo.dialogs.widgets.kbd.stub_scroll import StubScroll
 
 
 class FakeDialogMagic:
-    def __init__(self, value: Any) -> None:
+    """Структурно совместим с протоколом `DialogMagic`."""
+
+    def __init__(self, value: int) -> None:
         self._value = value
 
-    def resolve(self, data: Any) -> Any:
+    def resolve(self, value: Any) -> int:
         return self._value
 
 

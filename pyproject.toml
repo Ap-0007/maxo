@@ -165,6 +165,11 @@ enable_error_code = [
     "deprecated",
 ]
 
+[[tool.mypy.overrides]]
+module = ["examples.tg_max_one_fsm.tg.*"]
+disallow_subclassing_any = false
+disallow_untyped_decorators = false
+
 [tool.codespell]
 skip = "examples/mega/bot_dialogs/scrolls.py"
 
@@ -175,7 +180,7 @@ require-superclass = false
 # B101: assert в test_tools (ruff игнорирует S101 там же)
 # B105: 'X-Max-Bot-Api-Secret' - имя заголовка, а не пароль
 # B311: random для не-крипто целей (ruff игнорирует S311 глобально)
-# B701: jinja2 для текста сообщений, а не HTML - autoescape не нужен
+# B701: в jinja2 передаётся autoescape через `kwargs.setdefault("autoescape", True)`
 skips = ["B101", "B105", "B311", "B701"]
 
 [tool.ruff]

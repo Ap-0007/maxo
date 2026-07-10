@@ -463,7 +463,7 @@ class TestBackground:
 
     def test_get_fake_user_unwraps_error_event(self) -> None:
         inner = make_callback(with_message=False)
-        error_event: Any = ErrorEvent(
+        error_event: ErrorEvent[RuntimeError, MessageCallback] = ErrorEvent(
             exception=RuntimeError("x"),
             update=MaxoUpdate(update=inner),
         )
@@ -644,7 +644,7 @@ class TestGetLastMessage:
 
     def test_unwraps_error_event(self) -> None:
         inner = make_callback(with_message=False)
-        error_event: Any = ErrorEvent(
+        error_event: ErrorEvent[RuntimeError, MessageCallback] = ErrorEvent(
             exception=RuntimeError("x"),
             update=MaxoUpdate(update=inner),
         )
