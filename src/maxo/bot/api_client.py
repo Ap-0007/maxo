@@ -66,9 +66,9 @@ class MaxApiClient(AiohttpAsyncClient):
         base_url: str = "https://platform-api2.max.ru/",
         middleware: list[AsyncMiddleware] | None = None,
         session: ClientSession | None = None,
-        upload_config: UploadConfig | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
         json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
+        upload_config: UploadConfig | None = None,
     ) -> None:
         self._token = token
         self._ssl_context: ssl.SSLContext | None = None
