@@ -1,6 +1,5 @@
 """Фасады - тонкие делегаты к полям апдейта, проверяем их скопом."""
 
-from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -45,8 +44,7 @@ from maxo.routing.updates import (
     UserRemovedFromChat,
 )
 from maxo.types import Callback, Message, MessageBody, Recipient, User
-
-NOW = datetime(2026, 1, 1, tzinfo=UTC)
+from tests.constants import NOW
 
 
 def user() -> User:

@@ -1,5 +1,4 @@
 import re
-from datetime import UTC, datetime
 
 from maxo import Ctx
 from maxo.enums import ChatType
@@ -7,6 +6,7 @@ from maxo.routing.filters.exception import ExceptionMessageFilter, ExceptionType
 from maxo.routing.signals import MaxoUpdate
 from maxo.routing.updates import ErrorEvent, MessageCreated
 from maxo.types import Message, MessageBody, Recipient
+from tests.constants import NOW
 
 
 class ParentError(Exception):
@@ -22,11 +22,11 @@ def make_error_event(error: Exception) -> ErrorEvent[Exception, MessageCreated]:
         exception=error,
         update=MaxoUpdate(
             update=MessageCreated(
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
                 message=Message(
                     body=MessageBody(mid="mid", seq=1, text="text"),
                     recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-                    timestamp=datetime.now(UTC),
+                    timestamp=NOW,
                 ),
             ),
         ),

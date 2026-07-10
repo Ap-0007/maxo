@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from adaptix.load_error import LoadError
@@ -8,6 +7,7 @@ from maxo.bot.methods import GetUpdates
 from maxo.routing.updates import MessageCreated
 from maxo.types import Message
 from maxo.types.update_list import UpdateList
+from tests.constants import NOW
 
 
 def test_make_response_skips_malformed_update() -> None:
@@ -29,7 +29,7 @@ def test_make_response_skips_malformed_update() -> None:
 
     mock_loader = MagicMock()
     mock_message = MagicMock(spec=Message)
-    valid_update = MessageCreated(message=mock_message, timestamp=datetime.now(tz=UTC))
+    valid_update = MessageCreated(message=mock_message, timestamp=NOW)
     mock_loader.load.side_effect = [
         valid_update,
         LoadError("Item level error"),

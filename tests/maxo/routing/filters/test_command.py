@@ -1,5 +1,4 @@
 import re
-from datetime import UTC, datetime
 from typing import Any, cast
 
 import pytest
@@ -9,6 +8,7 @@ from maxo.enums import ChatType
 from maxo.routing.filters.command import Command, CommandException, CommandObject
 from maxo.routing.updates import MessageCreated
 from maxo.types import BotCommand, Message, MessageBody, Recipient
+from tests.constants import NOW
 
 
 class BotInfoStub:
@@ -29,11 +29,11 @@ def make_bot() -> Bot:
 
 def make_message_update(text: str | None) -> MessageCreated:
     return MessageCreated(
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
         message=Message(
             body=MessageBody(mid="mid", seq=1, text=text),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1),
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
         ),
     )
 

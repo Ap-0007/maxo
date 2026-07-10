@@ -3,21 +3,7 @@ from typing import Any
 import pytest
 
 from maxo import Bot, Ctx
-
-
-class MockBotInfo:
-    def __init__(self, user_id: int) -> None:
-        self.user_id = user_id
-
-
-class MockBotState:
-    def __init__(self, user_id: int) -> None:
-        self.info = MockBotInfo(user_id)
-
-
-class MockBot:
-    def __init__(self, user_id: int = 1) -> None:
-        self.state = MockBotState(user_id)
+from tests.mocks import MockBot
 
 
 @pytest.fixture

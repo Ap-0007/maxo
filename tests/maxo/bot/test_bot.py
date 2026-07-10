@@ -1,5 +1,4 @@
 import io
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,7 +10,8 @@ from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
-from tests.constants import TOKEN
+from tests.constants import NOW, TOKEN
+from tests.factories import make_bot
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -23,7 +23,7 @@ class MockMaxBotApiError(MaxBotApiError):
 
 @pytest.fixture
 def bot() -> Bot:
-    return Bot(token=TOKEN, warming_up=False)
+    return make_bot()
 
 
 async def test_bot_init(bot: Bot) -> None:
@@ -32,8 +32,8 @@ async def test_bot_init(bot: Bot) -> None:
 
 
 def test_default_upload_config_is_not_shared() -> None:
-    first = Bot(token=TOKEN, warming_up=False)
-    second = Bot(token=TOKEN, warming_up=False)
+    first = make_bot()
+    second = make_bot()
 
     first.upload_config.method = UploadMethod.SINGLE
 
@@ -43,13 +43,13 @@ def test_default_upload_config_is_not_shared() -> None:
 
 def test_explicit_upload_config_is_preserved() -> None:
     config = UploadConfig(method=UploadMethod.RESUMABLE)
-    bot = Bot(token=TOKEN, upload_config=config, warming_up=False)
+    bot = make_bot(upload_config=config)
 
     assert bot.upload_config is config
 
 
 async def test_bot_start_and_close() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
     assert isinstance(bot.state, EmptyBotState)
 
     with patch("maxo.bot.bot.MaxApiClient") as mock_api_client_class:
@@ -60,7 +60,7 @@ async def test_bot_start_and_close() -> None:
             is_bot=True,
             first_name="Test",
             username="testbot",
-            last_activity_time=datetime.now(UTC),
+            last_activity_time=NOW,
         )
 
         await bot.start()
@@ -127,7 +127,7 @@ async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
 
 
 async def test_close_twice_is_noop() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
     api_client = AsyncMock()
     bot._state = RunningBotState(info=MagicMock(), api_client=api_client)
 
@@ -138,7 +138,7 @@ async def test_close_twice_is_noop() -> None:
 
 
 async def test_bot_async_context_manager() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
 
     with (
         patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,

@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import AsyncMock, Mock
 
@@ -8,6 +7,7 @@ from maxo.dialogs.widgets.kbd import Checkbox
 from maxo.dialogs.widgets.text import Const
 from maxo.routing.updates import MessageCallback
 from maxo.types import Callback, CallbackButton, User
+from tests.constants import NOW
 
 
 async def test_check_checkbox(mock_manager: DialogManager) -> None:
@@ -87,14 +87,14 @@ async def test_process_item_callback_toggle(mock_manager: DialogManager) -> None
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+        last_activity_time=NOW,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="check:0",
         ),
     )
@@ -119,14 +119,14 @@ async def test_on_click_callback(mock_manager: DialogManager) -> None:
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+        last_activity_time=NOW,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="check:0",
         ),
     )

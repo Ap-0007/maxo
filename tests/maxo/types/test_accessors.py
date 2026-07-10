@@ -74,6 +74,7 @@ from maxo.types import (
     VideoThumbnail,
     VideoUrls,
 )
+from tests.constants import NOW
 
 TOKEN = "attachment-token"  # noqa: S105
 PHOTO_ID = "photo-token"
@@ -93,7 +94,7 @@ def make_user() -> User:
         name="Alice T.",
         username="alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
 
@@ -101,7 +102,7 @@ def make_chat(**kwargs: object) -> Chat:
     data = {
         "chat_id": 10,
         "is_public": True,
-        "last_event_time": datetime.now(UTC),
+        "last_event_time": NOW,
         "participants_count": 2,
         "status": ChatStatus.ACTIVE,
         "type": ChatType.CHAT,
@@ -114,7 +115,7 @@ def make_message(**kwargs: object) -> Message:
     data = {
         "body": MessageBody(mid="mid", seq=7, text="hello"),
         "recipient": Recipient(chat_type=ChatType.CHAT, chat_id=10),
-        "timestamp": datetime.now(UTC),
+        "timestamp": NOW,
     }
     data.update(kwargs)
     return Message(**data)  # type: ignore[arg-type]
@@ -136,7 +137,7 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
     with pytest.raises(AttributeIsEmptyError):
@@ -154,7 +155,7 @@ def test_bot_info_commands_accessor() -> None:
         first_name="Bot",
         username="bot",
         is_bot=True,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         commands=commands,
     )
 
@@ -167,7 +168,7 @@ def test_bot_info_commands_accessor_raises_for_omitted_value() -> None:
         first_name="Bot",
         username="bot",
         is_bot=True,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
     with pytest.raises(AttributeIsEmptyError):
@@ -448,7 +449,7 @@ def test_message_body_unsafe_attachments_raises_for_explicit_none() -> None:
 def test_callback_accessors() -> None:
     callback = Callback(
         callback_id="callback",
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
         user=make_user(),
         payload="payload",
     )
@@ -461,7 +462,7 @@ def test_callback_accessors() -> None:
     with pytest.raises(AttributeIsEmptyError):
         _ = Callback(
             callback_id="callback",
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
             user=make_user(),
         ).unsafe_payload
 
@@ -719,9 +720,9 @@ def test_small_generated_accessors() -> None:
             user_id=1,
             first_name="Alice",
             is_bot=False,
-            last_activity_time=datetime.now(UTC),
-            join_time=datetime.now(UTC),
-            last_access_time=datetime.now(UTC),
+            last_activity_time=NOW,
+            join_time=NOW,
+            last_access_time=NOW,
             is_admin=True,
             is_owner=False,
             alias="admin",
@@ -750,7 +751,7 @@ def test_small_generated_accessors() -> None:
     assert RequestGeoLocationButton(text="geo", quick=True).unsafe_quick is True
     assert SimpleQueryResult(success=True, message="ok").unsafe_message == "ok"
     assert Subscription(
-        time=datetime.now(UTC),
+        time=NOW,
         url="https://example.com/webhook",
         update_types=["message_created"],
     ).unsafe_update_types == ["message_created"]
@@ -770,7 +771,7 @@ def test_small_generated_accessors() -> None:
             user_id=1,
             first_name="Alice",
             is_bot=False,
-            last_activity_time=datetime.now(UTC),
+            last_activity_time=NOW,
             avatar_url="avatar",
             description="description",
             full_avatar_url="full",
@@ -839,7 +840,7 @@ def test_video_urls_and_user_with_photo_accessors() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         avatar_url="https://example.com/avatar.png",
         description="About Alice",
         full_avatar_url="https://example.com/full.png",
@@ -874,7 +875,7 @@ def test_message_generated_url_requires_chat_id() -> None:
     message = Message(
         body=MessageBody(mid="1", seq=1, text="hello"),
         recipient=Recipient(chat_type=ChatType.DIALOG),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
     assert message.generated_url is None
@@ -901,7 +902,7 @@ def test_user_and_chat_related_accessors() -> None:
     chat = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=1,
         status=ChatStatus.ACTIVE,
         type=ChatType.CHAT,
@@ -916,11 +917,11 @@ def test_user_and_chat_related_accessors() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         is_admin=True,
         is_owner=False,
-        join_time=datetime.now(UTC),
-        last_access_time=datetime.now(UTC),
+        join_time=NOW,
+        last_access_time=NOW,
         permissions=[ChatAdminPermission.READ_ALL_MESSAGES],
         alias="Admin",
         avatar_url="https://example.com/avatar.png",
@@ -943,7 +944,7 @@ def test_list_and_result_accessors() -> None:
     chat = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=1,
         status=ChatStatus.ACTIVE,
         type=ChatType.CHAT,
@@ -996,7 +997,7 @@ def test_attachment_factories_and_unsafe_fields() -> None:
         image_url="https://example.com/image.png",
     )
     subscription = Subscription(
-        time=datetime.now(UTC),
+        time=NOW,
         url="https://example.com",
         update_types=["message_created"],
     )
@@ -1062,7 +1063,7 @@ def test_remaining_optional_branches() -> None:
     message = Message(
         body=MessageBody(mid="1", seq=1, text="hello"),
         recipient=Recipient(chat_type=ChatType.DIALOG),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
         sender=make_user(),
         stat=MessageStat(views=1),
         url="https://example.com",
@@ -1100,7 +1101,7 @@ def test_remaining_optional_branches() -> None:
         url="https://example.com",
     )
     contact_request = ContactAttachmentRequest.factory(vcf_info="BEGIN:VCARD")
-    subscription = Subscription(time=datetime.now(UTC), url="https://example.com")
+    subscription = Subscription(time=NOW, url="https://example.com")
 
     assert message.unsafe_sender.user_id == 1
     assert message.unsafe_stat.views == 1
@@ -1143,7 +1144,7 @@ def test_additional_type_edges() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         username=None,
         avatar_url="https://example.com/avatar.png",
         description="About Alice",
@@ -1167,17 +1168,17 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
     chat_member = ChatMember(
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         is_admin=False,
         is_owner=False,
-        join_time=datetime.now(UTC),
-        last_access_time=datetime.now(UTC),
+        join_time=NOW,
+        last_access_time=NOW,
     )
     chat_admins = ChatAdminsList(admins=[chat_admin])
     chats = ChatList(chats=[])
@@ -1208,7 +1209,7 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
     message = Message(
         body=MessageBody(mid="1", seq=1, text="hello"),
         recipient=Recipient(chat_type=ChatType.DIALOG),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
     with pytest.raises(AttributeIsEmptyError):

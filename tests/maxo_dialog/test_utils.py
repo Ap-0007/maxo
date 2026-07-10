@@ -18,6 +18,7 @@ from maxo.dialogs.utils import (
 )
 from maxo.enums import ChatType
 from maxo.types import CallbackButton, MessageButton, Recipient, User
+from tests.constants import NOW
 
 
 def make_user() -> User:
@@ -25,7 +26,7 @@ def make_user() -> User:
         user_id=1,
         is_bot=False,
         first_name="Alice",
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
 
@@ -116,7 +117,7 @@ def test_loaded_helpers() -> None:
         user_id=1,
         is_bot=False,
         first_name="Alice",
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
     assert is_recipient_loaded(recipient) is True

@@ -12,6 +12,7 @@ from maxo.types.message import Message
 from maxo.types.message_list import MessageList
 from maxo.types.send_message_result import SendMessageResult
 from maxo.types.simple_query_result import SimpleQueryResult
+from tests.constants import NOW
 
 
 class MockChatFacade(ChatMethodsFacade):
@@ -136,7 +137,7 @@ async def test_get_messages_with_datetime_params(
     facade: MockChatFacade,
     mock_bot: MagicMock,
 ) -> None:
-    from_time = datetime(2026, 1, 1, tzinfo=UTC)
+    from_time = NOW
     to_time = datetime(2026, 1, 31, tzinfo=UTC)
 
     await facade.get_messages(from_=from_time, to=to_time)
@@ -233,10 +234,7 @@ async def test_send_message_with_all_params(
         )
 
 
-async def test_send_message_without_attachments(
-    facade: MockChatFacade,
-    mock_bot: MagicMock,
-) -> None:
+async def test_send_message_without_attachments(facade: MockChatFacade) -> None:
     with patch.object(
         facade,
         "build_attachments",
@@ -249,10 +247,7 @@ async def test_send_message_without_attachments(
         mock_build.assert_called_once_with(base=[], keyboard=None, files=None)
 
 
-async def test_send_message_with_keyboard_only(
-    facade: MockChatFacade,
-    mock_bot: MagicMock,
-) -> None:
+async def test_send_message_with_keyboard_only(facade: MockChatFacade) -> None:
     with patch.object(
         facade,
         "build_attachments",

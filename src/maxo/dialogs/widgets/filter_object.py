@@ -22,7 +22,7 @@ class CallableObject:
     def _callable(self) -> CallbackType:
         # FilterObject.__post_init__ раскрывает DialogMagic,
         # но тип поля остаётся CallbackVariant
-        return cast("CallbackType", self.callback)
+        return cast(CallbackType, self.callback)
 
     def __post_init__(self) -> None:
         callback = inspect.unwrap(self._callable())
@@ -58,7 +58,7 @@ class FilterObject(CallableObject):
             self.magic = callback
             # cast, иначе mypy сузит тип до сигнатуры `resolve`
             # и сочтёт проверку на `Filter` ниже недостижимой.
-            self.callback = cast("CallbackType", callback.resolve)
+            self.callback = cast(CallbackType, callback.resolve)
 
         super().__post_init__()
 

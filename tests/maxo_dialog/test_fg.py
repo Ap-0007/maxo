@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any
 
 import pytest
@@ -20,6 +19,8 @@ from maxo.enums import ChatType
 from maxo.fsm.state import State, StatesGroup
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
+
+from .conftest import wait_for_messages
 
 
 class MainSG(StatesGroup):
@@ -47,11 +48,6 @@ async def start_for_second_user_via_bg(
 ) -> None:
     manager = dialog_manager.bg(user_id=2, chat_id=-1)
     await manager.start(MainSG.start, mode=StartMode.RESET_STACK)
-
-
-@pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
 
 
 @pytest.fixture
@@ -115,7 +111,7 @@ async def test_start_in_foreground_for_another_user_via_bg(
     await dp.feed_signal(AfterStartup(), client.bot)
 
     await client.send("/start")
-    await asyncio.sleep(0.1)
+    await wait_for_messages(message_manager)
     window_message = message_manager.one_message()
     assert window_message.body.text == "stub"
     message_manager.reset_history()

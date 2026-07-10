@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -9,13 +8,13 @@ from maxo.omit import Omitted
 from maxo.types.chat import Chat
 from maxo.types.chat_list import ChatList
 from maxo.utils.iterators.chats import ChatsIterator
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import NOW
+from tests.factories import make_bot
 
 
 @pytest.fixture
 def bot() -> Bot:
-    return Bot(token=TOKEN, warming_up=False)
+    return make_bot()
 
 
 def create_chat(chat_id: int) -> Chat:
@@ -23,7 +22,7 @@ def create_chat(chat_id: int) -> Chat:
         chat_id=chat_id,
         type=ChatType.PRIVATE,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=2,
         status=ChatStatus.ACTIVE,
     )

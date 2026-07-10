@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,6 +13,7 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
 from maxo.routing.updates import MessageCallback
 from maxo.types import Callback, UpdateContext, User
+from tests.constants import NOW
 
 
 class MainSG(StatesGroup):
@@ -163,16 +163,16 @@ async def test_callback_handler_swallows_cancel_event() -> None:
         side_effect=CancelEventProcessing,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="c",
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="p",
             user=User(
                 user_id=1,
                 is_bot=False,
                 first_name="U",
-                last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+                last_activity_time=NOW,
             ),
         ),
     )

@@ -1,29 +1,10 @@
-from datetime import UTC, datetime
 from typing import cast
 
 import pytest
 
 from maxo import Bot
 from maxo.utils import deeplink
-
-
-class MockBotInfo(Bot):
-    def __init__(self, user_id: int, username: str) -> None:
-        self.user_id = user_id
-        self.username = username
-        self.first_name = "Test"
-        self.is_bot = True
-        self.last_activity_time = datetime.fromtimestamp(1234567890, tz=UTC)
-
-
-class MockBotState:
-    def __init__(self, user_id: int, username: str) -> None:
-        self.info = MockBotInfo(user_id, username)
-
-
-class MockBot:
-    def __init__(self, user_id: int = 1, username: str = "testbot") -> None:
-        self.state = MockBotState(user_id, username)
+from tests.mocks import MockBot
 
 
 def test_create_deep_link() -> None:

@@ -1,4 +1,3 @@
-import asyncio
 import os
 import tempfile
 
@@ -35,10 +34,13 @@ async def test_get_media_id() -> None:
         )
         assert media_id == MediaId(token="test1")  # noqa: S106
 
-        await asyncio.sleep(0.1)
-
         with open(filename, "w") as file:  # noqa: PTH123
             file.write("test2")
+
+        # Хранилище ключуется по st_mtime. Двигаем метку явно, а не спим:
+        # разрешение mtime у ФС не гарантировано.
+        stat = os.stat(filename)  # noqa: PTH116
+        os.utime(filename, (stat.st_atime, stat.st_mtime + 1))
 
         media_id = await manager.get_media_id(
             filename,

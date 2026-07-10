@@ -1,7 +1,6 @@
 import pytest
 from adaptix.load_error import LoadError
 
-from maxo import Bot
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import EditMessage, SendMessage
 from maxo.enums import TextFormat
@@ -10,6 +9,7 @@ from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort, create_retort_with_bot
 from maxo.types import NewMessageBody, UpdateList
 from maxo.types.base import MaxoType
+from tests.factories import make_bot
 
 
 class Sub(MaxoType):
@@ -64,7 +64,7 @@ def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
 
 
 def test_retort_from_bot_load_bot() -> None:
-    bot = Bot(token="", warming_up=False)
+    bot = make_bot(token="")
     retort = bot.retort
 
     data = {"a": "a", "sub": {"b": 1}}
@@ -77,7 +77,7 @@ def test_retort_from_bot_load_bot() -> None:
 
 
 def test_retort_with_bot_load_bot() -> None:
-    bot = Bot(token="", warming_up=False)
+    bot = make_bot(token="")
     retort = create_retort_with_bot(bot=bot, warming_up=False)
 
     data = {"a": "a", "sub": {"b": 1}}

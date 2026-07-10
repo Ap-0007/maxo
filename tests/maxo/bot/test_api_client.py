@@ -34,8 +34,7 @@ from maxo.errors import (
 from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.constants import TOKEN
 
 
 def mock_http_response(*chunks: bytes) -> MagicMock:

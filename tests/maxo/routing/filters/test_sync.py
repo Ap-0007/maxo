@@ -1,5 +1,3 @@
-from datetime import UTC, datetime
-
 import pytest
 
 from maxo.enums import ChatType
@@ -7,6 +5,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.filters import SyncFilter
 from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Message, MessageBody, Recipient, User
+from tests.constants import NOW
 
 
 def _update() -> MessageCreated:
@@ -14,15 +13,15 @@ def _update() -> MessageCreated:
         message=Message(
             body=MessageBody(mid="test", seq=1),
             recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=1),
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
             sender=User(
                 user_id=1,
                 first_name="Test",
                 is_bot=False,
-                last_activity_time=datetime.now(UTC),
+                last_activity_time=NOW,
             ),
         ),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
 

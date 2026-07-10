@@ -65,7 +65,9 @@ class TestTextAdd:
     ) -> None:
         multi = "c" + Multi(Const("a"), Const("b"), sep="-")
 
+        # Внутренний Multi со своим `sep` не разворачивается в внешний.
         assert len(multi.texts) == 2
+        assert await multi.render_text({}, mock_manager) == "ca-b"
 
     def test_multi_find(self) -> None:
         assert Multi(Const("a")).find("nope") is None

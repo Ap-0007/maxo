@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -40,9 +39,10 @@ from maxo.types import (
     User,
     UserWithPhoto,
 )
+from tests.constants import NOW
 
 
-class MockBot:
+class ChatFetchingBot:
     def __init__(self, *, get_chat: Any, get_members: Any) -> None:
         self._get_chat = get_chat
         self._get_members = get_members
@@ -59,7 +59,7 @@ def make_user(user_id: int = 1, first_name: str = "Test") -> User:
         user_id=user_id,
         first_name=first_name,
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
 
@@ -68,10 +68,10 @@ def make_message_created(chat_id: int = 1, user_id: int = 1) -> MessageCreated:
         message=Message(
             body=MessageBody(mid="m1", seq=1),
             recipient=Recipient(chat_type=ChatType.CHAT, chat_id=chat_id),
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
             sender=make_user(user_id=user_id),
         ),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
 
@@ -80,7 +80,7 @@ def make_message_removed(chat_id: int = 1, user_id: int = 2) -> MessageRemoved:
         chat_id=chat_id,
         message_id="m1",
         user_id=user_id,
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
 
@@ -115,7 +115,7 @@ async def run_middleware(
                 chat_id=10,
                 is_channel=False,
                 user=make_user(1),
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             10,
             1,
@@ -127,7 +127,7 @@ async def run_middleware(
                 chat_id=11,
                 is_channel=True,
                 user=make_user(2),
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             11,
             2,
@@ -135,14 +135,14 @@ async def run_middleware(
             True,
         ),
         (
-            BotStarted(chat_id=12, user=make_user(3), timestamp=datetime.now(UTC)),
+            BotStarted(chat_id=12, user=make_user(3), timestamp=NOW),
             12,
             3,
             ChatType.DIALOG,
             True,
         ),
         (
-            BotStopped(chat_id=13, user=make_user(4), timestamp=datetime.now(UTC)),
+            BotStopped(chat_id=13, user=make_user(4), timestamp=NOW),
             13,
             4,
             ChatType.DIALOG,
@@ -153,7 +153,7 @@ async def run_middleware(
                 chat_id=14,
                 title="New title",
                 user=make_user(5),
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             14,
             5,
@@ -165,7 +165,7 @@ async def run_middleware(
                 chat_id=15,
                 user=make_user(6),
                 user_locale="ru",
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             15,
             6,
@@ -175,10 +175,10 @@ async def run_middleware(
         (
             DialogMuted(
                 chat_id=16,
-                muted_until=datetime.now(UTC),
+                muted_until=NOW,
                 user=make_user(7),
                 user_locale="ru",
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             16,
             7,
@@ -190,7 +190,7 @@ async def run_middleware(
                 chat_id=17,
                 user=make_user(8),
                 user_locale="ru",
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             17,
             8,
@@ -202,7 +202,7 @@ async def run_middleware(
                 chat_id=18,
                 user=make_user(9),
                 user_locale="ru",
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             18,
             9,
@@ -214,7 +214,7 @@ async def run_middleware(
                 chat_id=19,
                 is_channel=False,
                 user=make_user(10),
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             19,
             10,
@@ -226,7 +226,7 @@ async def run_middleware(
                 chat_id=20,
                 is_channel=True,
                 user=make_user(11),
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             20,
             11,
@@ -237,11 +237,11 @@ async def run_middleware(
             MessageCallback(
                 callback=Callback(
                     callback_id="cb-1",
-                    timestamp=datetime.now(UTC),
+                    timestamp=NOW,
                     user=make_user(12),
                 ),
                 message=make_message_created(chat_id=21, user_id=100).message,
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             21,
             12,
@@ -251,7 +251,7 @@ async def run_middleware(
         (
             MessageEdited(
                 message=make_message_created(chat_id=22, user_id=13).message,
-                timestamp=datetime.now(UTC),
+                timestamp=NOW,
             ),
             22,
             13,
@@ -327,7 +327,7 @@ async def test_enrich_disabled_does_not_call_bot() -> None:
     async def get_members(_: Any, /, **__: Any) -> None:
         raise AssertionError("get_members must not be called")
 
-    bot = MockBot(get_chat=get_chat, get_members=get_members)
+    bot = ChatFetchingBot(get_chat=get_chat, get_members=get_members)
     middleware = UpdateContextMiddleware(enrich=False)
     msg = make_message_created()
     ctx = Ctx({"update": msg, "bot": bot})
@@ -342,7 +342,7 @@ async def test_enrich_enabled_fills_chat_and_user_from_payload() -> None:
     chat_result = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=2,
         status=ChatStatus.ACTIVE,
         type=ChatType.CHAT,
@@ -357,7 +357,7 @@ async def test_enrich_enabled_fills_chat_and_user_from_payload() -> None:
     async def get_members_noop(_: Any, /, **__: Any) -> ChatMembersList:
         return ChatMembersList(members=[])
 
-    bot = MockBot(get_chat=get_chat, get_members=get_members_noop)
+    bot = ChatFetchingBot(get_chat=get_chat, get_members=get_members_noop)
     middleware = UpdateContextMiddleware(enrich=True)
     msg = make_message_created(chat_id=1, user_id=5)
     ctx = Ctx({"update": msg, "bot": bot})
@@ -376,7 +376,7 @@ async def test_enrich_message_removed_fills_user() -> None:
     chat_result = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=2,
         status=ChatStatus.ACTIVE,
         type=ChatType.CHAT,
@@ -385,12 +385,12 @@ async def test_enrich_message_removed_fills_user() -> None:
         user_id=2,
         first_name="Member",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         alias="",
         is_admin=False,
         is_owner=False,
-        join_time=datetime.now(UTC),
-        last_access_time=datetime.now(UTC),
+        join_time=NOW,
+        last_access_time=NOW,
     )
     members_list = ChatMembersList(members=[member])
 
@@ -411,7 +411,7 @@ async def test_enrich_message_removed_fills_user() -> None:
         get_members_calls.append((chat_id, user_ids))
         return members_list
 
-    bot = MockBot(get_chat=get_chat, get_members=get_members)
+    bot = ChatFetchingBot(get_chat=get_chat, get_members=get_members)
     middleware = UpdateContextMiddleware(enrich=True)
     removed = make_message_removed(chat_id=1, user_id=2)
     ctx = Ctx({"update": removed, "bot": bot})
@@ -431,12 +431,12 @@ async def test_enrich_message_removed_dialog_fills_user() -> None:
         user_id=3,
         first_name="DialogUser",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
     chat_result = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=2,
         status=ChatStatus.ACTIVE,
         type=ChatType.DIALOG,
@@ -452,7 +452,7 @@ async def test_enrich_message_removed_dialog_fills_user() -> None:
     async def get_members_must_not_be_called(_: Any, **__: Any) -> None:
         raise AssertionError("get_members must not be called for DIALOG")
 
-    bot = MockBot(
+    bot = ChatFetchingBot(
         get_chat=get_chat,
         get_members=get_members_must_not_be_called,
     )
@@ -473,7 +473,7 @@ async def test_enrich_enabled_fills_chat_and_event_chat_key() -> None:
     chat_result = Chat(
         chat_id=1,
         is_public=False,
-        last_event_time=datetime.now(UTC),
+        last_event_time=NOW,
         participants_count=2,
         status=ChatStatus.ACTIVE,
         type=ChatType.CHAT,
@@ -488,7 +488,7 @@ async def test_enrich_enabled_fills_chat_and_event_chat_key() -> None:
     async def get_members_noop(_: Any, /, **__: Any) -> ChatMembersList:
         return ChatMembersList(members=[])
 
-    bot = MockBot(get_chat=get_chat, get_members=get_members_noop)
+    bot = ChatFetchingBot(get_chat=get_chat, get_members=get_members_noop)
     middleware = UpdateContextMiddleware(enrich=True)
     msg = make_message_created(chat_id=1, user_id=5)
     ctx = Ctx({"update": msg, "bot": bot})

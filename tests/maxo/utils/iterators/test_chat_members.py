@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import ANY, AsyncMock
 
 import pytest
@@ -8,6 +7,7 @@ from maxo.dialogs.test_tools.bot_client import FakeBot
 from maxo.types.chat_member import ChatMember
 from maxo.types.chat_members_list import ChatMembersList
 from maxo.utils.iterators.chat_members import ChatMembersIterator
+from tests.constants import NOW
 
 
 @pytest.fixture
@@ -21,10 +21,10 @@ def create_chat_member(user_id: int) -> ChatMember:
         is_admin=False,
         first_name=f"Test{user_id}",
         is_bot=False,
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
         is_owner=False,
-        join_time=datetime.now(UTC),
-        last_access_time=datetime.now(UTC),
+        join_time=NOW,
+        last_access_time=NOW,
     )
 
 

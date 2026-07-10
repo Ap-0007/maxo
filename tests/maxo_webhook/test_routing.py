@@ -5,8 +5,8 @@ from yarl import URL
 
 from maxo import Bot
 from maxo.transport.webhook.routing import PathRouting, QueryRouting, StaticRouting
+from tests.factories import make_bot
 
-from .conftest import make_bot
 from .fixtures import DummyBoundRequest, DummyRequest
 
 

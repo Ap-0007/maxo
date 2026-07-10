@@ -14,8 +14,8 @@ from maxo.utils.webapp import (
     parse_webapp_init_data,
     safe_parse_webapp_init_data,
 )
+from tests.constants import TOKEN
 
-TOKEN = "f9LHod"  # noqa: S105
 TEST_DATA = {
     "query_id": "test_query_id",
     "user": json.dumps(

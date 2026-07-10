@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 from maxo.dialogs import DialogManager
@@ -7,6 +6,7 @@ from maxo.dialogs.widgets.kbd.button import Button
 from maxo.dialogs.widgets.text import Const
 from maxo.routing.updates import MessageCallback
 from maxo.types import Callback, User
+from tests.constants import NOW
 
 
 async def test_scrolling_group_basic(mock_manager: DialogManager) -> None:
@@ -121,14 +121,14 @@ async def test_scrolling_group_process_item_callback(
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+        last_activity_time=NOW,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="scroll:1",
         ),
     )

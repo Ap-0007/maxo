@@ -288,8 +288,8 @@ target-version = ["py312"]
 include = 'src/.*\.py$|tests/.*\.py$|examples/.*\.py$'
 
 [tool.pytest.ini_options]
-log_cli = true
-log_cli_level = "DEBUG"
+# log_cli печатал DEBUG-лог на каждый тест и раздувал вывод в несколько раз.
+# Для отладки включай точечно: `uv run pytest --log-cli-level=DEBUG`.
 asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning",
