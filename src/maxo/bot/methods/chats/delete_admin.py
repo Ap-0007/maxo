@@ -13,7 +13,7 @@ class DeleteAdmin(MaxoMethod[SimpleQueryResult]):
 
     Пример запроса:
     ```bash
-    curl -X DELETE "https://platform-api.max.ru/chats/{chatId}/members/admins/{userId}" \
+    curl -X DELETE "https://platform-api2.max.ru/chats/{chatId}/members/admins/{userId}" \
       -H "Authorization: {access_token}"
     ```
 

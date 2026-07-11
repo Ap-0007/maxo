@@ -5,9 +5,9 @@ class UpdateType(StrEnum):
     """
     Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:
         - Вы подписались на обновления через Webhook - при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](https://dev.max.ru/docs-api/methods/POST/subscriptions), который содержит объект `Update`
-        - Вы отправили [GET-запрос /updates](https://dev.max.ru/docs-api/methods/GET/updates) для получения обновлений через  Long Polling- в ответ вернётся объект `Update`
+        - Вы отправили [GET-запрос /updates](https://dev.max.ru/docs-api/methods/GET/updates) для получения обновлений через  Long Polling - в ответ вернётся объект `Update`
 
-    >! Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
+    >! Получение обновлений с помощью [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
 
     ## Типы событий
         - `bot_added` - бот добавлен в чат или канал

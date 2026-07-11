@@ -14,7 +14,7 @@ class PinMessage(MaxoMethod[SimpleQueryResult]):
 
     Пример запроса:
     ```bash
-    curl -X PUT "https://platform-api.max.ru/chats/{chatId}/pin" \
+    curl -X PUT "https://platform-api2.max.ru/chats/{chatId}/pin" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

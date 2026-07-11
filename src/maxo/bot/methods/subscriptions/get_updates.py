@@ -24,7 +24,7 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
 
     #### Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/updates" \
+    curl -X GET "https://platform-api2.max.ru/updates" \
       -H "Authorization: {access_token}"
     ```
 

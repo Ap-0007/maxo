@@ -16,13 +16,13 @@ class GetMessages(MaxoMethod[MessageList]):
 
     #### Пример запроса с использованием `chat_id`:
     ```bash
-    curl -X GET "https://platform-api.max.ru/messages?chat_id={chat_id}" \
+    curl -X GET "https://platform-api2.max.ru/messages?chat_id={chat_id}" \
       -H "Authorization: {access_token}"
     ```
 
     #### Пример запроса с использованием `message_ids`:
     ```bash
-    curl -X GET "https://platform-api.max.ru/messages?message_ids={message_id1},{message_id2}" \
+    curl -X GET "https://platform-api2.max.ru/messages?message_ids={message_id1},{message_id2}" \
       -H "Authorization: {access_token}"
     ```
 

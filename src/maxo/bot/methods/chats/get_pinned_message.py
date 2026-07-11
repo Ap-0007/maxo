@@ -13,7 +13,7 @@ class GetPinnedMessage(MaxoMethod[GetPinnedMessageResult]):
 
     Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/chats/{chatId}/pin" \
+    curl -X GET "https://platform-api2.max.ru/chats/{chatId}/pin" \
       -H "Authorization: {access_token}"
     ```
 

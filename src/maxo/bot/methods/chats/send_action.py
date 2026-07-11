@@ -12,7 +12,7 @@ class SendAction(MaxoMethod[SimpleQueryResult]):
 
     #### Пример запроса:
     ```bash
-    curl -X POST "https://platform-api.max.ru/chats/{chatId}/actions" \
+    curl -X POST "https://platform-api2.max.ru/chats/{chatId}/actions" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

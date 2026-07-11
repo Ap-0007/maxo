@@ -11,7 +11,7 @@ class GetVideoAttachmentDetails(MaxoMethod[VideoAttachmentDetails]):
 
     #### Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/videos/{video_token}" \
+    curl -X GET "https://platform-api2.max.ru/videos/{video_token}" \
       -H "Authorization: {access_token}"
     ```
 

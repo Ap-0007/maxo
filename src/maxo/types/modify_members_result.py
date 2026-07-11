@@ -9,14 +9,14 @@ class ModifyMembersResult(SimpleQueryResult):
     Результат запроса на изменение списка участников
 
     Args:
-        failed_user_details: Подробное описание, почему пользователь не был добавлен в групповой чат или канал
-        failed_user_ids: ID пользователей, которых не удалось добавить
+        failed_user_details: Подробное объяснение, почему пользователь не был добавлен в групповой чат
+        failed_user_ids: ID пользователей, которых не удалось добавить в групповой чат
     """
 
     failed_user_details: Omittable[list[FailedUserDetails] | None] = Omitted()
-    """Подробное описание, почему пользователь не был добавлен в групповой чат или канал"""
+    """Подробное объяснение, почему пользователь не был добавлен в групповой чат"""
     failed_user_ids: Omittable[list[int] | None] = Omitted()
-    """ID пользователей, которых не удалось добавить"""
+    """ID пользователей, которых не удалось добавить в групповой чат"""
 
     @property
     def unsafe_failed_user_details(self) -> list[FailedUserDetails]:

@@ -11,7 +11,7 @@ class DeleteMessage(MaxoMethod[SimpleQueryResult]):
 
     #### Пример запроса:
     ```bash
-    curl -X DELETE "https://platform-api.max.ru/messages?message_id={message_id}" \
+    curl -X DELETE "https://platform-api2.max.ru/messages?message_id={message_id}" \
       -H "Authorization: {access_token}"
     ```
 
