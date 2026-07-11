@@ -16,7 +16,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     #### Пример запроса с одной кнопкой-ссылкой
 
     Больше примеров запросов с кнопками - [в разделе «Клавиатура»](https://dev.max.ru/docs-api#Как%20добавить%20кнопки)
-    ````bash
+    ```bash
     curl -X POST "https://platform-api2.max.ru/messages?user_id={user_id}" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
