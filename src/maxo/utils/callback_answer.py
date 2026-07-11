@@ -1,30 +1,113 @@
+"""
+https://github.com/aiogram/aiogram/blob/dev-3.x/aiogram/utils/callback_answer.py.
+
+Original code licensed under MIT by aiogram contributors
+
+The MIT License (MIT)
+
+Copyright (c) 2017 - present Alex Root Junior
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software,
+and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 from typing import Any
 
+from maxo.errors import MaxoError
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.updates.message_callback import MessageCallback
-from maxo.types import MaxoType
 
 CALLBACK_ANSWER_KEY = "callback_answer"
 
 
-class CallbackAnswer(MaxoType):
+class CallbackAnswerException(MaxoError):
+    """Попытка изменить `CallbackAnswer` после того, как ответ уже отправлен."""
+
+    def __str__(self) -> str:
+        return "Нельзя изменить CallbackAnswer после отправки ответа на колбэк"
+
+
+class CallbackAnswer:
     """
     Управление авто-ответом на колбэк из хендлера.
 
-    Middleware кладёт объект в ctx под ключом `CALLBACK_ANSWER_KEY`. Хендлер,
-    объявивший параметр `callback_answer: CallbackAnswer`, может его мутировать
-    до того, как middleware ответит.
+    Middleware кладёт объект в ctx под ключом `CALLBACK_ANSWER_KEY`.
+    Хендлер, объявивший параметр `callback_answer: CallbackAnswer`,
+    может его мутировать до того, как middleware ответит
     """
 
-    disabled: bool = False
-    """Не отвечать на этот колбэк."""
-    before: bool = False
-    """Ответить до хендлера, а не после."""
-    notification: str | None = None
-    """Текст одноразового уведомления (иначе пустой ответ)."""
-    answered: bool = False
-    """Внутреннее: ответ уже отправлен."""
+    __slots__ = ("_answered", "_before", "_disabled", "_notification")
+
+    def __init__(
+        self,
+        *,
+        disabled: bool = False,
+        before: bool = False,
+        notification: str | None = None,
+        answered: bool = False,
+    ) -> None:
+        self._disabled = disabled
+        self._before = before
+        self._notification = notification
+        self._answered = answered
+
+    @property
+    def answered(self) -> bool:
+        """Внутреннее: ответ уже отправлен (только для чтения)."""
+        return self._answered
+
+    @property
+    def disabled(self) -> bool:
+        """Не отвечать на этот колбэк."""
+        return self._disabled
+
+    @disabled.setter
+    def disabled(self, value: bool) -> None:
+        self._raise_if_answered()
+        self._disabled = value
+
+    @property
+    def before(self) -> bool:
+        """Ответить до хендлера, а не после."""
+        return self._before
+
+    @before.setter
+    def before(self, value: bool) -> None:
+        self._raise_if_answered()
+        self._before = value
+
+    @property
+    def notification(self) -> str | None:
+        """Текст одноразового уведомления (иначе пустой ответ)."""
+        return self._notification
+
+    @notification.setter
+    def notification(self, value: str | None) -> None:
+        self._raise_if_answered()
+        self._notification = value
+
+    def disable(self) -> None:
+        """Отключить авто-ответ на этот колбэк."""
+        self.disabled = True
+
+    def _raise_if_answered(self) -> None:
+        if self._answered:
+            raise CallbackAnswerException
 
 
 class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
@@ -64,16 +147,18 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
         if answer.before and not answer.disabled:
             await self._answer(update, answer)
 
-        result = await next(ctx)
-
-        if not answer.disabled and not answer.answered:
-            await self._answer(update, answer)
-
-        return result
+        try:
+            return await next(ctx)
+        finally:
+            if not answer.disabled and not answer.answered:
+                await self._answer(update, answer)
 
     async def _answer(self, update: MessageCallback, answer: CallbackAnswer) -> None:
         if answer.notification is not None:
             await update.answer(notification=answer.notification)
         else:
             await update.answer()
-        answer.answered = True
+        # `answered` намеренно read-only для хендлеров (публичного сеттера нет),
+        # а middleware и CallbackAnswer - тесно связаны в одном модуле,
+        # поэтому внутренний флаг ставим напрямую
+        answer._answered = True  # noqa: SLF001

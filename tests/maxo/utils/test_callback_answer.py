@@ -1,10 +1,14 @@
 from typing import cast
 from unittest.mock import AsyncMock
 
+import pytest
+
 from maxo.routing.ctx import Ctx
 from maxo.routing.updates.message_callback import MessageCallback
 from maxo.utils.callback_answer import (
     CALLBACK_ANSWER_KEY,
+    CallbackAnswer,
+    CallbackAnswerException,
     CallbackAnswerMiddleware,
 )
 
@@ -64,3 +68,51 @@ async def test_no_double_answer_when_before() -> None:
     mw = CallbackAnswerMiddleware(before=True)
     await mw(cast(MessageCallback, update), Ctx({}), _next_ok)
     update.answer.assert_awaited_once_with()
+
+
+async def test_answers_even_when_handler_raises() -> None:
+    update = AsyncMock()
+
+    async def next_boom(ctx: Ctx) -> str:
+        raise RuntimeError("boom")
+
+    mw = CallbackAnswerMiddleware()
+    with pytest.raises(RuntimeError, match="boom"):
+        await mw(cast(MessageCallback, update), Ctx({}), next_boom)
+
+    update.answer.assert_awaited_once_with()
+
+
+async def test_disabled_handler_no_answer_on_exception() -> None:
+    update = AsyncMock()
+
+    async def next_boom(ctx: Ctx) -> str:
+        ctx[CALLBACK_ANSWER_KEY].disabled = True
+        raise RuntimeError("boom")
+
+    mw = CallbackAnswerMiddleware()
+    with pytest.raises(RuntimeError, match="boom"):
+        await mw(cast(MessageCallback, update), Ctx({}), next_boom)
+
+    update.answer.assert_not_awaited()
+
+
+async def test_mutation_after_answer_raises() -> None:
+    answer = CallbackAnswer(answered=True)
+
+    with pytest.raises(CallbackAnswerException):
+        answer.disabled = True
+    with pytest.raises(CallbackAnswerException):
+        answer.notification = "late"
+    with pytest.raises(CallbackAnswerException):
+        answer.before = True
+
+
+async def test_mutation_before_answer_allowed() -> None:
+    answer = CallbackAnswer()
+
+    answer.disabled = True
+    answer.notification = "ok"
+    assert answer.disabled is True
+    assert answer.notification == "ok"
+    assert answer.answered is False
