@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, Mock
 from maxo import Ctx
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.enums import AttachmentType, ChatType
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, PhotoAttachment, Recipient
+from maxo.types import Message, MessageBody, MessageCreated, PhotoAttachment, Recipient
 from maxo.types.photo_attachment_payload import PhotoAttachmentPayload
 from tests.constants import NOW
 

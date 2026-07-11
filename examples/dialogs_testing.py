@@ -18,8 +18,7 @@ from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.types import CallbackButton
+from maxo.types import CallbackButton, MessageCallback, MessageCreated
 
 
 class MenuSG(StatesGroup):

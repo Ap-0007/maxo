@@ -16,9 +16,9 @@ from maxo.bot.state import RunningBotState
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.routing.updates.updates import Updates
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
+from maxo.types.updates import Updates
 from tests.factories import make_bot
 
 

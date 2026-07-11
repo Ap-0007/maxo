@@ -28,7 +28,7 @@ from maxo.fsm.context import FSMContext
 from maxo.fsm.storages.base import BaseStorage, RawState
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 from maxo.types.update_context import UpdateContext
 
 CONTAINER_NAME = "dishka_container"

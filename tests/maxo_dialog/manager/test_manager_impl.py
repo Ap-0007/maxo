@@ -31,13 +31,14 @@ from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import ErrorEvent, MessageCallback
 from maxo.types import (
     Callback,
     CallbackButton,
+    ErrorEvent,
     Message,
     MessageBody,
     MessageButton,
+    MessageCallback,
     Recipient,
     UpdateContext,
 )

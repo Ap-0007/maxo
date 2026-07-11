@@ -4,7 +4,7 @@ from typing import Any, Protocol
 from maxo.dialogs.api.entities import Data, NewMessage
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.fsm import State
-from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import MessageCallback, MessageCreated
 
 from .widgets import Widget
 

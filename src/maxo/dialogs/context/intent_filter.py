@@ -3,7 +3,7 @@ from maxo.dialogs.api.internal import CONTEXT_KEY
 from maxo.fsm import StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import BaseFilter
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 
 class IntentFilter(BaseFilter[BaseUpdate]):

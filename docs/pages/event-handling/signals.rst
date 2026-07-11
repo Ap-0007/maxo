@@ -179,7 +179,7 @@
 .. code-block:: python
 
     from maxo import Dispatcher
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     dispatcher = Dispatcher()
 

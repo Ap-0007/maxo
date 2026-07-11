@@ -16,8 +16,7 @@ from maxo.dialogs.widgets.kbd.pager import (
     SwitchPage,
 )
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, User
+from maxo.types import Callback, MessageCallback, User
 from tests.constants import NOW
 
 

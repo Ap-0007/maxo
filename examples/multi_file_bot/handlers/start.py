@@ -1,6 +1,6 @@
 from maxo import Router
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 start_router = Router(__name__)
 

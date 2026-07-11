@@ -44,7 +44,7 @@
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     class MyMiddleware(BaseMiddleware[MessageCreated]):
         async def __call__(

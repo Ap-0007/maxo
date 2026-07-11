@@ -22,7 +22,7 @@ from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 # ---------------------------------------------------------------------------
 # Состояния

@@ -7,8 +7,7 @@ from maxo.dialogs.widgets.common import (
     OnPageChangedVariants,
     WhenCondition,
 )
-from maxo.routing.updates import MessageCallback
-from maxo.types import CallbackButton
+from maxo.types import CallbackButton, MessageCallback
 
 from .base import Keyboard
 from .group import Group

@@ -1,8 +1,8 @@
 from maxo.omit import Omittable
 from maxo.routing.facades.base import BaseUpdateFacade
 from maxo.routing.mixins import MessageMethodsFacade
-from maxo.routing.updates.message_created import MessageCreated
 from maxo.types.message import Message
+from maxo.types.message_created import MessageCreated
 
 
 class MessageCreatedFacade(BaseUpdateFacade[MessageCreated], MessageMethodsFacade):

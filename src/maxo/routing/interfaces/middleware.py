@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 _UpdateT_co = TypeVar("_UpdateT_co", bound=BaseUpdate, covariant=True)
 _UpdateT_contra = TypeVar("_UpdateT_contra", bound=BaseUpdate, contravariant=True)

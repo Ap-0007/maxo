@@ -85,7 +85,7 @@ Button
     from maxo.dialogs.api.protocols import DialogManager
     from maxo.dialogs.widgets.kbd import Button
     from maxo.dialogs.widgets.text import Const
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     async def on_click(callback: MessageCallback, button: Button, manager: DialogManager):
         await callback.callback_answer("Вы нажали на кнопку!")
@@ -158,7 +158,7 @@ Select
     from maxo.dialogs.api.protocols import DialogManager
     from maxo.dialogs.widgets.kbd import Select
     from maxo.dialogs.widgets.text import Format
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     async def on_fruit_selected(callback: MessageCallback, widget: Select, manager: DialogManager, item_id: str):
         await callback.callback_answer(f"Вы выбрали: {item_id}")
@@ -207,7 +207,7 @@ ConfirmButton
     from maxo.dialogs.api.protocols import DialogManager
     from maxo.dialogs.widgets.kbd import ConfirmButton
     from maxo.dialogs.widgets.text import Const
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     async def on_confirm(
         callback: MessageCallback,

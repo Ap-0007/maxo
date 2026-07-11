@@ -7,7 +7,7 @@
 ----------------
 
 ``Dispatcher`` автоматически регистрирует глобальную мидлварь ``ErrorMiddleware``. Она оборачивает процесс обработки каждого события в блок ``try...except``.
-Если в любом из хендлеров или мидлварей возникает необработанное исключение (наследуемое от ``Exception``), оно перехватывается, и создается новое событие типа :class:`~maxo.routing.updates.error.ErrorEvent`.
+Если в любом из хендлеров или мидлварей возникает необработанное исключение (наследуемое от ``Exception``), оно перехватывается, и создается новое событие типа :class:`~maxo.types.error_event.ErrorEvent`.
 
 Это событие затем отправляется в диспетчер, где вы можете поймать его с помощью специальных обработчиков ошибок.
 
@@ -18,7 +18,7 @@
 
 .. code-block:: python
 
-    from maxo.routing.updates import ErrorEvent
+    from maxo.types import ErrorEvent
 
     @router.error()
     async def global_error_handler(event: ErrorEvent):
@@ -40,7 +40,7 @@ ExceptionTypeFilter
 .. code-block:: python
 
     from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.routing.updates import ErrorEvent
+    from maxo.types import ErrorEvent
     from maxo.types import UpdateContext
 
     # Перехват ошибок конкретного типа
@@ -63,7 +63,7 @@ ExceptionMessageFilter
 .. code-block:: python
 
     from maxo.routing.filters import ExceptionMessageFilter
-    from maxo.routing.updates import ErrorEvent
+    from maxo.types import ErrorEvent
 
     @router.error(ExceptionMessageFilter(r"Access denied"))
     async def access_denied_handler(event: ErrorEvent):
@@ -74,7 +74,7 @@ ExceptionMessageFilter
 
 В обработчик ошибки передаются следующие аргументы:
 
-1.  **event**: объект :class:`~maxo.routing.updates.error.ErrorEvent`. Содержит:
+1.  **event**: объект :class:`~maxo.types.error_event.ErrorEvent`. Содержит:
     - ``event.exception`` - само исключение.
     - ``event.update`` - исходное событие (Update), при обработке которого возникла ошибка.
 2.  **ctx**: контекст выполнения.
@@ -89,7 +89,7 @@ ExceptionMessageFilter
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import ExceptionTypeFilter
-    from maxo.routing.updates import ErrorEvent, MessageCreated
+    from maxo.types import ErrorEvent, MessageCreated
     from maxo.types import UpdateContext
 
     class MyCustomError(Exception):

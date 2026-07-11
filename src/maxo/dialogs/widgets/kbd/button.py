@@ -9,8 +9,13 @@ from maxo.dialogs.widgets.widget_event import (
     ensure_event_processor,
 )
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.updates import MessageCallback
-from maxo.types import CallbackButton, ClipboardButton, LinkButton, OpenAppButton
+from maxo.types import (
+    CallbackButton,
+    ClipboardButton,
+    LinkButton,
+    MessageCallback,
+    OpenAppButton,
+)
 
 from .base import Keyboard
 

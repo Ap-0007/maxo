@@ -22,7 +22,7 @@ from maxo.fsm import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import MessageCallback, MessageCreated
 from maxo.types.update_context import UpdateContext
 
 from .context.intent_filter import IntentFilter

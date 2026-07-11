@@ -18,8 +18,15 @@ from maxo.routing.filters.payload import (
     Payload,
     _check_field_is_nullable,
 )
-from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.types import Callback, Message, MessageBody, Recipient, User
+from maxo.types import (
+    Callback,
+    Message,
+    MessageBody,
+    MessageCallback,
+    MessageCreated,
+    Recipient,
+    User,
+)
 from tests.constants import NOW
 
 

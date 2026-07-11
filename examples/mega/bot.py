@@ -24,8 +24,8 @@ from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import ExceptionTypeFilter
-from maxo.routing.updates import ErrorEvent, MessageCallback, MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import ErrorEvent, MessageCallback, MessageCreated
 
 logger = logging.getLogger(__name__)
 

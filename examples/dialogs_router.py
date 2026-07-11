@@ -17,8 +17,8 @@ from maxo.dialogs.widgets.text import Const, Format, Multi
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 
 class StartSG(StatesGroup):

@@ -25,25 +25,29 @@ from maxo.routing.facades import (
     UserRemovedFromChatFacade,
 )
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import (
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
+    Callback,
     ChatTitleChanged,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
     DialogUnmuted,
     ErrorEvent,
+    Message,
+    MessageBody,
     MessageCallback,
     MessageCreated,
     MessageEdited,
     MessageRemoved,
+    Recipient,
+    User,
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.types import Callback, Message, MessageBody, Recipient, User
 from tests.constants import NOW
 
 

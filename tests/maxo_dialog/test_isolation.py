@@ -10,7 +10,7 @@ from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 
 async def start(

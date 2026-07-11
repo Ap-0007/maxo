@@ -5,8 +5,8 @@ from typing import Any
 from maxo import Bot, Ctx, Dispatcher
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 
 # Outer выполняется всегда и до фильтров; inner - после всех фильтров, если они прошли

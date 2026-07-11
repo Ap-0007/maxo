@@ -3,8 +3,8 @@ import os
 
 from maxo import Bot, Dispatcher
 from maxo.enums import TextFormat
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher()

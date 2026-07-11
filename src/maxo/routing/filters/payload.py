@@ -38,8 +38,7 @@ from maxo import Ctx
 from maxo.omit import is_not_defined
 from maxo.routing.filters import BaseFilter
 from maxo.routing.interfaces import Filter
-from maxo.routing.updates import MessageCallback
-from maxo.types import MaxoType
+from maxo.types import MaxoType, MessageCallback
 
 T = TypeVar("T", bound="Payload")
 

@@ -18,7 +18,7 @@ from maxo.dialogs.widgets.text import Const, Jinja
 from maxo.fsm.state import State, StatesGroup
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import BeforeStartup
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 
 class MainSG(StatesGroup):

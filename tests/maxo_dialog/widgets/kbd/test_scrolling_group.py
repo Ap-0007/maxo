@@ -4,8 +4,7 @@ from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import ScrollingGroup
 from maxo.dialogs.widgets.kbd.button import Button
 from maxo.dialogs.widgets.text import Const
-from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, User
+from maxo.types import Callback, MessageCallback, User
 from tests.constants import NOW
 
 

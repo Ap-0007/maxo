@@ -35,8 +35,7 @@ from maxo.routing.middlewares.update_context import (
 )
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.routing.updates import MessageCreated
-from maxo.types import Recipient, User
+from maxo.types import MessageCreated, Recipient, User
 from tests.constants import NOW
 
 from .conftest import wait_for_messages

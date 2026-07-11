@@ -80,7 +80,7 @@
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     class UserMiddleware(BaseMiddleware[MessageCreated]):
         async def __call__(
@@ -121,7 +121,7 @@ start_data - данные между диалогами
 
     from maxo.dialogs import DialogManager
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @router.message_created(Command("profile"))
     async def show_profile(message: MessageCreated, dialog_manager: DialogManager):
@@ -147,7 +147,7 @@ start_data - данные между диалогами
 
     from maxo.dialogs import DialogManager
     from maxo.dialogs.widgets.kbd import Button
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     async def on_edit_click(
         callback: MessageCallback,
@@ -170,7 +170,7 @@ dialog_data - данные между окнами
 
     from maxo.dialogs import DialogManager
     from maxo.dialogs.widgets.input import MessageInput
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     async def on_name_input(message: MessageCreated, widget: MessageInput, manager: DialogManager):
         manager.dialog_data["name"] = message.message.body.text

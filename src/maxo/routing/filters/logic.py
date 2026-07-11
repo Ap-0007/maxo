@@ -9,7 +9,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.filters.always import AlwaysTrueFilter
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces.filter import Filter
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 

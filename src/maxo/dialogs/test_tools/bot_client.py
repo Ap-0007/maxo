@@ -8,15 +8,8 @@ from maxo.bot.state import RunningBotState
 from maxo.enums import ChatStatus, ChatType, MessageLinkType
 from maxo.omit import Omitted
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import (
-    BotAddedToChat,
-    MessageCallback,
-    MessageCreated,
-    MessageEdited,
-    MessageRemoved,
-    UserAddedToChat,
-)
 from maxo.types import (
+    BotAddedToChat,
     BotInfo,
     Callback,
     CallbackButton,
@@ -24,10 +17,15 @@ from maxo.types import (
     LinkedMessage,
     Message,
     MessageBody,
+    MessageCallback,
+    MessageCreated,
+    MessageEdited,
+    MessageRemoved,
     MessageStat,
     Recipient,
     SimpleQueryResult,
     User,
+    UserAddedToChat,
 )
 
 from .keyboard import InlineButtonLocator

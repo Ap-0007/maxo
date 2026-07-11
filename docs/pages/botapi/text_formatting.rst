@@ -81,7 +81,7 @@ TextFormat
 .. code-block:: python
 
     from maxo.enums import TextFormat
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @router.message_created()
     async def handler(message: MessageCreated):
@@ -118,7 +118,7 @@ Text API (``maxo.utils.formatting``)
 .. code-block:: python
 
     from maxo.enums import TextFormat
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
     from maxo.utils.formatting import Bold, Italic
 
     @router.message_created()
@@ -149,7 +149,7 @@ Text API (``maxo.utils.formatting``)
 .. code-block:: python
 
     from maxo.enums import TextFormat
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
     from maxo.utils.formatting import Bold, as_key_value, as_marked_list, as_section
 
     @router.message_created()

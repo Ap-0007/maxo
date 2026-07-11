@@ -52,8 +52,15 @@ from maxo.enums import ChatStatus, ChatType
 from maxo.fsm import State
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.routing.updates import ErrorEvent, MessageCallback, MessageCreated
-from maxo.types import Message, MessageButton, Recipient, User
+from maxo.types import (
+    ErrorEvent,
+    Message,
+    MessageButton,
+    MessageCallback,
+    MessageCreated,
+    Recipient,
+    User,
+)
 
 
 class ManagerImpl(DialogManager):

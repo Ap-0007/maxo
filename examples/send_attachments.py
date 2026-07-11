@@ -4,9 +4,8 @@ from typing import cast
 
 from maxo import Bot, Dispatcher
 from maxo.omit import Omitted
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
-from maxo.types import UpdateContext
+from maxo.types import MessageCreated, UpdateContext
 from maxo.types.attachments import Attachments, AttachmentsRequests
 from maxo.utils.upload_media import FSInputFile
 

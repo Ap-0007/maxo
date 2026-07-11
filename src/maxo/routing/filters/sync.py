@@ -4,7 +4,7 @@ from typing import TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 

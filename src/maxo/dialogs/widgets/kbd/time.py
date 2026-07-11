@@ -11,8 +11,7 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.routing.updates import MessageCallback
-from maxo.types import CallbackButton
+from maxo.types import CallbackButton, MessageCallback
 
 
 class OnClick(Protocol):

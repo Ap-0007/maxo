@@ -22,7 +22,7 @@ from maxo.dialogs.widgets.kbd.calendar_kbd import (
     CalendarYearsView,
 )
 from maxo.dialogs.widgets.text import Const, Format, Text
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 from . import states
 from .common import MAIN_MENU_BUTTON

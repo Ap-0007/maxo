@@ -1,4 +1,4 @@
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 
 class BaseSignal(BaseUpdate):

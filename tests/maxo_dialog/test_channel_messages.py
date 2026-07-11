@@ -18,8 +18,7 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, Recipient
+from maxo.types import Message, MessageBody, MessageCreated, Recipient
 from maxo.types.update_context import UpdateContext
 
 

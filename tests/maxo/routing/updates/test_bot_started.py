@@ -3,7 +3,7 @@ import pytest
 from maxo.enums import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omitted
-from maxo.routing.updates.bot_started import BotStarted
+from maxo.types.bot_started import BotStarted
 from maxo.types.user import User
 from tests.constants import NOW
 

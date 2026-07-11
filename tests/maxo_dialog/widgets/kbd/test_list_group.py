@@ -4,8 +4,7 @@ from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.kbd import ListGroup
 from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, CallbackButton, LinkButton, User
+from maxo.types import Callback, CallbackButton, LinkButton, MessageCallback, User
 from tests.constants import NOW
 
 

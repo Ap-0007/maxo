@@ -5,7 +5,7 @@ from typing import Any, cast
 from maxo.dialogs.api.internal import ButtonVariant, RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import WhenCondition
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 from .base import Keyboard
 

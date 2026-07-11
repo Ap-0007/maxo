@@ -6,7 +6,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.interfaces.handler import Handler
 from maxo.routing.middlewares.manager import MiddlewareManagerFacade
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)

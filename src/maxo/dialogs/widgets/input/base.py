@@ -16,7 +16,7 @@ from maxo.dialogs.widgets.widget_event import (
 )
 from maxo.enums import AttachmentType
 from maxo.routing.filters import BaseFilter
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 MessageHandlerFunc = Callable[
     [MessageCreated, "MessageInput", DialogManager],

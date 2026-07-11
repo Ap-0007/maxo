@@ -4,8 +4,7 @@ from adaptix.load_error import LoadError
 from unihttp.http import HTTPResponse
 
 from maxo.bot.methods import GetUpdates
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message
+from maxo.types import Message, MessageCreated
 from maxo.types.update_list import UpdateList
 from tests.constants import NOW
 

@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from maxo import Bot
 from maxo.fsm import State
-from maxo.routing.updates import BaseUpdate
-from maxo.types import Recipient, User
+from maxo.types import BaseUpdate, Recipient, User
 
 from .access import AccessSettings
 from .modes import ShowMode, StartMode

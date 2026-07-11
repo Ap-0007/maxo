@@ -3,8 +3,8 @@ import pytest
 from maxo.enums import ChatType, UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omitted
-from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Message, MessageBody, Recipient, User
+from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
 

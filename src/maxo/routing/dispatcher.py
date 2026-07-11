@@ -16,9 +16,9 @@ from maxo.routing.routers.simple import Router
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals.base import BaseSignal
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.routing.updates.base import BaseUpdate
 from maxo.routing.utils._resolving_inner_middlewares import resolve_middlewares
 from maxo.routing.utils.validate_router_graph import validate_router_graph
+from maxo.types.base_update import BaseUpdate
 
 
 class Dispatcher(Router):

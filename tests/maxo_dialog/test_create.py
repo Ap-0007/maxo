@@ -11,8 +11,7 @@ from maxo.dialogs.widgets.text import Format
 from maxo.enums import ChatType
 from maxo.fsm.state import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, UpdateContext, User
+from maxo.types import Callback, MessageCallback, UpdateContext, User
 from tests.constants import NOW
 
 

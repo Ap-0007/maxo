@@ -14,8 +14,7 @@ from maxo.enums import ChatType
 from maxo.integrations.dishka import setup_dishka
 from maxo.routing.signals.startup import BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, Recipient
+from maxo.types import Message, MessageBody, MessageCreated, Recipient
 from tests.constants import NOW
 
 

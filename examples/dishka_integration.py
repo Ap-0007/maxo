@@ -20,8 +20,8 @@ from dishka import (
 from maxo import Bot, Dispatcher
 from maxo.integrations.dishka import setup_dishka
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 
 class GreeterService:

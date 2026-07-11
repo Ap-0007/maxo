@@ -3,8 +3,8 @@ import pytest
 from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import SyncFilter
-from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Message, MessageBody, Recipient, User
+from maxo.types.message_created import MessageCreated
 from tests.constants import NOW
 
 

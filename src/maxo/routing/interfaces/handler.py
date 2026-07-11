@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Protocol, TypeVar
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base_update import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)

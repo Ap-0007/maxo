@@ -46,7 +46,7 @@ BgManagerFactory
     from maxo.dialogs.widgets.kbd import Button
     from maxo.dialogs.widgets.text import Const, Format
     from maxo.fsm import State, StatesGroup
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     class TimerSG(StatesGroup):
         running = State()

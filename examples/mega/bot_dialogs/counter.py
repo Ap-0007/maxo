@@ -3,7 +3,7 @@ from typing import Any, cast
 from maxo.dialogs import ChatEvent, Dialog, DialogManager, Window
 from maxo.dialogs.widgets.kbd import Counter, ManagedCounter
 from maxo.dialogs.widgets.text import Const, Progress
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 from . import states
 from .common import MAIN_MENU_BUTTON

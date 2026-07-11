@@ -11,32 +11,30 @@ from maxo.routing.middlewares.update_context import (
     UpdateContextMiddleware,
 )
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import (
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
+    Callback,
+    Chat,
+    ChatMember,
+    ChatMembersList,
     ChatTitleChanged,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
     DialogUnmuted,
+    Message,
+    MessageBody,
     MessageCallback,
     MessageCreated,
     MessageEdited,
     MessageRemoved,
-    UserAddedToChat,
-    UserRemovedFromChat,
-)
-from maxo.types import (
-    Callback,
-    Chat,
-    ChatMember,
-    ChatMembersList,
-    Message,
-    MessageBody,
     Recipient,
     User,
+    UserAddedToChat,
+    UserRemovedFromChat,
     UserWithPhoto,
 )
 from tests.constants import NOW
