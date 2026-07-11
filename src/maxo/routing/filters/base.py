@@ -3,7 +3,7 @@ from abc import ABC
 from typing import Any, Generic, TypeVar
 
 from maxo.routing.interfaces.filter import Filter
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 

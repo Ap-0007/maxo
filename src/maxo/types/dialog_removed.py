@@ -2,7 +2,7 @@ from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.mixins import ChatMethodsFacade
-from maxo.types.base_update import MaxUpdate
+from maxo.types.base import MaxUpdate
 from maxo.types.user import User
 
 

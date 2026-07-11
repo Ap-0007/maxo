@@ -9,8 +9,7 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import BaseMaxoType, BotMixin, MaxoType
-from .base_update import BaseUpdate, MaxUpdate
+from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType
 from .bot_added_to_chat import BotAddedToChat
 from .bot_command import BotCommand
 from .bot_info import BotInfo

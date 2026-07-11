@@ -2,7 +2,7 @@ from typing import Generic, TypeVar
 
 from maxo.bot.bot import Bot
 from maxo.routing.mixins import SubscriptionMethodsFacade
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 

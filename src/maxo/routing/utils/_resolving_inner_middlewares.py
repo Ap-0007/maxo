@@ -4,7 +4,7 @@ from typing import Any
 
 from maxo.routing.interfaces.middleware import BaseMiddleware
 from maxo.routing.interfaces.router import BaseRouter
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 
 def resolve_middlewares(

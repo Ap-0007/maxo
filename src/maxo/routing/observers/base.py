@@ -9,7 +9,7 @@ from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
 from maxo.routing.observers.state import EmptyObserverState
 from maxo.routing.sentinels import UNHANDLED, SkipHandler
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)

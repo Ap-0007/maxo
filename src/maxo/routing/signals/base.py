@@ -1,4 +1,4 @@
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 
 class BaseSignal(BaseUpdate):

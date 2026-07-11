@@ -1,3 +1,3 @@
-from maxo.types.base_update import BaseUpdate, MaxUpdate
+from maxo.types.base import BaseUpdate, MaxUpdate
 
 __all__ = ("BaseUpdate", "MaxUpdate")

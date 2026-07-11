@@ -10,7 +10,7 @@ warnings.warn(
     stacklevel=2,
 )
 
-from maxo.types.base_update import BaseUpdate, MaxUpdate
+from maxo.types.base import BaseUpdate, MaxUpdate
 from maxo.types.bot_added_to_chat import BotAddedToChat
 from maxo.types.bot_removed_from_chat import BotRemovedFromChat
 from maxo.types.bot_started import BotStarted

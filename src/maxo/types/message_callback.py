@@ -5,7 +5,7 @@ from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.mixins.callback import CallbackMethodsFacade
 from maxo.routing.mixins.message import MessageMethodsFacade
-from maxo.types.base_update import MaxUpdate
+from maxo.types.base import MaxUpdate
 from maxo.types.callback import Callback
 from maxo.types.message import Message
 from maxo.types.user import User

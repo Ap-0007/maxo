@@ -2,7 +2,7 @@ from typing import Generic, TypeVar
 
 from maxo.routing.facades.base import BaseUpdateFacade
 from maxo.routing.signals import MaxoUpdate
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 from maxo.types.error_event import ErrorEvent
 
 _ExceptionT = TypeVar("_ExceptionT", bound=Exception)

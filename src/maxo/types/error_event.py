@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 
 from maxo.routing.signals import MaxoUpdate
-from maxo.types.base_update import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ExceptionT = TypeVar("_ExceptionT", bound=Exception)
