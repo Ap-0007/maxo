@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -12,6 +11,7 @@ from maxo.routing.sentinels import UNHANDLED, SkipHandler
 from maxo.routing.signals import BeforeStartup
 from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Message, MessageBody, Recipient, User
+from tests.constants import NOW
 
 
 @pytest.fixture
@@ -20,15 +20,15 @@ def update() -> MessageCreated:
         message=Message(
             body=MessageBody(mid="test", seq=1),
             recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=1),
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
             sender=User(
                 user_id=1,
                 first_name="Test",
                 is_bot=False,
-                last_activity_time=datetime.now(UTC),
+                last_activity_time=NOW,
             ),
         ),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
 

@@ -4,14 +4,12 @@ from typing import Any, cast
 
 import pytest
 
-from maxo.fsm.key_builder import StorageKey, StorageKeyType
+from maxo.fsm.key_builder import StorageKeyType
 from maxo.fsm.state import State
 from maxo.fsm.storages import redis as redis_storage
 from maxo.fsm.storages.redis import RedisEventIsolation, RedisStorage
 
-
-def make_key() -> StorageKey:
-    return StorageKey(chat_id=1, user_id=2, bot_id=3)
+from .conftest import make_key
 
 
 class FakeRedis:
@@ -131,9 +129,11 @@ async def test_redis_event_isolation_lock_and_close() -> None:
     isolation = RedisEventIsolation(redis=cast(Any, redis))
     key = make_key()
 
+    entered = False
     async with isolation.lock(key):
-        assert True
+        entered = True
 
+    assert entered is True
     built_key = isolation.key_builder.build(key, StorageKeyType.LOCK)
     assert redis.lock_calls == [
         (

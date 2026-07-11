@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import cast
 
 import pytest
@@ -11,21 +10,11 @@ from maxo.bot.state import (
     RunningBotState,
 )
 from maxo.errors.state import StateError
-from maxo.types import BotInfo
+from tests.factories import make_bot_info
 
 
 def make_api_client() -> MaxApiClient:
     return cast(MaxApiClient, object())
-
-
-def make_bot_info() -> BotInfo:
-    return BotInfo(
-        user_id=1,
-        is_bot=True,
-        first_name="Maxo",
-        username="maxobot",
-        last_activity_time=datetime.now(UTC),
-    )
 
 
 def test_empty_bot_state() -> None:

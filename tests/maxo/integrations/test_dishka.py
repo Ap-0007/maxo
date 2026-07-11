@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,6 +16,7 @@ from maxo.routing.signals.startup import BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.updates import MessageCreated
 from maxo.types import Message, MessageBody, Recipient
+from tests.constants import NOW
 
 
 class MyService:
@@ -36,9 +36,9 @@ def update() -> MessageCreated:
         message=Message(
             body=MessageBody(mid="test", seq=1),
             recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=1),
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
         ),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
 
 

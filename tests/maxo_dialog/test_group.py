@@ -1,4 +1,3 @@
-import asyncio
 from typing import Any
 
 import pytest
@@ -24,6 +23,8 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import Command, CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
+
+from .conftest import wait_for_messages
 
 
 class MainSG(StatesGroup):
@@ -53,11 +54,6 @@ async def add_shared(event: Any, dialog_manager: DialogManager) -> None:
             user_ids=[1, 2],
         ),
     )
-
-
-@pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
 
 
 @pytest.fixture
@@ -216,7 +212,7 @@ async def test_shared_stack(
     await dp.feed_signal(AfterStartup(), client.bot)
 
     await client.send("/start")
-    await asyncio.sleep(0.1)  # synchronization workaround, fixme
+    await wait_for_messages(message_manager)
 
     first_message = message_manager.one_message()
     assert first_message.body.text == "stub"

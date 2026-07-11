@@ -6,9 +6,6 @@ Covers three related bugs:
 - chat_id=None in UpdateContext for DialogUpdateEvent (https://github.com/K1rL3s/maxo/issues/79)
 """
 
-import asyncio
-from datetime import UTC, datetime
-
 import pytest
 
 from maxo import Ctx, Dispatcher
@@ -40,6 +37,9 @@ from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.updates import MessageCreated
 from maxo.types import Recipient, User
+from tests.constants import NOW
+
+from .conftest import wait_for_messages
 
 
 class ChatSG(StatesGroup):
@@ -69,7 +69,7 @@ def _fake_user(user_id: int = 100) -> User:
         user_id=user_id,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime.now(UTC),
+        last_activity_time=NOW,
     )
 
 
@@ -237,11 +237,6 @@ def _make_dp(
     return dp, bg_factory
 
 
-@pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
-
-
 async def test_bg_start_dialog_then_message_handled(
     message_manager: MockMessageManager,
 ) -> None:
@@ -258,8 +253,7 @@ async def test_bg_start_dialog_then_message_handled(
     bg = bg_factory.bg(client.bot, user_id, chat_id, chat_type=ChatType.DIALOG)
     await bg.start(ChatSG.active, mode=StartMode.RESET_STACK)
 
-    # bg.start() dispatches via call_soon + create_task - yield to event loop
-    await asyncio.sleep(0.1)
+    await wait_for_messages(message_manager)
 
     assert len(message_manager.sent_messages) >= 1
     assert message_manager.sent_messages[0].body.text == "chat active"
@@ -287,7 +281,7 @@ async def test_bg_start_wrong_chat_type_message_unhandled(
     bg = bg_factory.bg(client.bot, user_id, chat_id)
     await bg.start(ChatSG.active, mode=StartMode.RESET_STACK)
 
-    await asyncio.sleep(0.1)
+    await wait_for_messages(message_manager)
 
     message_manager.reset_history()
     await client.send("hello from user")

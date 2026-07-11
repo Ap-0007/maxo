@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import cast
 
 from maxo.dialogs.test_tools.keyboard import (
@@ -17,6 +16,7 @@ from maxo.types import (
     MessageBody,
     Recipient,
 )
+from tests.constants import NOW
 
 
 def make_message(buttons: list[list[InlineButtons]] | None) -> Message:
@@ -26,7 +26,7 @@ def make_message(buttons: list[list[InlineButtons]] | None) -> Message:
     return Message(
         body=MessageBody(mid="mid", seq=1, attachments=attachments),
         recipient=Recipient(chat_type=ChatType.CHAT, chat_id=42),
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
     )
 
 

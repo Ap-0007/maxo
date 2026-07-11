@@ -3,11 +3,7 @@ from ipaddress import IPv4Address
 import pytest
 
 from maxo import Bot
-from tests.constants import TOKEN
-
-
-def make_bot(token: str = TOKEN) -> Bot:
-    return Bot(token=token, warming_up=False)
+from tests.factories import make_bot
 
 
 @pytest.fixture

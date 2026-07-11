@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -16,6 +15,7 @@ from maxo.dialogs.api.exceptions import DialogStackOverflow, OutdatedIntent
 from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State
 from maxo.types import Recipient, User
+from tests.constants import NOW
 
 MEDIA_ID = "media-id"
 OTHER_MEDIA_ID = "other-media-id"
@@ -80,7 +80,7 @@ def test_dialog_update_event_type() -> None:
             user_id=1,
             first_name="User",
             is_bot=False,
-            last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+            last_activity_time=NOW,
         ),
         recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
         action=DialogAction.UPDATE,

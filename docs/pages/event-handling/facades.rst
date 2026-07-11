@@ -23,7 +23,7 @@
 Основные возможности
 --------------------
 
-- **Быстрые ответы**: методы ``answer_text``, ``reply_text``, ``answer_photo`` и т.д. автоматически подставляют нужные ID.
+- **Быстрые ответы**: методы ``answer_text``, ``reply_text``, ``send_media`` и другие автоматически подставляют нужные ID.
 - **Управление клавиатурами**: методы для быстрой отправки или редактирования клавиатур.
 - **Доступ к боту**: через свойство ``facade.bot`` всегда доступен экземпляр бота.
 
@@ -39,7 +39,7 @@
 
 .. code-block:: python
 
-    from maxo.routing.updates.mixins.attachments import MediaInput
+    from maxo.routing.mixins.attachments import MediaInput
 
 Загрузка файла
 ~~~~~~~~~~~~~~
@@ -50,6 +50,39 @@
 
     photo = BufferedInputFile.image(content, "photo.jpg")
     await facade.send_media(media=photo, text="Новое фото")
+
+Все настройки загрузки собраны в ``maxo.bot.UploadConfig`` и передаются в
+``Bot(upload_config=...)``. Способ выбирается полем ``method``
+(``maxo.bot.UploadMethod``):
+
+- ``AUTO`` (по умолчанию) - большие файлы грузятся resumable-протоколом
+  (частями), мелкие - одним запросом. Порог - ``resumable_threshold``.
+- ``RESUMABLE`` - всегда частями.
+- ``SINGLE`` - всегда одним multipart-запросом.
+
+В ``UploadConfig`` также задаются размер куска и ретраи resumable-загрузки,
+ретраи отправки при ``attachment.not.ready`` и модель ожидания обработки файла
+сервером. Для больших файлов повышайте ``not_ready_max_retries`` - сервер
+обрабатывает многогигабайтные файлы дольше.
+
+Resumable-загрузка читает файл по кускам и отправляет их последовательными
+запросами. Для ``FSInputFile`` это значит, что большой файл стримится прямо с
+диска и не держится в памяти целиком - так снимается лимит на размер (обычный
+однозапросный аплоад падает на файлах около 2 ГБ). Для больших файлов
+предпочитайте ``FSInputFile``:
+
+.. code-block:: python
+
+    from maxo import Bot
+    from maxo.bot import UploadConfig, UploadMethod
+    from maxo.utils.upload_media import FSInputFile
+
+    # AUTO - значение по умолчанию; для очень больших файлов даём больше ретраев
+    config = UploadConfig(method=UploadMethod.AUTO, not_ready_max_retries=30)
+    bot = Bot(token, upload_config=config)
+
+    video = FSInputFile.video("/path/to/large_video.mp4")
+    await facade.send_media(media=video, text="Большое видео")
 
 Отправка по токену
 ~~~~~~~~~~~~~~~~~~

@@ -87,28 +87,31 @@
     result = bot.retort.dump(my, MyData)
     assert result == {"name": "test", "sub": {"value": 42}}
 
-Использование ``create_retort`` вручную
-----------------------------------------
+Создание ретроты вручную
+------------------------
 
-Если вы создаёте ретроту самостоятельно через :func:`~maxo.serialization.create_retort`,
-передайте ``bot=`` для включения инъекции:
+Если вы создаёте ретроту самостоятельно, используйте
+:func:`~maxo.serialization.create_retort_with_bot` - она внедряет бота во все
+загружаемые ``MaxoType``:
 
 .. code-block:: python
 
-    from maxo.serialization import create_retort
+    from maxo.serialization import create_retort_with_bot
 
-    retort = create_retort(bot=bot)
+    retort = create_retort_with_bot(bot)
     my = retort.load(data, MyData)
     assert my.bot is bot
 
-Если ``bot`` не передан (или передан как ``None``), инъекция не производится,
-и обращение к ``.bot`` вызовет :class:`~maxo.errors.AttributeIsEmptyError`:
+Функция :func:`~maxo.serialization.create_retort` создаёт ретроту без инъекции
+бота. Объекты загрузятся, но обращение к ``.bot`` вызовет
+:class:`~maxo.errors.AttributeIsEmptyError`:
 
 .. code-block:: python
 
     from maxo.errors import AttributeIsEmptyError
+    from maxo.serialization import create_retort
 
-    retort = create_retort()  # bot не передан
+    retort = create_retort()  # без бота
     my = retort.load(data, MyData)
 
     try:
@@ -141,14 +144,17 @@ API
 .. autoclass:: maxo.types.BotMixin
    :members:
    :undoc-members:
+   :no-index:
 
 .. autoclass:: maxo.types.BaseMaxoType
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 
 .. autoclass:: maxo.types.MaxoType
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:

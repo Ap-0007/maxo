@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TypeAlias
 
 from unihttp.http import UploadFile
@@ -26,6 +26,14 @@ from maxo.types.video_attachment_request import VideoAttachmentRequest
 from maxo.utils.upload_media import InputFile
 
 MediaInput: TypeAlias = InputFile | MediaAttachmentsRequests
+MediaAttachmentFactory: TypeAlias = Callable[[str], MediaAttachmentsRequests]
+
+MEDIA_ATTACHMENT_FACTORIES: dict[UploadType, MediaAttachmentFactory] = {
+    UploadType.FILE: FileAttachmentRequest.factory,
+    UploadType.AUDIO: AudioAttachmentRequest.factory,
+    UploadType.VIDEO: VideoAttachmentRequest.factory,
+    UploadType.IMAGE: lambda token: PhotoAttachmentRequest.factory(token=token),
+}
 
 
 class AttachmentsFacade(SubscriptionMethodsFacade):
@@ -69,56 +77,72 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
                 attachments[i] = file
 
         if files_to_upload:
-            uploaded_files = await self.build_media_attachments(files_to_upload)
+            # Размер каждого файла считаем один раз и прокидываем дальше
+            sizes = await asyncio.gather(*(file.size() for file in files_to_upload))
+            uploaded_files = await self.build_media_attachments(files_to_upload, sizes)
             for i, uploaded_file in zip(file_indices, uploaded_files, strict=True):
                 attachments[i] = uploaded_file
 
-            # TODO: Исправить костыль со сном, https://github.com/K1rL3s/maxo/issues/10
-            # maxo.errors.api.MaxBotBadRequestError:
-            # ('attachment.not.ready',
-            # 'Key: errors.process.attachment.file.not.processed')
-            await asyncio.sleep(0.5)
+            await self._wait_media_processing(files_to_upload, sizes)
 
         return [attachment for attachment in attachments if attachment is not None]
+
+    async def _wait_media_processing(
+        self,
+        files: Sequence[InputFile],
+        sizes: Sequence[int],
+    ) -> None:
+        """Делает первичную паузу перед отправкой загруженных файлов."""
+        config = self.bot.upload_config
+        delays = [
+            config.estimated_processing_delay(file.type, size)
+            for file, size in zip(files, sizes, strict=True)
+        ]
+        delay = max(delays, default=0.0)
+        if delay > 0:
+            await asyncio.sleep(delay)
 
     async def build_media_attachments(
         self,
         files: Sequence[InputFile],
+        sizes: Sequence[int] | None = None,
     ) -> Sequence[MediaAttachmentsRequests]:
         attachments: list[MediaAttachmentsRequests] = []
 
-        result = await asyncio.gather(*(self.upload_media(file) for file in files))
+        if sizes is None:
+            sizes = await asyncio.gather(*(file.size() for file in files))
+
+        result = await asyncio.gather(
+            *(
+                self.upload_media(file, size)
+                for file, size in zip(files, sizes, strict=True)
+            ),
+        )
 
         for type_, token in result:
-            match type_:
-                case UploadType.FILE:
-                    attachments.append(FileAttachmentRequest.factory(token))
-                case UploadType.AUDIO:
-                    attachments.append(AudioAttachmentRequest.factory(token))
-                case UploadType.VIDEO:
-                    attachments.append(VideoAttachmentRequest.factory(token))
-                case UploadType.IMAGE:
-                    attachments.append(PhotoAttachmentRequest.factory(token=token))
-                case _:
-                    # Недостижимо по типам, но Макс может прислать новый тип.
-                    loggers.utils.warning(  # type: ignore[unreachable]
-                        "Received unknown attachment type: %s",
-                        type_,
-                    )
+            factory = MEDIA_ATTACHMENT_FACTORIES.get(type_)
+            if factory is None:
+                loggers.utils.warning("Received unknown attachment type: %s", type_)
+                continue
+
+            attachments.append(factory(token))
 
         return attachments
 
-    async def upload_media(self, file: InputFile) -> tuple[UploadType, str]:
+    async def upload_media(
+        self,
+        file: InputFile,
+        size: int | None = None,
+    ) -> tuple[UploadType, str]:
+        if size is None:
+            size = await file.size()
+        if size <= 0:
+            msg = "Нельзя загрузить пустой файл"
+            raise ValueError(msg)
+
         result: UploadEndpoint = await self.bot.get_upload_url(type=file.type)
 
-        upload_result: UploadMediaResult | None
-        try:
-            upload_result = await self.bot.upload_media(
-                upload_url=result.url,
-                file=UploadFile(file=await file.read(), filename=file.file_name),
-            )
-        except RetvalReturnedServerException:
-            upload_result = None
+        upload_result = await self._upload_file(file, result.url, size)
 
         token: str
         if is_defined(result.token):
@@ -129,3 +153,20 @@ class AttachmentsFacade(SubscriptionMethodsFacade):
             raise RuntimeError("Could not get upload token")
 
         return file.type, token
+
+    async def _upload_file(
+        self,
+        file: InputFile,
+        url: str,
+        size: int,
+    ) -> UploadMediaResult | None:
+        if self.bot.upload_config.should_use_resumable(size):
+            return await self.bot.upload_media_resumable(url, file, size)
+
+        try:
+            return await self.bot.upload_media(
+                upload_url=url,
+                file=UploadFile(file=await file.read(), filename=file.file_name),
+            )
+        except RetvalReturnedServerException:
+            return None

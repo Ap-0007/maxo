@@ -57,11 +57,6 @@ async def on_process_result_sub(_: Any, __: Any, dialog_manager: DialogManager) 
 
 
 @pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
-
-
-@pytest.fixture
 def client(dp: Dispatcher) -> BotClient:
     return BotClient(dp)
 

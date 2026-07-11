@@ -35,11 +35,6 @@ async def start(message: MessageCreated, dialog_manager: DialogManager) -> None:
 
 
 @pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
-
-
-@pytest.fixture
 def dp(message_manager: MockMessageManager) -> Dispatcher:
     dp = Dispatcher(
         storage=JsonMemoryStorage(),

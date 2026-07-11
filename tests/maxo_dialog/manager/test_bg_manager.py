@@ -1,5 +1,4 @@
 import asyncio
-from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 
@@ -21,8 +20,7 @@ from maxo.dialogs.manager.updater import Updater
 from maxo.enums import ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.types import Chat, ChatMembersList, User
-
-NOW = datetime(2026, 1, 1, tzinfo=UTC)
+from tests.constants import NOW
 
 
 class SG(StatesGroup):

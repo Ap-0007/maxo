@@ -32,12 +32,13 @@ import ssl
 from collections.abc import AsyncGenerator, Callable
 from typing import Any, BinaryIO, Never
 
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from aiohttp import ClientError, ClientSession, ClientTimeout, TCPConnector
 from aiohttp.hdrs import AUTHORIZATION, USER_AGENT
 from aiohttp.http import SERVER_SOFTWARE
 from anyio import open_file
 from unihttp.clients.aiohttp import AiohttpAsyncClient
-from unihttp.http import HTTPResponse
+from unihttp.exceptions import NetworkError, RequestTimeoutError
+from unihttp.http import HTTPRequest, HTTPResponse
 from unihttp.method import BaseMethod
 from unihttp.middlewares import AsyncMiddleware
 from unihttp.serialize import RequestDumper, ResponseLoader
@@ -45,19 +46,15 @@ from unihttp.serialize import RequestDumper, ResponseLoader
 from maxo import loggers
 from maxo.__meta__ import __version__
 from maxo.bot.methods import AddMembers
-from maxo.errors import (
-    MaxBotApiError,
-    MaxBotBadRequestError,
-    MaxBotForbiddenError,
-    MaxBotMethodNotAllowedError,
-    MaxBotNotFoundError,
-    MaxBotServiceUnavailableError,
-    MaxBotTooManyRequestsError,
-    MaxBotUnauthorizedError,
-    MaxBotUnknownServerError,
-    MaxBotUnsupportedMediaTypeError,
-)
+from maxo.bot.middlewares import AttachmentNotReadyRetryMiddleware
+from maxo.bot.upload import UploadConfig, resumable_upload
+from maxo.errors.api import raise_api_error
+from maxo.errors.network import MaxBotTimeoutError, to_network_error
 from maxo.types import AttachmentPayload
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import InputFile
+
+_CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
 
 
 class MaxApiClient(AiohttpAsyncClient):
@@ -71,20 +68,26 @@ class MaxApiClient(AiohttpAsyncClient):
         session: ClientSession | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
         json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
+        upload_config: UploadConfig | None = None,
     ) -> None:
         self._token = token
+        self._ssl_context: ssl.SSLContext | None = None
+
+        if upload_config is None:
+            upload_config = UploadConfig()
+        self._upload_config = upload_config
 
         if session is None:
-            cert = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
-            ssl_context = ssl.create_default_context()
-            ssl_context.load_verify_locations(cafile=cert)
-            connector = TCPConnector(ssl=ssl_context)
+            connector = TCPConnector(ssl=self._get_ssl_context())
             session = ClientSession(connector=connector)
 
-        if AUTHORIZATION not in session.headers:
-            session.headers[AUTHORIZATION] = self._token
-        if USER_AGENT not in session.headers:
-            session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"
+        _apply_auth_headers(session, self._token)
+
+        not_ready_retry = AttachmentNotReadyRetryMiddleware(
+            max_retries=self._upload_config.not_ready_max_retries,
+            backoff_config=self._upload_config.not_ready_backoff,
+        )
+        middleware = [*(middleware or []), not_ready_retry]
 
         super().__init__(
             base_url=base_url,
@@ -96,37 +99,54 @@ class MaxApiClient(AiohttpAsyncClient):
             json_loads=json_loads,
         )
 
-    def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
-        # ruff: noqa: PLR2004
-        data = response.data
-        if isinstance(data, dict):
-            code: str = data.get("code") or data.get("error_code", "")
-            error: str = data.get("error") or data.get("error_data", "")
-            message: str = data.get("message", "")
-        else:
-            code = ""
-            error = ""
-            message = ""
+    async def upload_resumable(
+        self,
+        url: str,
+        file: InputFile,
+        size: int | None = None,
+    ) -> UploadMediaResult | None:
+        """
+        Загружает файл частями, без чтения всего файла в память.
 
-        if response.status_code == 400:
-            raise MaxBotBadRequestError(code, error, message, data)
-        if response.status_code == 401:
-            raise MaxBotUnauthorizedError(code, error, message, data)
-        if response.status_code == 403:
-            raise MaxBotForbiddenError(code, error, message, data)
-        if response.status_code == 404:
-            raise MaxBotNotFoundError(code, error, message, data)
-        if response.status_code == 405:
-            raise MaxBotMethodNotAllowedError(code, error, message, data)
-        if response.status_code == 415:
-            raise MaxBotUnsupportedMediaTypeError(code, error, message, data)
-        if response.status_code == 429:
-            raise MaxBotTooManyRequestsError(code, error, message, data)
-        if response.status_code == 500:
-            raise MaxBotUnknownServerError(code, error, message, data)
-        if response.status_code == 503:
-            raise MaxBotServiceUnavailableError(code, error, message, data)
-        raise MaxBotApiError(code, error, message, data)
+        `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
+        """
+        session = self._new_upload_session()
+        try:
+            return await resumable_upload(
+                url=url,
+                file=file,
+                session=session,
+                response_loader=self.response_loader,
+                json_loads=self.json_loads,
+                config=self._upload_config,
+                size=size,
+            )
+        finally:
+            await session.close()
+
+    def _get_ssl_context(self) -> ssl.SSLContext:
+        if self._ssl_context is None:
+            self._ssl_context = _build_ssl_context()
+        return self._ssl_context
+
+    def _new_upload_session(self) -> ClientSession:
+        """Отдельная сессия с одним соединением для resumable-загрузки."""
+        connector = TCPConnector(ssl=self._get_ssl_context(), limit=1)
+        session = ClientSession(connector=connector)
+        _apply_auth_headers(session, self._token)
+        return session
+
+    async def make_request(self, request: HTTPRequest) -> HTTPResponse:
+        """Приводит транспортные ошибки aiohttp и unihttp к ошибкам `maxo`."""
+        try:
+            return await super().make_request(request)
+        except RequestTimeoutError as error:
+            raise MaxBotTimeoutError(str(error) or type(error).__name__) from error
+        except (NetworkError, ClientError, TimeoutError) as error:
+            raise to_network_error(error) from error
+
+    def handle_error(self, response: HTTPResponse, method: BaseMethod[Any]) -> Never:
+        raise_api_error(response.status_code, response.data)
 
     def validate_response(
         self,
@@ -142,9 +162,7 @@ class MaxApiClient(AiohttpAsyncClient):
             )
         ):
             if isinstance(method, AddMembers):
-                # При ошибке добавления юзера апи возвращает success=false и статус 200,
-                # и даёт подробную инфу в ModifyMembersResult.
-                # Из-за этого для нормальной работы метода нужно не патчить его статус
+                # AddMembers возвращает частичный результат при success=false.
                 return
             loggers.bot_session.warning(
                 "Patch the status code from %d to 400 due to an error on the MAX API",
@@ -241,3 +259,16 @@ class MaxApiClient(AiohttpAsyncClient):
         if seek is True:
             destination.seek(0)
         return destination
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    ssl_context = ssl.create_default_context()
+    ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
+    return ssl_context
+
+
+def _apply_auth_headers(session: ClientSession, token: str) -> None:
+    if AUTHORIZATION not in session.headers:
+        session.headers[AUTHORIZATION] = token
+    if USER_AGENT not in session.headers:
+        session.headers[USER_AGENT] = f"{SERVER_SOFTWARE} maxo/{__version__}"

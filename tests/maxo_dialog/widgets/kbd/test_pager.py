@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import cast
 from unittest.mock import MagicMock, Mock
 
@@ -19,6 +18,7 @@ from maxo.dialogs.widgets.kbd.pager import (
 from maxo.dialogs.widgets.text import Const, Format
 from maxo.routing.updates import MessageCallback
 from maxo.types import Callback, User
+from tests.constants import NOW
 
 
 async def test_switch_page_first(mock_manager: DialogManager) -> None:
@@ -251,14 +251,14 @@ async def test_process_item_callback(mock_manager: DialogManager) -> None:
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+        last_activity_time=NOW,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="pager:1",
         ),
     )

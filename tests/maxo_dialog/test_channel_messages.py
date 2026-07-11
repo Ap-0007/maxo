@@ -29,11 +29,6 @@ def captured_ctx() -> dict[str, Any]:
 
 
 @pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
-
-
-@pytest.fixture
 def dp(message_manager: MockMessageManager, captured_ctx: dict[str, Any]) -> Dispatcher:
     router = Router()
 
@@ -90,7 +85,6 @@ async def test_storage_proxy_channel_message_edited(
 
 async def test_storage_proxy_channel_message_removed(
     channel_client: BotClient,
-    captured_ctx: dict[str, Any],
 ) -> None:
     """MessageRemoved без user тоже не падает."""
     await channel_client.send_channel_message_removed(mid="42")

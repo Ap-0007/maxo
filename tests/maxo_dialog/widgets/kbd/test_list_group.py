@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 from maxo.dialogs import DialogManager
@@ -7,6 +6,7 @@ from maxo.dialogs.widgets.kbd.button import Button, Url
 from maxo.dialogs.widgets.text import Const, Format
 from maxo.routing.updates import MessageCallback
 from maxo.types import Callback, CallbackButton, LinkButton, User
+from tests.constants import NOW
 
 
 async def test_render_list_group_with_url_button(mock_manager: DialogManager) -> None:
@@ -120,7 +120,7 @@ async def test_render_with_pagination_second_page(mock_manager: DialogManager) -
     assert keyboard[1][0].text == "Button d"
 
 
-async def test_find_widget(mock_manager: DialogManager) -> None:
+async def test_find_widget() -> None:
     button = Button(Const("Button"), "button")
     list_group = ListGroup(
         button,
@@ -153,14 +153,14 @@ async def test_process_item_callback(mock_manager: DialogManager) -> None:
         user_id=1,
         is_bot=False,
         first_name="Test",
-        last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+        last_activity_time=NOW,
     )
     callback = MessageCallback(
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         callback=Callback(
             callback_id="1",
             user=fake_user,
-            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+            timestamp=NOW,
             payload="list:a:button",
         ),
     )

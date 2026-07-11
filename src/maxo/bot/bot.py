@@ -57,9 +57,12 @@ from maxo.bot.state import (
     EmptyBotState,
     RunningBotState,
 )
+from maxo.bot.upload import UploadConfig
 from maxo.errors import MaxBotApiError
 from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, MaxoType
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import InputFile
 
 _MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 
@@ -73,6 +76,7 @@ class Bot(BaseAsyncClient):
         "_retort",
         "_state",
         "_token",
+        "_upload_config",
         "_warming_up",
     )
 
@@ -81,6 +85,7 @@ class Bot(BaseAsyncClient):
         token: str,
         *,
         defaults: BotDefaults | None = None,
+        upload_config: UploadConfig | None = None,
         warming_up: bool = True,
         middleware: list[AsyncMiddleware] | None = None,
         json_dumps: Callable[[Any], str] = json.dumps,
@@ -90,6 +95,9 @@ class Bot(BaseAsyncClient):
         self._token = token
         self._warming_up = warming_up
         self._middleware = middleware
+        self._upload_config = (
+            upload_config if upload_config is not None else UploadConfig()
+        )
         self._json_dumps = json_dumps
         self._json_loads = json_loads
 
@@ -114,6 +122,10 @@ class Bot(BaseAsyncClient):
         return self._defaults
 
     @property
+    def upload_config(self) -> UploadConfig:
+        return self._upload_config
+
+    @property
     def token(self) -> str:
         return self._token
 
@@ -135,6 +147,7 @@ class Bot(BaseAsyncClient):
             request_dumper=self._retort,
             response_loader=self._retort,
             middleware=self._middleware,
+            upload_config=self._upload_config,
             json_dumps=self._json_dumps,
             json_loads=self._json_loads,
         )
@@ -160,10 +173,7 @@ class Bot(BaseAsyncClient):
         try:
             await self.call_method(method)
         except MaxBotApiError as e:
-            # In due to WebHook mechanism doesn't allow getting response for
-            # requests called in answer to WebHook request.
-            # Need to skip unsuccessful responses.
-            # For debugging here is added logging.
+            # Webhook-ответ не позволяет вернуть ошибку вызывающему коду.
             loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
 
     async def __aenter__(self) -> Self:
@@ -193,6 +203,19 @@ class Bot(BaseAsyncClient):
             chunk_size=chunk_size,
             seek=seek,
         )
+
+    async def upload_media_resumable(
+        self,
+        upload_url: str,
+        file: InputFile,
+        size: int | None = None,
+    ) -> UploadMediaResult | None:
+        """
+        Загружает медиа по `upload_url` частями.
+
+        `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
+        """
+        return await self.state.api_client.upload_resumable(upload_url, file, size)
 
     # Bots
 

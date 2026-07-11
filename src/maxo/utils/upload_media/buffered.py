@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 from maxo.enums import UploadType
 from maxo.utils.upload_media.base import InputFile
 
@@ -41,3 +43,10 @@ class BufferedInputFile(InputFile):
 
     async def read(self) -> bytes:
         return self._data
+
+    async def size(self) -> int:
+        return len(self._data)
+
+    async def stream(self, chunk_size: int) -> AsyncGenerator[bytes, None]:
+        for start in range(0, len(self._data), chunk_size):
+            yield self._data[start : start + chunk_size]

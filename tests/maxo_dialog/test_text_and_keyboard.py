@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any, cast
 
 from maxo.dialogs.api.internal import RawKeyboard
@@ -13,14 +12,9 @@ from maxo.types import (
     OpenAppButton,
     User,
 )
+from tests.constants import NOW
 
-
-class DummyManager:
-    def __init__(self, preview: bool = False) -> None:
-        self.preview = preview
-
-    def is_preview(self) -> bool:
-        return self.preview
+from .conftest import DummyManager
 
 
 class DummyDialog:
@@ -94,16 +88,16 @@ async def test_keyboard_rendering_and_callback_routing() -> None:
     callback = MessageCallback(
         callback=Callback(
             callback_id="cb",
-            timestamp=datetime.now(UTC),
+            timestamp=NOW,
             user=User(
                 user_id=1,
                 first_name="Alice",
                 is_bot=False,
-                last_activity_time=datetime.now(UTC),
+                last_activity_time=NOW,
             ),
             payload="custom",
         ),
-        timestamp=datetime.now(UTC),
+        timestamp=NOW,
     )
     assert await custom.process_callback(callback, dialog, manager) is False
 

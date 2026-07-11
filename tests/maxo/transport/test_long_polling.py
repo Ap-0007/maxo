@@ -19,7 +19,7 @@ from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.updates.updates import Updates
 from maxo.transport.long_polling import LongPolling
 from maxo.types import BotInfo, MaxoType, UpdateList
-from tests.constants import TOKEN
+from tests.factories import make_bot
 
 
 @dataclass
@@ -34,7 +34,7 @@ def mock_api_client() -> AsyncMock:
 
 @pytest.fixture
 def mock_bot(mock_api_client: AsyncMock) -> Bot:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
     bot._state = RunningBotState(
         info=BotInfo(
             user_id=123,
@@ -85,7 +85,7 @@ async def test_handles_load_error_and_skips_update(
     mock_api_client.call_method.side_effect = [
         LoadError("Test LoadError"),
         UpdateList(
-            updates=cast("list[Updates]", [MockUpdate(timestamp=100)]),
+            updates=cast(list[Updates], [MockUpdate(timestamp=100)]),
             marker=initial_marker + 2,
         ),
         CancelledError,
@@ -179,7 +179,6 @@ async def test_handles_load_error_with_no_marker(
 async def test_handles_general_exception(
     long_polling: LongPolling,
     mock_bot: Bot,
-    mock_dispatcher: Dispatcher,
     mock_api_client: AsyncMock,
     mock_feed_max_update: AsyncMock,
 ) -> None:

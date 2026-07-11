@@ -39,9 +39,13 @@ maxo - асинхронный Python-фреймворк для ботов MAX (m
    :target: https://pypi.org/project/maxo/
    :alt: Supported python versions
 
-.. |Tests| image:: https://img.shields.io/github/actions/workflow/status/K1rL3s/maxo/analyze.yml?style=flat&label=tests
+.. |Tests| image:: https://img.shields.io/github/actions/workflow/status/K1rL3s/maxo/test.yml?style=flat&label=tests
    :target: https://github.com/K1rL3s/maxo/actions
    :alt: Tests
+
+.. |Lint| image:: https://img.shields.io/github/actions/workflow/status/K1rL3s/maxo/lint.yml?style=flat&label=lint
+   :target: https://github.com/K1rL3s/maxo/actions
+   :alt: Lint
 
 .. rst-class:: lead
 

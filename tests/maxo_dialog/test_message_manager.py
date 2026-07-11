@@ -1,7 +1,6 @@
 """Тесты MessageManager - закрывают п.1 issue #110 (skip get_message_by_id в remove_inline_kbd)."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -38,6 +37,7 @@ from maxo.types import (
     VideoAttachmentRequest,
 )
 from maxo.utils.upload_media import FSInputFile
+from tests.constants import NOW
 
 IMAGE_MEDIA_ID = "image-id"
 VIDEO_MEDIA_ID = "video-id"
@@ -95,19 +95,19 @@ def _make_message(mid: str = "77", text: str | None = "sent") -> Message:
     return Message(
         body=MessageBody(mid=mid, seq=int(mid), text=text, attachments=[]),
         recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
     )
 
 
 def _make_callback() -> Callback:
     return Callback(
         callback_id="cb",
-        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        timestamp=NOW,
         user=User(
             user_id=1,
             first_name="User",
             is_bot=False,
-            last_activity_time=datetime(2026, 1, 1, tzinfo=UTC),
+            last_activity_time=NOW,
         ),
     )
 

@@ -1,12 +1,11 @@
 import pytest
 from jinja2 import Environment
 
-from maxo import Bot, Dispatcher
+from maxo import Dispatcher
 from maxo.dialogs import DialogManager
 from maxo.dialogs.widgets.text import Jinja, setup_jinja
 from maxo.dialogs.widgets.text.jinja import JINJA_ENV_FIELD, StubLoader
-
-TOKEN = "f9LHod"  # noqa: S105
+from tests.factories import make_bot
 
 
 @pytest.fixture
@@ -76,7 +75,7 @@ def test_setup_jinja_for_dispatcher_with_filters() -> None:
 
 
 def test_setup_jinja_for_bot_is_deprecated() -> None:
-    bot = Bot(TOKEN, warming_up=False)
+    bot = make_bot()
 
     with pytest.warns(DeprecationWarning, match="Passing `Bot` to setup_jinja"):
         env = setup_jinja(bot)

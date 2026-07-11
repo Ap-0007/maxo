@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -17,8 +16,7 @@ from maxo.types import (
     SimpleQueryResult,
     User,
 )
-
-NOW = datetime(2026, 1, 1, tzinfo=UTC)
+from tests.constants import NOW
 
 
 class MockMessageFacade(MessageMethodsFacade):

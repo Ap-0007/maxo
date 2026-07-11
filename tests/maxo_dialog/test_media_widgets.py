@@ -2,33 +2,13 @@ from typing import Any, cast
 
 import pytest
 
-from maxo.dialogs.api.entities import ChatEvent, Context, MediaAttachment
+from maxo.dialogs.api.entities import ChatEvent, MediaAttachment
 from maxo.dialogs.api.protocols import DialogManager
 from maxo.dialogs.widgets.media import DynamicMedia, Media, MediaScroll, StaticMedia
 from maxo.dialogs.widgets.text import Format
 from maxo.enums import AttachmentType
-from maxo.fsm.state import State
 
-
-class DummyManager:
-    def __init__(self) -> None:
-        self.widget_data: dict[
-            str,
-            dict[Any, Any] | list[Any] | int | str | float | None,
-        ] = {}
-
-    def current_context(self) -> Context:
-        return Context(
-            dialog_data={},
-            start_data={},
-            widget_data=self.widget_data,
-            state=State(),
-            _stack_id="_stack_id",
-            _intent_id="_intent_id",
-        )
-
-    def is_preview(self) -> bool:
-        return False
+from .conftest import DummyManager
 
 
 class StubMedia(Media):

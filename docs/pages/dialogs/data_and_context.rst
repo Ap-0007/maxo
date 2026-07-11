@@ -127,7 +127,7 @@ start_data - данные между диалогами
     async def show_profile(message: MessageCreated, dialog_manager: DialogManager):
         await dialog_manager.start(
             ProfileSG.main,
-            data={"user_id": message.message.sender.user_id},
+            data={"user_id": message.message.unsafe_sender.user_id},
         )
 
 **Пример 2: Чтение start_data в геттере**

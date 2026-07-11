@@ -5,19 +5,7 @@ from maxo.dialogs.widgets.kbd import Button, Column, Group, Row, Url
 from maxo.dialogs.widgets.text import Case, Const, Format, Jinja, Multi
 from maxo.types import LinkButton
 
-
-class DummyManager:
-    def __init__(
-        self,
-        preview: bool = False,
-        middleware_data: dict[str, Any] | None = None,
-    ) -> None:
-        self._preview = preview
-        self.middleware_data = middleware_data or {}
-        self._page = 0
-
-    def is_preview(self) -> bool:
-        return self._preview
+from .conftest import DummyManager
 
 
 class DummyTemplate:

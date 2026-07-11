@@ -1,7 +1,6 @@
 import asyncio
 from typing import Any
 
-from maxo.fsm.key_builder import StorageKey
 from maxo.fsm.state import State
 from maxo.fsm.storages.memory import (
     DisabledEventIsolation,
@@ -9,14 +8,7 @@ from maxo.fsm.storages.memory import (
     SimpleEventIsolation,
 )
 
-
-def make_key(
-    *,
-    chat_id: int = -42,
-    user_id: int = 42,
-    bot_id: int = 1,
-) -> StorageKey:
-    return StorageKey(chat_id=chat_id, user_id=user_id, bot_id=bot_id)
+from .conftest import make_key
 
 
 async def test_memory_storage_state_isolated_by_key() -> None:
@@ -93,10 +85,13 @@ async def test_memory_storage_close_clears_state_and_data() -> None:
 async def test_disabled_event_isolation_does_not_block() -> None:
     isolation = DisabledEventIsolation()
     key = make_key()
+    entered = False
 
+    # Повторный захват того же ключа не должен вставать в ожидание.
     async with isolation.lock(key), isolation.lock(key):
-        assert True
+        entered = True
 
+    assert entered is True
     await isolation.close()
 
 

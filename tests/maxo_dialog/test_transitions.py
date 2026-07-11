@@ -56,11 +56,6 @@ async def start(
 
 
 @pytest.fixture
-def message_manager() -> MockMessageManager:
-    return MockMessageManager()
-
-
-@pytest.fixture
 def dp(message_manager: MockMessageManager) -> Dispatcher:
     key_builder = DefaultKeyBuilder(with_destiny=True)
     event_isolation = SimpleEventIsolation(key_builder=key_builder)

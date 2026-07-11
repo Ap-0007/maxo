@@ -59,9 +59,7 @@ async def test_multimedia_iadd(mock_manager: DialogManager) -> None:
     assert res[2] == MediaAttachment(AttachmentType.IMAGE, path="c")
 
 
-async def test_multimedia_nested_with_true_condition(
-    mock_manager: DialogManager,
-) -> None:
+async def test_multimedia_nested_with_true_condition() -> None:
     # MultiMedia с true_condition должен разворачиваться при вложении
     inner = MultiMedia(Static("a"), Static("b"))
     outer = inner + Static("c")
@@ -78,7 +76,7 @@ async def test_multimedia_radd(mock_manager: DialogManager) -> None:
     assert res[0] == MediaAttachment(AttachmentType.IMAGE, path="a")
 
 
-async def test_multimedia_find(mock_manager: DialogManager) -> None:
+async def test_multimedia_find() -> None:
     # Media виджеты не имеют id, find всегда возвращает None
     widget_a = Static("a")
     widget_b = Static("b")
@@ -90,14 +88,14 @@ async def test_multimedia_find(mock_manager: DialogManager) -> None:
     assert found is None
 
 
-async def test_or_ior(mock_manager: DialogManager) -> None:
+async def test_or_ior() -> None:
     media = Or(Static("a"))
     media |= Static("b")
 
     assert len(media.widgets) == 2
 
 
-async def test_or_nested_operations(mock_manager: DialogManager) -> None:
+async def test_or_nested_operations() -> None:
     # Or должен разворачивать вложенные Or
     inner_or = Static("a") | Static("b")
     outer_or = inner_or | Static("c")

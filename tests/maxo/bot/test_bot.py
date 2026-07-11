@@ -1,14 +1,17 @@
-from datetime import UTC, datetime
-from typing import Any
+import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
+from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
 from maxo.types import BotInfo
-from tests.constants import TOKEN
+from maxo.types.upload_media_result import UploadMediaResult
+from maxo.utils.upload_media import BufferedInputFile
+from tests.constants import NOW, TOKEN
+from tests.factories import make_bot
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -20,7 +23,7 @@ class MockMaxBotApiError(MaxBotApiError):
 
 @pytest.fixture
 def bot() -> Bot:
-    return Bot(token=TOKEN, warming_up=False)
+    return make_bot()
 
 
 async def test_bot_init(bot: Bot) -> None:
@@ -28,8 +31,25 @@ async def test_bot_init(bot: Bot) -> None:
     assert isinstance(bot.state, EmptyBotState)
 
 
+def test_default_upload_config_is_not_shared() -> None:
+    first = make_bot()
+    second = make_bot()
+
+    first.upload_config.method = UploadMethod.SINGLE
+
+    assert second.upload_config.method is UploadMethod.AUTO
+    assert first.upload_config is not second.upload_config
+
+
+def test_explicit_upload_config_is_preserved() -> None:
+    config = UploadConfig(method=UploadMethod.RESUMABLE)
+    bot = make_bot(upload_config=config)
+
+    assert bot.upload_config is config
+
+
 async def test_bot_start_and_close() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
     assert isinstance(bot.state, EmptyBotState)
 
     with patch("maxo.bot.bot.MaxApiClient") as mock_api_client_class:
@@ -40,7 +60,7 @@ async def test_bot_start_and_close() -> None:
             is_bot=True,
             first_name="Test",
             username="testbot",
-            last_activity_time=datetime.now(UTC),
+            last_activity_time=NOW,
         )
 
         await bot.start()
@@ -65,7 +85,7 @@ async def test_bot_context(bot: Bot) -> None:
 async def test_bot_call_method(bot: Bot) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
         mock_state.api_client.call_method = AsyncMock(return_value="test_result")
-        result: Any = await bot.call_method(MagicMock())
+        result: object = await bot.call_method(MagicMock())
         assert result == "test_result"
         mock_state.api_client.call_method.assert_awaited_once()
 
@@ -83,14 +103,15 @@ async def test_bot_silent_call_method(
 
 
 async def test_bot_download(bot: Bot) -> None:
+    downloaded = io.BytesIO(b"downloaded")
     with patch.object(
         bot,
         "_state",
         MagicMock(),
-    ) as mock_state:  # Patch private attribute
-        mock_state.api_client.download = AsyncMock(return_value="downloaded")
-        result: Any = await bot.download("https://example.com/file")
-        assert result == "downloaded"
+    ) as mock_state:
+        mock_state.api_client.download = AsyncMock(return_value=downloaded)
+        result = await bot.download("https://example.com/file")
+        assert result is downloaded
         mock_state.api_client.download.assert_awaited_once()
 
 
@@ -106,7 +127,7 @@ async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
 
 
 async def test_close_twice_is_noop() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
     api_client = AsyncMock()
     bot._state = RunningBotState(info=MagicMock(), api_client=api_client)
 
@@ -117,7 +138,7 @@ async def test_close_twice_is_noop() -> None:
 
 
 async def test_bot_async_context_manager() -> None:
-    bot = Bot(token=TOKEN, warming_up=False)
+    bot = make_bot()
 
     with (
         patch("maxo.bot.bot.Bot.start", new_callable=AsyncMock) as mock_start,
@@ -139,3 +160,19 @@ async def test_context_without_auto_close(bot: Bot) -> None:
             pass
 
     mock_close.assert_not_awaited()
+
+
+async def test_bot_upload_media_resumable(bot: Bot) -> None:
+    file = BufferedInputFile.file(b"payload", "f.bin")
+    upload_result = UploadMediaResult(token="upload-token")  # noqa: S106
+
+    with patch.object(bot, "_state", MagicMock()) as mock_state:
+        mock_state.api_client.upload_resumable = AsyncMock(return_value=upload_result)
+        result = await bot.upload_media_resumable("https://example.com/upload", file)
+
+    assert result is upload_result
+    mock_state.api_client.upload_resumable.assert_awaited_once_with(
+        "https://example.com/upload",
+        file,
+        None,
+    )

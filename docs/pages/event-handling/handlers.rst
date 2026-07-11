@@ -28,7 +28,7 @@
 
 1.  **Объект обновления** (первый позиционный аргумент): типизированный объект события, например ``MessageCreated``, ``MessageCallback``. Содержит все данные, пришедшие от API.
 2.  ``ctx: Ctx`` - контекст выполнения. Словарь-подобный объект, который живет в рамках обработки одного обновления. В нем хранятся ссылки на ``bot``, ``update``, а также любые данные, добавленные мидлварями.
-3.  ``facade: Facade`` - обёртка над обновлением. Подробнее в разделе :doc:`facades`.
+3.  ``facade`` - обёртка над обновлением. Тип зависит от события: ``MessageCreatedFacade``, ``MessageCallbackFacade`` и так далее (общий базовый класс - ``BaseUpdateFacade``). Подробнее в разделе :doc:`facades`.
 4.  ``fsm_context: FSMContext`` - контекст конечного автомата (FSM). Доступен, если FSM активирован. Подробнее в разделе :doc:`fsm`.
 
 .. code-block:: python
@@ -51,22 +51,24 @@ Dependency Injection (DI)
 .. code-block:: python
 
     from maxo import Bot
+    from maxo.omit import is_defined
     from maxo.routing.ctx import Ctx
-    from maxo.routing.facades import MessageCreatedFacade
     from maxo.routing.filters import BaseFilter
     from maxo.routing.updates import MessageCreated
+    from maxo.types import User
 
 
-    # Пример фильтра, который возвращает данные пользователя
+    # Пример фильтра, который возвращает данные пользователя.
+    # get_user_from_db - ваша функция загрузки пользователя из БД.
     class UserFilter(BaseFilter[MessageCreated]):
         async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
             sender = update.message.sender
-            if sender is None:
+            if not is_defined(sender):
                 return False
 
             user = await get_user_from_db(sender.user_id)
             if user:
-                ctx["user"] = user  # Передаем user в обработчик
+                ctx["user"] = user  # Передаём user в обработчик
                 return True
             return False
 

@@ -17,8 +17,12 @@ class DialogAttachmentsFacade(AttachmentsFacade):
         super().__init__(bot)
         self._media_id_storage = media_id_storage
 
-    async def upload_media(self, file: InputFile) -> tuple[UploadType, str]:
-        type_, token = await super().upload_media(file)
+    async def upload_media(
+        self,
+        file: InputFile,
+        size: int | None = None,
+    ) -> tuple[UploadType, str]:
+        type_, token = await super().upload_media(file, size)
 
         if isinstance(file, FSInputFile):
             await self._media_id_storage.save_media_id(
