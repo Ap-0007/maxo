@@ -113,6 +113,23 @@ async def test_mutation_before_answer_allowed() -> None:
 
     answer.disabled = True
     answer.notification = "ok"
+    answer.before = True
     assert answer.disabled is True
     assert answer.notification == "ok"
+    assert answer.before is True
     assert answer.answered is False
+
+
+def test_exception_message() -> None:
+    assert (
+        str(CallbackAnswerException())
+        == "Нельзя изменить CallbackAnswer после отправки ответа на колбэк"
+    )
+
+
+def test_disable_method() -> None:
+    answer = CallbackAnswer()
+
+    answer.disable()
+
+    assert answer.disabled is True
