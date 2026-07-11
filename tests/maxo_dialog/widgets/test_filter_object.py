@@ -5,7 +5,7 @@ from magic_filter import F
 from maxo.dialogs.widgets.filter_object import CallableObject, FilterObject
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import Filter
-from maxo.routing.updates import BaseUpdate
+from maxo.types import BaseUpdate
 
 
 class DummyFilter(Filter[BaseUpdate]):

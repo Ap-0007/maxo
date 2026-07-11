@@ -6,8 +6,8 @@ from maxo import loggers
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Query
 from maxo.omit import Omittable, Omitted
-from maxo.routing.updates.updates import Updates
 from maxo.types.update_list import UpdateList
+from maxo.types.updates import Updates
 
 
 class GetUpdates(MaxoMethod[UpdateList], slots=False):

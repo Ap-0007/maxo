@@ -14,7 +14,7 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
 from maxo.routing.signals import AfterStartup, BeforeStartup
-from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import MessageCallback, MessageCreated
 
 
 class MainSG(StatesGroup):

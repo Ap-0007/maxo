@@ -2,8 +2,8 @@ from maxo import Router
 from maxo.enums import UpdateType
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import BaseFilter
-from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.routing.utils.collect_used_updates import collect_used_updates
+from maxo.types import MessageCallback, MessageCreated
 
 
 async def message_handler(_: MessageCreated) -> None:

@@ -29,7 +29,7 @@
     from maxo.fsm import FSMContext
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Импортируйте вашу группу состояний
     # from states import Registration
@@ -53,7 +53,7 @@
 
     from maxo.fsm import FSMContext, StateFilter
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Этот хендлер сработает только если пользователь находится в состоянии waiting_name
     @router.message_created(StateFilter(Registration.waiting_name))
@@ -86,7 +86,7 @@
 
     from maxo.fsm import FSMContext, StateFilter
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @router.message_created(StateFilter(Registration.waiting_age))
     async def process_age(

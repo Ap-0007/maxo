@@ -14,7 +14,7 @@
 
     from maxo import Bot, Dispatcher
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
     from maxo.transport.long_polling import LongPolling
 
     bot = Bot(token=os.environ["TOKEN"])
@@ -82,7 +82,7 @@
     from maxo.enums import ChatType
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import BaseFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     class IsGroupChat(BaseFilter[MessageCreated]):
         """Пропускает только сообщения из групповых чатов."""
@@ -131,7 +131,7 @@
     from maxo import Dispatcher, Router
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     dispatcher = Dispatcher()
     admin_router = Router(name="admin")
@@ -172,49 +172,49 @@
      - Тип события (Update)
      - Описание
    * - ``@router.message_created``
-     - :class:`~maxo.routing.updates.message_created.MessageCreated`
+     - :class:`~maxo.types.message_created.MessageCreated`
      - Новое сообщение от пользователя (текст, фото, файлы и т.д.).
    * - ``@router.message_callback``
-     - :class:`~maxo.routing.updates.message_callback.MessageCallback`
+     - :class:`~maxo.types.message_callback.MessageCallback`
      - Нажатие на кнопку Inline-клавиатуры.
    * - ``@router.message_edited``
-     - :class:`~maxo.routing.updates.message_edited.MessageEdited`
+     - :class:`~maxo.types.message_edited.MessageEdited`
      - Пользователь отредактировал ранее отправленное сообщение.
    * - ``@router.message_removed``
-     - :class:`~maxo.routing.updates.message_removed.MessageRemoved`
+     - :class:`~maxo.types.message_removed.MessageRemoved`
      - Пользователь удалил сообщение.
    * - ``@router.bot_started``
-     - :class:`~maxo.routing.updates.bot_started.BotStarted`
+     - :class:`~maxo.types.bot_started.BotStarted`
      - Пользователь нажал кнопку «Запустить» или впервые начал диалог с ботом.
    * - ``@router.bot_stopped``
-     - :class:`~maxo.routing.updates.bot_stopped.BotStopped`
+     - :class:`~maxo.types.bot_stopped.BotStopped`
      - Пользователь заблокировал бота.
    * - ``@router.user_added_to_chat``
-     - :class:`~maxo.routing.updates.user_added_to_chat.UserAddedToChat`
+     - :class:`~maxo.types.user_added_to_chat.UserAddedToChat`
      - В групповой чат добавлен новый участник.
    * - ``@router.user_removed_from_chat``
-     - :class:`~maxo.routing.updates.user_removed_from_chat.UserRemovedFromChat`
+     - :class:`~maxo.types.user_removed_from_chat.UserRemovedFromChat`
      - Участник покинул групповой чат или был удален.
    * - ``@router.bot_added_to_chat``
-     - :class:`~maxo.routing.updates.bot_added_to_chat.BotAddedToChat`
+     - :class:`~maxo.types.bot_added_to_chat.BotAddedToChat`
      - Бот добавлен в групповой чат.
    * - ``@router.bot_removed_from_chat``
-     - :class:`~maxo.routing.updates.bot_removed_from_chat.BotRemovedFromChat`
+     - :class:`~maxo.types.bot_removed_from_chat.BotRemovedFromChat`
      - Бот удален из группового чата.
    * - ``@router.chat_title_changed``
-     - :class:`~maxo.routing.updates.chat_title_changed.ChatTitleChanged`
+     - :class:`~maxo.types.chat_title_changed.ChatTitleChanged`
      - Название группового чата изменено.
    * - ``@router.dialog_cleared``
-     - :class:`~maxo.routing.updates.dialog_cleared.DialogCleared`
+     - :class:`~maxo.types.dialog_cleared.DialogCleared`
      - История переписки очищена.
    * - ``@router.dialog_removed``
-     - :class:`~maxo.routing.updates.dialog_removed.DialogRemoved`
+     - :class:`~maxo.types.dialog_removed.DialogRemoved`
      - Диалог удален.
    * - ``@router.dialog_muted`` / ``@router.dialog_unmuted``
-     - :class:`~maxo.routing.updates.dialog_muted.DialogMuted` / :class:`~maxo.routing.updates.dialog_unmuted.DialogUnmuted`
+     - :class:`~maxo.types.dialog_muted.DialogMuted` / :class:`~maxo.types.dialog_unmuted.DialogUnmuted`
      - Уведомления в диалоге отключены или включены.
    * - ``@router.error``
-     - :class:`~maxo.routing.updates.error.ErrorEvent`
+     - :class:`~maxo.types.error_event.ErrorEvent`
      - Произошла ошибка при обработке другого события.
 
 Сигналы жизненного цикла

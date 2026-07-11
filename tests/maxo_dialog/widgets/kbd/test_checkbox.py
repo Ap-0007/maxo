@@ -5,8 +5,7 @@ from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import ChatEvent
 from maxo.dialogs.widgets.kbd import Checkbox
 from maxo.dialogs.widgets.text import Const
-from maxo.routing.updates import MessageCallback
-from maxo.types import Callback, CallbackButton, User
+from maxo.types import Callback, CallbackButton, MessageCallback, User
 from tests.constants import NOW
 
 

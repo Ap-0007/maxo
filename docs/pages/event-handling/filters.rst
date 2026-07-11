@@ -8,7 +8,7 @@
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @dispatcher.message_created(Command("start"))
     async def start(update: MessageCreated, ctx: Ctx):
@@ -34,7 +34,7 @@
     from magic_filter import F
 
     from maxo.integrations.magic_filter import MagicFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Обработка команды /admin ИЛИ сообщения с текстом "secret"
     @dispatcher.message_created(Command("admin") | MagicFilter(F.text == "secret"))
@@ -54,7 +54,7 @@
 
     from maxo.integrations.magic_filter import MagicFilter
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Эти две регистрации эквивалентны
     @dispatcher.message_created(Command("start"), MagicFilter(F.text == "hello"))
@@ -95,7 +95,7 @@ Magic Filter
 
     from maxo.integrations.magic_filter import MagicFilter
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Сработает, если текст сообщения равен "hello"
     @dispatcher.message_created(MagicFilter(F.text == "hello"))
@@ -116,7 +116,7 @@ SyncFilter (синхронные предикаты)
 .. code-block:: python
 
     from maxo.routing.filters import SyncFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @dispatcher.message_created(SyncFilter(lambda u: u.message.body.text == "ping"))
     async def ping(update: MessageCreated):
@@ -136,7 +136,7 @@ SyncFilter (синхронные предикаты)
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import BaseFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     class MyFilter(BaseFilter[MessageCreated]):
         async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
@@ -151,7 +151,7 @@ SyncFilter (синхронные предикаты)
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import BaseFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     class MinLengthFilter(BaseFilter[MessageCreated]):
         """Пропускает сообщения длиннее min_length символов."""

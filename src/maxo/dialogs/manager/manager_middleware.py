@@ -9,7 +9,7 @@ from maxo.dialogs.api.protocols import (
 )
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseMiddleware, BaseRouter, NextMiddleware
-from maxo.routing.updates.base import MaxUpdate
+from maxo.types.base import MaxUpdate
 
 MANAGER_KEY = "dialog_manager"
 BG_FACTORY_KEY = "dialog_bg_factory"

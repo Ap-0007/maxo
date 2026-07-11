@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Self, dataclass_transform
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, dataclass_transform
 
+from maxo.enums.update_type import UpdateType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import is_defined
 
@@ -64,3 +66,24 @@ class BotMixin:
 class MaxoType(BaseMaxoType, BotMixin):
     def __post_init__(self) -> None:
         BotMixin.__init__(self)
+
+
+class BaseUpdate(MaxoType):
+    pass
+
+
+class MaxUpdate(BaseUpdate):
+    """
+    Базовый класс для всех апдейтов из Макса.
+
+    У всех апдейтов есть тип (`type`, `update_type`) и время (`timestamp`).
+    Фасад (`facade`) объединяет методы для работы с апдейтом,
+    например, отправить сообщение или ответить на колбэк.
+    """
+
+    type: ClassVar[UpdateType]
+    timestamp: datetime
+
+    @property
+    def update_type(self) -> UpdateType:
+        return self.type

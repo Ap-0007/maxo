@@ -12,7 +12,7 @@
 
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import Command, CommandStart
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     # Оба варианта эквивалентны:
     @router.message_created(CommandStart())
@@ -34,7 +34,7 @@
 .. code-block:: python
 
     from maxo.routing.ctx import Ctx
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @router.message_created()
     async def echo(update: MessageCreated, ctx: Ctx):
@@ -54,7 +54,7 @@ Dependency Injection (DI)
     from maxo.omit import is_defined
     from maxo.routing.ctx import Ctx
     from maxo.routing.filters import BaseFilter
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
     from maxo.types import User
 
 

@@ -21,8 +21,8 @@ from dishka import (
 from maxo import Bot, Ctx, Dispatcher
 from maxo.integrations.dishka import CONTAINER_NAME, setup_dishka
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 
 class GreeterService:

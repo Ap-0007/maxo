@@ -4,8 +4,8 @@ from typing import Any
 
 from maxo import Bot, Ctx, Dispatcher
 from maxo.routing.filters import BaseFilter
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 from maxo.types.user import User
 
 dp = Dispatcher()

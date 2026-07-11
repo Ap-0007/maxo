@@ -15,7 +15,8 @@ from maxo.routing.routers.state import EmptyRouterState, StartedRouterState
 from maxo.routing.sentinels import UNHANDLED
 from maxo.routing.signals.shutdown import AfterShutdown, BeforeShutdown
 from maxo.routing.signals.startup import AfterStartup, BeforeStartup
-from maxo.routing.updates import (
+from maxo.routing.utils.get_default_name import get_router_default_name
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
@@ -32,8 +33,7 @@ from maxo.routing.updates import (
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.routing.updates.error import ErrorEvent
-from maxo.routing.utils.get_default_name import get_router_default_name
+from maxo.types.error_event import ErrorEvent
 
 
 class Router(BaseRouter):

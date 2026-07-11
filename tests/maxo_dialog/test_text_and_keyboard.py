@@ -4,11 +4,11 @@ from maxo.dialogs.api.internal import RawKeyboard
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.kbd import Button, Clipboard, Group, Keyboard, Url, WebApp
 from maxo.dialogs.widgets.text import Const, Format, Multi
-from maxo.routing.updates import MessageCallback
 from maxo.types import (
     Callback,
     CallbackButton,
     LinkButton,
+    MessageCallback,
     OpenAppButton,
     User,
 )

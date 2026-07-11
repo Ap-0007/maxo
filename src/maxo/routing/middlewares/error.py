@@ -5,7 +5,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.interfaces.router import BaseRouter
 from maxo.routing.sentinels import UNHANDLED, CancelHandler, SkipHandler
-from maxo.routing.updates.error import ErrorEvent
+from maxo.types.error_event import ErrorEvent
 
 
 class ErrorMiddleware(BaseMiddleware[Any]):

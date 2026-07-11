@@ -18,6 +18,7 @@ from maxo.types import (
     AudioAttachment,
     BotCommand,
     BotInfo,
+    BotStopped,
     Callback,
     CallbackButton,
     Chat,
@@ -29,6 +30,10 @@ from maxo.types import (
     ContactAttachmentPayload,
     ContactAttachmentRequest,
     ContactAttachmentRequestPayload,
+    DialogCleared,
+    DialogMuted,
+    DialogRemoved,
+    DialogUnmuted,
     FailedUserDetails,
     FileAttachment,
     GetPinnedMessageResult,
@@ -42,6 +47,8 @@ from maxo.types import (
     Message,
     MessageBody,
     MessageButton,
+    MessageCallback,
+    MessageEdited,
     MessageStat,
     ModifyMembersResult,
     NewMessageBody,
@@ -65,7 +72,9 @@ from maxo.types import (
     UploadMediaResult,
     UploadedInfo,
     User,
+    UserAddedToChat,
     UserMentionMarkup,
+    UserRemovedFromChat,
     UserWithPhoto,
     VideoAttachment,
     VideoAttachmentDetails,
@@ -1267,3 +1276,163 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = message.unsafe_stat
     with pytest.raises(AttributeIsEmptyError):
         _ = message.unsafe_url
+
+
+def make_callback() -> Callback:
+    return Callback(
+        callback_id="cb",
+        timestamp=NOW,
+        user=make_user(),
+        payload="payload",
+    )
+
+
+def test_bot_stopped_unsafe_user_locale() -> None:
+    defined = BotStopped(
+        chat_id=1,
+        user=make_user(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = BotStopped(chat_id=1, user=make_user(), timestamp=NOW)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale
+
+
+def test_dialog_cleared_unsafe_user_locale() -> None:
+    defined = DialogCleared(
+        chat_id=1,
+        user=make_user(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = DialogCleared(chat_id=1, user=make_user(), timestamp=NOW)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale
+
+
+def test_dialog_muted_unsafe_user_locale() -> None:
+    defined = DialogMuted(
+        chat_id=1,
+        muted_until=NOW,
+        user=make_user(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = DialogMuted(
+        chat_id=1,
+        muted_until=NOW,
+        user=make_user(),
+        timestamp=NOW,
+    )
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale
+
+
+def test_dialog_removed_unsafe_user_locale() -> None:
+    defined = DialogRemoved(
+        chat_id=1,
+        user=make_user(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = DialogRemoved(chat_id=1, user=make_user(), timestamp=NOW)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale
+
+
+def test_dialog_unmuted_unsafe_user_locale() -> None:
+    defined = DialogUnmuted(
+        chat_id=1,
+        user=make_user(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = DialogUnmuted(chat_id=1, user=make_user(), timestamp=NOW)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale
+
+
+def test_user_added_to_chat_unsafe_inviter_id() -> None:
+    defined = UserAddedToChat(
+        chat_id=1,
+        is_channel=False,
+        user=make_user(),
+        inviter_id=2,
+        timestamp=NOW,
+    )
+    assert defined.unsafe_inviter_id == 2
+
+    omitted = UserAddedToChat(
+        chat_id=1,
+        is_channel=False,
+        user=make_user(),
+        timestamp=NOW,
+    )
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_inviter_id
+
+
+def test_user_removed_from_chat_unsafe_admin_id() -> None:
+    defined = UserRemovedFromChat(
+        chat_id=1,
+        is_channel=False,
+        user=make_user(),
+        admin_id=2,
+        timestamp=NOW,
+    )
+    assert defined.unsafe_admin_id == 2
+
+    omitted = UserRemovedFromChat(
+        chat_id=1,
+        is_channel=False,
+        user=make_user(),
+        timestamp=NOW,
+    )
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_admin_id
+
+
+def test_message_edited_text() -> None:
+    edited = MessageEdited(message=make_message(), timestamp=NOW)
+    assert edited.text == "hello"
+
+
+def test_message_callback_unsafe_message() -> None:
+    with_message = MessageCallback(
+        callback=make_callback(),
+        message=make_message(),
+        timestamp=NOW,
+    )
+    assert with_message.unsafe_message is with_message.message
+
+    without_message = MessageCallback(
+        callback=make_callback(),
+        message=None,
+        timestamp=NOW,
+    )
+    with pytest.raises(AttributeIsEmptyError):
+        _ = without_message.unsafe_message
+
+
+def test_message_callback_unsafe_user_locale() -> None:
+    defined = MessageCallback(
+        callback=make_callback(),
+        user_locale="ru-RU",
+        timestamp=NOW,
+    )
+    assert defined.unsafe_user_locale == "ru-RU"
+
+    omitted = MessageCallback(callback=make_callback(), timestamp=NOW)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = omitted.unsafe_user_locale

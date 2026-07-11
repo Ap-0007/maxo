@@ -38,7 +38,7 @@ from maxo.routing.middlewares.update_context import (
     UPDATE_CONTEXT_KEY,
 )
 from maxo.routing.sentinels import UNHANDLED
-from maxo.routing.updates import (
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,

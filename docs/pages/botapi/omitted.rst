@@ -149,7 +149,7 @@ Omitted в объектах ответа
 
 .. code-block:: python
 
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo.types.message_created import MessageCreated
     from maxo.omit import is_defined, is_omitted
 
     @dispatcher.message_created()
@@ -175,7 +175,7 @@ Omitted в объектах ответа
 
 .. code-block:: python
 
-    from maxo.routing.updates.message_created import MessageCreated
+    from maxo.types.message_created import MessageCreated
     from maxo.omit import is_defined
     from maxo.errors import AttributeIsEmptyError
 
@@ -208,7 +208,7 @@ Omitted в объектах ответа
 
 .. code-block:: python
 
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     @dispatcher.message_created()
     async def handler(message: MessageCreated) -> None:

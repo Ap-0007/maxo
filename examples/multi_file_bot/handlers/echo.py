@@ -1,5 +1,5 @@
 from maxo import Router
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 echo_router = Router(__name__)
 

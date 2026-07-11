@@ -1,6 +1,6 @@
 from maxo.routing.facades.base import BaseUpdateFacade
 from maxo.routing.mixins import ChatMethodsFacade
-from maxo.routing.updates.chat_title_changed import ChatTitleChanged
+from maxo.types.chat_title_changed import ChatTitleChanged
 from maxo.types.user import User
 
 

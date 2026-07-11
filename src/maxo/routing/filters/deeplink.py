@@ -1,7 +1,7 @@
 from maxo import Ctx
 from maxo.omit import is_not_defined
 from maxo.routing.filters.base import BaseFilter
-from maxo.routing.updates.bot_started import BotStarted
+from maxo.types.bot_started import BotStarted
 from maxo.utils.payload import decode_payload
 
 

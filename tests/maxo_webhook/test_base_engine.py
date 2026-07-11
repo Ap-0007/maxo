@@ -6,11 +6,11 @@ from adaptix.load_error import LoadError
 
 from maxo import Bot, Dispatcher
 from maxo.routing.signals import MaxoUpdate
-from maxo.routing.updates import Updates
 from maxo.transport.webhook.adapters.base_adapter import BoundRequest, WebAdapter
 from maxo.transport.webhook.engines.base import WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security
+from maxo.types import Updates
 
 from .fixtures import DummyAdapter, DummyBoundRequest, DummyRequest
 

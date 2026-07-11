@@ -3,7 +3,7 @@ import pytest
 from maxo import Ctx
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.filters.logic import AndFilter, InvertFilter, OrFilter
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 
 class MyTestFilter(BaseFilter[BaseUpdate]):

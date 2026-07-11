@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 
 from maxo.omit import Omittable, Omitted
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 

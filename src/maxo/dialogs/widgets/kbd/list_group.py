@@ -17,7 +17,7 @@ from maxo.dialogs.widgets.common import (
 from maxo.dialogs.widgets.common.items import ItemsGetterVariant, get_items_getter
 from maxo.dialogs.widgets.widget_event import ensure_event_processor
 from maxo.errors import AttributeIsEmptyError
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 from .base import Keyboard
 

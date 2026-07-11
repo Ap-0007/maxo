@@ -1,7 +1,7 @@
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import is_defined
-from maxo.routing.updates.updates import Updates
 from maxo.types.base import MaxoType
+from maxo.types.updates import Updates
 
 
 class UpdateList(MaxoType):

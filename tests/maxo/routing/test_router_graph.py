@@ -5,8 +5,8 @@ from maxo.errors import CycleRoutersError
 from maxo.errors.state import StateError
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals import BeforeStartup
-from maxo.routing.updates import MessageCallback, MessageCreated, MessageEdited
 from maxo.routing.utils.validate_router_graph import validate_router_graph
+from maxo.types import MessageCallback, MessageCreated, MessageEdited
 
 
 def test_include_many_routers() -> None:

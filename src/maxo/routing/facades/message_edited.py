@@ -1,7 +1,7 @@
 from maxo.routing.facades.base import BaseUpdateFacade
 from maxo.routing.mixins import MessageMethodsFacade
-from maxo.routing.updates.message_edited import MessageEdited
 from maxo.types.message import Message
+from maxo.types.message_edited import MessageEdited
 
 
 class MessageEditedFacade(BaseUpdateFacade[MessageEdited], MessageMethodsFacade):

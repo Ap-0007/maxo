@@ -11,7 +11,7 @@ from maxo.dialogs import DialogManager
 from maxo.dialogs.api.entities import MarkupVariant, MediaAttachment
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.dialogs.api.protocols import DialogProtocol
-from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.types import MessageCallback, MessageCreated
 from maxo.types.buttons import InlineButtons
 
 

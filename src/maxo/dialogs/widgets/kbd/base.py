@@ -6,7 +6,7 @@ from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.utils import add_exception_note
 from maxo.dialogs.widgets.common import Actionable, WhenCondition, Whenable
 from maxo.omit import is_defined
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 
 class Keyboard(Actionable, Whenable, KeyboardWidget):

@@ -7,7 +7,7 @@ from maxo.routing.filters.logic import (
     combine_filters,
 )
 from maxo.routing.interfaces.filter import Filter
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 TrueF = AlwaysTrueFilter
 FalseF = AlwaysFalseFilter

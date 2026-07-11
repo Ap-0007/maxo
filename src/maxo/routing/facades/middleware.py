@@ -23,7 +23,7 @@ from maxo.routing.facades import (
 )
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.routing.updates import (
+from maxo.types import (
     BaseUpdate,
     BotAddedToChat,
     BotRemovedFromChat,

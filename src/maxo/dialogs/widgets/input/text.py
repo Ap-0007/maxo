@@ -15,7 +15,7 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 from maxo.types.message_body import MessageBody
 
 from .base import BaseInput

@@ -8,7 +8,7 @@ from maxo.dialogs.widgets.kbd.button import Button, OnClick
 from maxo.dialogs.widgets.text import Const
 from maxo.dialogs.widgets.widget_event import WidgetEventProcessor
 from maxo.fsm import State
-from maxo.routing.updates import MessageCallback
+from maxo.types import MessageCallback
 
 BACK_TEXT = Const("Back")
 NEXT_TEXT = Const("Next")

@@ -34,7 +34,7 @@ from typing import cast
 from maxo import Bot, Ctx
 from maxo.omit import is_defined
 from maxo.routing.filters import BaseFilter
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 from maxo.types.base import MaxoType
 from maxo.types.bot_command import BotCommand
 

@@ -2,8 +2,7 @@ from datetime import UTC, datetime
 
 from maxo import Ctx
 from maxo.routing.filters import DeeplinkFilter
-from maxo.routing.updates import BotStarted
-from maxo.types import User
+from maxo.types import BotStarted, User
 from maxo.utils.payload import encode_payload
 
 

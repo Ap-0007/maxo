@@ -44,11 +44,11 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
-from maxo.routing.updates.message_callback import MessageCallback
-from maxo.routing.updates.message_created import MessageCreated
 from maxo.types import Callback, CallbackButton, UpdateContext, User
 from maxo.types.message import Message
 from maxo.types.message_body import MessageBody
+from maxo.types.message_callback import MessageCallback
+from maxo.types.message_created import MessageCreated
 from maxo.types.recipient import Recipient
 
 # Превью рендерится без реальных апдейтов, поэтому время фиксировано.

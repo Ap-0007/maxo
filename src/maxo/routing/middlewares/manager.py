@@ -7,7 +7,7 @@ from maxo.routing.middlewares.state import (
     EmptyMiddlewareManagerState,
     MiddlewareManagerState,
 )
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _ReturnT = TypeVar("_ReturnT")
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)

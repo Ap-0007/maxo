@@ -11,8 +11,8 @@ from maxo.enums import TextFormat
 from maxo.fsm import FSMContext, State, StateFilter, StatesGroup
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCreated
 
 router = Router(__name__)
 

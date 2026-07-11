@@ -6,8 +6,7 @@ import pytest
 from maxo import Bot, Ctx
 from maxo.enums import ChatType
 from maxo.routing.filters.command import Command, CommandException, CommandObject
-from maxo.routing.updates import MessageCreated
-from maxo.types import BotCommand, Message, MessageBody, Recipient
+from maxo.types import BotCommand, Message, MessageBody, MessageCreated, Recipient
 from tests.constants import NOW
 
 

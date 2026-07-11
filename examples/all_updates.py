@@ -4,7 +4,8 @@ import logging
 import os
 
 from maxo import Bot, Dispatcher
-from maxo.routing.updates import (
+from maxo.transport.long_polling import LongPolling
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
@@ -21,7 +22,6 @@ from maxo.routing.updates import (
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.transport.long_polling import LongPolling
 
 logger = logging.getLogger(__name__)
 

@@ -43,21 +43,19 @@ from maxo.routing.middlewares.update_context import (
     EVENT_FROM_USER_KEY,
     UPDATE_CONTEXT_KEY,
 )
-from maxo.routing.updates import (
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
-    MessageCallback,
-    UserAddedToChat,
-    UserRemovedFromChat,
-)
-from maxo.types import (
     Callback,
     Message,
     MessageBody,
+    MessageCallback,
     Recipient,
     UpdateContext,
+    UserAddedToChat,
+    UserRemovedFromChat,
 )
 from tests.constants import NOW
 

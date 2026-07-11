@@ -8,8 +8,7 @@ from maxo.dialogs.api.entities import Context
 from maxo.dialogs.test_tools import MockMessageManager
 from maxo.enums import ChatType
 from maxo.fsm.state import State
-from maxo.routing.updates import MessageCreated
-from maxo.types import Message, MessageBody, Recipient, User
+from maxo.types import Message, MessageBody, MessageCreated, Recipient, User
 from tests.constants import NOW
 
 WidgetData = dict[str, dict[Any, Any] | list[Any] | int | str | float | None]

@@ -4,7 +4,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.handlers.update import UpdateHandler, UpdateHandlerFn
 from maxo.routing.interfaces.filter import Filter
 from maxo.routing.observers.base import BaseObserver
-from maxo.routing.updates.base import BaseUpdate
+from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 _ReturnT_co = TypeVar("_ReturnT_co", covariant=True)

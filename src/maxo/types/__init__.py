@@ -9,9 +9,13 @@ from .attachments import (
 )
 from .audio_attachment import AudioAttachment
 from .audio_attachment_request import AudioAttachmentRequest
-from .base import BaseMaxoType, BotMixin, MaxoType
+from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType
+from .bot_added_to_chat import BotAddedToChat
 from .bot_command import BotCommand
 from .bot_info import BotInfo
+from .bot_removed_from_chat import BotRemovedFromChat
+from .bot_started import BotStarted
+from .bot_stopped import BotStopped
 from .button import Button
 from .buttons import InlineButtons
 from .callback import Callback
@@ -22,12 +26,18 @@ from .chat_admins_list import ChatAdminsList
 from .chat_list import ChatList
 from .chat_member import ChatMember
 from .chat_members_list import ChatMembersList
+from .chat_title_changed import ChatTitleChanged
 from .clipboard_button import ClipboardButton
 from .contact_attachment import ContactAttachment
 from .contact_attachment_payload import ContactAttachmentPayload
 from .contact_attachment_request import ContactAttachmentRequest
 from .contact_attachment_request_payload import ContactAttachmentRequestPayload
+from .dialog_cleared import DialogCleared
+from .dialog_muted import DialogMuted
+from .dialog_removed import DialogRemoved
+from .dialog_unmuted import DialogUnmuted
 from .emphasized_markup import EmphasizedMarkup
+from .error_event import ErrorEvent
 from .failed_user_details import FailedUserDetails
 from .file_attachment import FileAttachment
 from .file_attachment_payload import FileAttachmentPayload
@@ -54,7 +64,11 @@ from .media_attachment_payload import MediaAttachmentPayload
 from .message import Message
 from .message_body import MessageBody
 from .message_button import MessageButton
+from .message_callback import CallbackQuery, MessageCallback
+from .message_created import MessageCreated
+from .message_edited import MessageEdited
 from .message_list import MessageList
+from .message_removed import MessageRemoved
 from .message_stat import MessageStat
 from .modify_members_result import ModifyMembersResult
 from .monospaced_markup import MonospacedMarkup
@@ -85,11 +99,14 @@ from .subscription import Subscription
 from .underline_markup import UnderlineMarkup
 from .update_context import UpdateContext
 from .update_list import UpdateList
+from .updates import Updates
 from .upload_endpoint import UploadEndpoint
 from .upload_media_result import UploadMediaResult
 from .uploaded_info import UploadedInfo
 from .user import User
+from .user_added_to_chat import UserAddedToChat
 from .user_mention_markup import UserMentionMarkup
+from .user_removed_from_chat import UserRemovedFromChat
 from .user_with_photo import UserWithPhoto
 from .video_attachment import VideoAttachment
 from .video_attachment_details import VideoAttachmentDetails
@@ -106,24 +123,36 @@ __all__ = (
     "AudioAttachment",
     "AudioAttachmentRequest",
     "BaseMaxoType",
+    "BaseUpdate",
+    "BotAddedToChat",
     "BotCommand",
     "BotInfo",
     "BotMixin",
+    "BotRemovedFromChat",
+    "BotStarted",
+    "BotStopped",
     "Button",
     "Callback",
     "CallbackButton",
+    "CallbackQuery",
     "Chat",
     "ChatAdmin",
     "ChatAdminsList",
     "ChatList",
     "ChatMember",
     "ChatMembersList",
+    "ChatTitleChanged",
     "ClipboardButton",
     "ContactAttachment",
     "ContactAttachmentPayload",
     "ContactAttachmentRequest",
     "ContactAttachmentRequestPayload",
+    "DialogCleared",
+    "DialogMuted",
+    "DialogRemoved",
+    "DialogUnmuted",
     "EmphasizedMarkup",
+    "ErrorEvent",
     "FailedUserDetails",
     "FileAttachment",
     "FileAttachmentPayload",
@@ -145,6 +174,7 @@ __all__ = (
     "LocationAttachmentRequest",
     "MarkupElement",
     "MarkupElements",
+    "MaxUpdate",
     "MaxoType",
     "MediaAttachmentPayload",
     "MediaAttachments",
@@ -152,7 +182,11 @@ __all__ = (
     "Message",
     "MessageBody",
     "MessageButton",
+    "MessageCallback",
+    "MessageCreated",
+    "MessageEdited",
     "MessageList",
+    "MessageRemoved",
     "MessageStat",
     "ModifyMembersResult",
     "MonospacedMarkup",
@@ -183,11 +217,14 @@ __all__ = (
     "UnderlineMarkup",
     "UpdateContext",
     "UpdateList",
+    "Updates",
     "UploadEndpoint",
     "UploadMediaResult",
     "UploadedInfo",
     "User",
+    "UserAddedToChat",
     "UserMentionMarkup",
+    "UserRemovedFromChat",
     "UserWithPhoto",
     "VideoAttachment",
     "VideoAttachmentDetails",

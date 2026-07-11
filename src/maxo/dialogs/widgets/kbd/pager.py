@@ -6,8 +6,7 @@ from maxo.dialogs.api.internal import RawKeyboard, TextWidget
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedScroll, Scroll, WhenCondition
 from maxo.dialogs.widgets.text import Const, Format
-from maxo.routing.updates import MessageCallback
-from maxo.types import CallbackButton
+from maxo.types import CallbackButton, MessageCallback
 
 from .base import Keyboard
 

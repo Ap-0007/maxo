@@ -3,18 +3,19 @@ from typing import Any
 
 from maxo import Bot
 from maxo.enums import ChatType
-from maxo.routing.updates import (
+from maxo.types import (
     BotAddedToChat,
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
+    Chat,
     ErrorEvent,
     MessageCallback,
     MessageCreated,
+    User,
     UserAddedToChat,
     UserRemovedFromChat,
 )
-from maxo.types import Chat, User
 
 from .update_event import DialogUpdateEvent
 

@@ -30,7 +30,7 @@
     from maxo.dialogs import Dialog, DialogManager, Window
     from maxo.dialogs.widgets.kbd import Button
     from maxo.dialogs.widgets.text import Const
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
 
     async def on_click(callback: MessageCallback, button: Button, manager: DialogManager):
         await manager.answer_callback()
@@ -54,7 +54,7 @@
     from maxo import Router
     from maxo.dialogs import DialogManager, StartMode
     from maxo.routing.filters import Command
-    from maxo.routing.updates import MessageCreated
+    from maxo.types import MessageCreated
 
     router = Router()
 

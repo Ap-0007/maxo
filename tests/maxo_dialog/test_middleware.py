@@ -12,7 +12,7 @@ from maxo.fsm.state import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.command import CommandStart
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 
 class MainSG(StatesGroup):

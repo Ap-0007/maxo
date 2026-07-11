@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from maxo.enums import UpdateType
 from maxo.routing.interfaces.router import BaseRouter
-from maxo.routing.updates.base import MaxUpdate
+from maxo.types.base import MaxUpdate
 
 
 def collect_used_updates(

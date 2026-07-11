@@ -14,8 +14,7 @@ from maxo.enums import ChatType
 from maxo.enums.text_format import TextFormat
 from maxo.fsm import State
 from maxo.omit import Omittable, Omitted
-from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.types import Recipient
+from maxo.types import MessageCallback, MessageCreated, Recipient
 
 from .api.entities import Data, LinkPreviewOptions
 from .api.internal.widgets import MarkupFactory
