@@ -13,7 +13,7 @@ class GetAdmins(MaxoMethod[ChatMembersList]):
 
     Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/chats/{chatId}/members/admins" \
+    curl -X GET "https://platform-api2.max.ru/chats/{chatId}/members/admins" \
       -H "Authorization: {access_token}"
     ```
 

@@ -15,7 +15,7 @@ class EditChat(MaxoMethod[Chat]):
 
     Пример запроса:
     ```bash
-    curl -X PATCH "https://platform-api.max.ru/chats/{chatId}" \
+    curl -X PATCH "https://platform-api2.max.ru/chats/{chatId}" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

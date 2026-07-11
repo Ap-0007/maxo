@@ -13,7 +13,7 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
 
     #### Пример запроса:
     ```bash
-    curl -X POST "https://platform-api.max.ru/answers?callback_id=callback_id" \
+    curl -X POST "https://platform-api2.max.ru/answers?callback_id=callback_id" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

@@ -13,7 +13,7 @@ class UnpinMessage(MaxoMethod[SimpleQueryResult]):
 
     Пример запроса:
     ```bash
-    curl -X DELETE "https://platform-api.max.ru/chats/{chatId}/pin" \
+    curl -X DELETE "https://platform-api2.max.ru/chats/{chatId}/pin" \
       -H "Authorization: {access_token}"
     ```
 

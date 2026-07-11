@@ -11,7 +11,7 @@ class LeaveChat(MaxoMethod[SimpleQueryResult]):
 
     Пример запроса:
     ```bash
-    curl -X DELETE "https://platform-api.max.ru/chats/{chatId}/members/me" \
+    curl -X DELETE "https://platform-api2.max.ru/chats/{chatId}/members/me" \
       -H "Authorization: {access_token}"
     ```
 

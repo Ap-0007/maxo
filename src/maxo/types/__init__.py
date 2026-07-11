@@ -19,7 +19,6 @@ from .callback_button import CallbackButton
 from .chat import Chat
 from .chat_admin import ChatAdmin
 from .chat_admins_list import ChatAdminsList
-from .chat_button import ChatButton
 from .chat_list import ChatList
 from .chat_member import ChatMember
 from .chat_members_list import ChatMembersList
@@ -116,7 +115,6 @@ __all__ = (
     "Chat",
     "ChatAdmin",
     "ChatAdminsList",
-    "ChatButton",
     "ChatList",
     "ChatMember",
     "ChatMembersList",

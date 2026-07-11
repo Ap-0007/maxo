@@ -10,7 +10,7 @@ class GetMyInfo(MaxoMethod[BotInfo]):
 
     #### Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/me" \
+    curl -X GET "https://platform-api2.max.ru/me" \
       -H "Authorization: {access_token}"
     ```
 

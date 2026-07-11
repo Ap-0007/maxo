@@ -8,7 +8,7 @@ class UploadEndpoint(MaxoType):
     Точка доступа, куда следует загружать ваши бинарные файлы
 
     Args:
-        token: Видео- или аудио-токен для отправки медиафайла во вложении к сообщению с помощью [POST /messages](https://dev.max.ru/docs-api/methods/POST/messages)
+        token: Токен для отправки медиафайла во вложении к сообщению с помощью [POST /messages](https://dev.max.ru/docs-api/methods/POST/messages) или [PUT /messages](https://dev.max.ru/docs-api/methods/PUT/messages)
         url: URL для загрузки медиафайла. Срок жизни ссылки не ограничен
     """
 
@@ -16,7 +16,7 @@ class UploadEndpoint(MaxoType):
     """URL для загрузки медиафайла. Срок жизни ссылки не ограничен"""
 
     token: Omittable[str] = Omitted()
-    """Видео- или аудио-токен для отправки медиафайла во вложении к сообщению с помощью [POST /messages](https://dev.max.ru/docs-api/methods/POST/messages)"""
+    """Токен для отправки медиафайла во вложении к сообщению с помощью [POST /messages](https://dev.max.ru/docs-api/methods/POST/messages) или [PUT /messages](https://dev.max.ru/docs-api/methods/PUT/messages)"""
 
     @property
     def unsafe_token(self) -> str:

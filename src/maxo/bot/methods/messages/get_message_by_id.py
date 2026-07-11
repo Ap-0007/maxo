@@ -11,7 +11,7 @@ class GetMessageById(MaxoMethod[Message]):
 
     #### Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/messages/{messageId}" \
+    curl -X GET "https://platform-api2.max.ru/messages/{messageId}" \
       -H "Authorization: {access_token}"
     ```
 

@@ -17,7 +17,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
 
     Больше примеров запросов с кнопками - [в разделе «Клавиатура»](https://dev.max.ru/docs-api#Как%20добавить%20кнопки)
     ```bash
-    curl -X POST "https://platform-api.max.ru/messages?user_id={user_id}" \
+    curl -X POST "https://platform-api2.max.ru/messages?user_id={user_id}" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{
@@ -44,7 +44,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     Args:
         attachments: Вложения сообщения. Если поле равно `null`, изменений не произойдет. Если пусто, все вложения будут удалены
         chat_id: Если сообщение отправляется в чат, укажите его ID. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
-        disable_link_preview: Если `false`, сервер не будет генерировать превью для ссылок в тексте сообщения
+        disable_link_preview: Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения
         format: Если установлен, текст сообщения будет форматирован данным способом. Для подробной информации загляните в раздел [Форматирование](https://dev.max.ru/docs-api#Форматирование%20текста%20в%20сообщениях)
         link: Ссылка на сообщение
         notify: Если false, участники чата не будут уведомлены (по умолчанию `true`)
@@ -60,7 +60,7 @@ class SendMessage(MaxoMethod[SendMessageResult]):
     chat_id: Query[Omittable[int]] = Omitted()
     """Если сообщение отправляется в чат, укажите его ID. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)"""
     disable_link_preview: Query[Omittable[bool]] = Omitted()
-    """Если `false`, сервер не будет генерировать превью для ссылок в тексте сообщения"""
+    """Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения"""
     user_id: Query[Omittable[int]] = Omitted()
     """Если вы хотите отправить сообщение пользователю, укажите его ID"""
 

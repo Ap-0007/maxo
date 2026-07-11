@@ -6,7 +6,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class RemoveMember(MaxoMethod[SimpleQueryResult]):
     """
-    Удаление участника из группового чата или канала
+    Удаление участников из группового чата или канала
 
     Удаляет участника из группового чата или канала
 
@@ -14,7 +14,7 @@ class RemoveMember(MaxoMethod[SimpleQueryResult]):
 
     Пример запроса:
     ```bash
-    curl -X DELETE "https://platform-api.max.ru/chats/{chatId}/members?user_id={user_id}&block=true" \
+    curl -X DELETE "https://platform-api2.max.ru/chats/{chatId}/members?user_id={user_id}&block=true" \
       -H "Authorization: {access_token}"
     ```
 

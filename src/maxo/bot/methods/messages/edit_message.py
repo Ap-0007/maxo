@@ -22,7 +22,7 @@ class EditMessage(MaxoMethod[SimpleQueryResult]):
 
     #### Пример запроса:
     ```bash
-    curl -X PUT "https://platform-api.max.ru/messages?message_id=message_id" \
+    curl -X PUT "https://platform-api2.max.ru/messages?message_id=message_id" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{

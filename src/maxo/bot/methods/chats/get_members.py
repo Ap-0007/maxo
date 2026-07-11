@@ -14,7 +14,7 @@ class GetMembers(MaxoMethod[ChatMembersList]):
 
     Пример запроса:
     ```bash
-    curl -X GET "https://platform-api.max.ru/chats/{chatId}/members" \
+    curl -X GET "https://platform-api2.max.ru/chats/{chatId}/members" \
       -H "Authorization: {access_token}"
     ```
 

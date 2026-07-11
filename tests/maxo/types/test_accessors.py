@@ -6,7 +6,6 @@ import pytest
 from maxo import Bot
 from maxo.enums import (
     AttachmentType,
-    ButtonType,
     ChatAdminPermission,
     ChatStatus,
     ChatType,
@@ -24,7 +23,6 @@ from maxo.types import (
     Chat,
     ChatAdmin,
     ChatAdminsList,
-    ChatButton,
     ChatList,
     ChatMember,
     ContactAttachment,
@@ -793,36 +791,18 @@ def test_upload_media_result_last_token() -> None:
         _ = UploadMediaResult().last_token
 
 
-def test_base_message_button_and_chat_button_accessors() -> None:
+def test_base_message_button_accessors() -> None:
     message_button = MessageButton(text="Hello")
-    chat_button = ChatButton(
-        text="Create chat",
-        type=ButtonType.MESSAGE,
-        chat_title="Chat",
-        chat_description="Desc",
-    )
 
     assert message_button.unsafe_text == "Hello"
-    assert chat_button.unsafe_chat_description == "Desc"
 
 
 def test_button_accessors_raise_for_omitted_values() -> None:
     message_button = MessageButton()
-    chat_button = ChatButton(
-        text="Create chat",
-        type=ButtonType.MESSAGE,
-        chat_title="Chat",
-    )
     open_app_button = OpenAppButton(text="Open")
 
     with pytest.raises(AttributeIsEmptyError):
         _ = message_button.unsafe_text
-    with pytest.raises(AttributeIsEmptyError):
-        _ = chat_button.unsafe_chat_description
-    with pytest.raises(AttributeIsEmptyError):
-        _ = chat_button.unsafe_start_payload
-    with pytest.raises(AttributeIsEmptyError):
-        _ = chat_button.unsafe_uuid
     with pytest.raises(AttributeIsEmptyError):
         _ = open_app_button.unsafe_contact_id
     with pytest.raises(AttributeIsEmptyError):
@@ -1069,14 +1049,6 @@ def test_remaining_optional_branches() -> None:
         url="https://example.com",
     )
     open_app = OpenAppButton(text="open")
-    chat_button = ChatButton(
-        text="create",
-        type=ButtonType.MESSAGE,
-        chat_title="Room",
-        chat_description="desc",
-        start_payload="start",
-        uuid=1,
-    )
     new_message = NewMessageBody(
         attachments=[],
         format=TextFormat.HTML,
@@ -1111,9 +1083,6 @@ def test_remaining_optional_branches() -> None:
         match=r"OpenAppButton.contact_id is empty \(<Omitted>\)",
     ):
         _ = open_app.unsafe_contact_id
-    assert chat_button.unsafe_chat_description == "desc"
-    assert chat_button.unsafe_start_payload == "start"
-    assert chat_button.unsafe_uuid == 1
     assert new_message.unsafe_attachments == []
     assert new_message.unsafe_format == TextFormat.HTML
     with pytest.raises(
