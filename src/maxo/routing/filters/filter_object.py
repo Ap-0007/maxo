@@ -8,7 +8,7 @@ from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 
-# Эти имена фильтр получает позиционно, из контекста их брать не нужно.
+# Эти имена фильтр получает позиционно, из контекста их брать не нужно
 RESERVED_PARAMS: Final = frozenset({"self", "update", "ctx"})
 
 
@@ -16,16 +16,11 @@ class FilterObject(BaseFilter[_UpdateT], Generic[_UpdateT]):
     """
     Фильтр вместе с разобранной сигнатурой его `__call__`.
 
-    Сам является фильтром: вызывается как `(update, ctx)` и комбинируется
-    операторами `&`, `|`, `~`, поэтому его можно передавать всюду, где ждут
-    `Filter`.
+    Обернутый фильтр может попросить значения из контекста, объявив их
+    параметрами `__call__`. Сигнатура разбирается один раз, при регистрации:
+    фильтры зовутся на каждый апдейт, и `inspect` там был бы слишком дорогим.
 
-    Кроме `update` и `ctx` обернутый фильтр может попросить любое значение из
-    контекста - достаточно объявить его параметром `__call__` с тем же именем.
-    Сигнатура разбирается один раз, при регистрации: фильтры зовутся на каждый
-    апдейт, и `inspect` в этом месте был бы слишком дорогим.
-
-    Подражание aiogram, где ту же роль играет `FilterObject`.
+    Сам является фильтром, поэтому его можно передавать всюду, где ждут `Filter`.
     """
 
     filter: Filter[_UpdateT]
@@ -33,7 +28,7 @@ class FilterObject(BaseFilter[_UpdateT], Generic[_UpdateT]):
     __slots__ = ("_params", "_varkw", "filter")
 
     def __init__(self, filter_: Filter[_UpdateT]) -> None:
-        # Обертка идемпотентна: заворачивать обертку в обертку незачем
+        # Обертка идемпотентна
         if isinstance(filter_, FilterObject):
             filter_ = filter_.filter
 
@@ -42,7 +37,7 @@ class FilterObject(BaseFilter[_UpdateT], Generic[_UpdateT]):
         try:
             spec = inspect.getfullargspec(type(filter_).__call__)
         except TypeError:
-            # `__call__` не питоновская функция (например, C-level callable).
+            # `__call__` не питоновская функция, сигнатуру не прочитать
             self._params: frozenset[str] = frozenset()
             self._varkw = False
         else:

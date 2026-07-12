@@ -64,7 +64,6 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         for filter_ in self._filters:
             inner = unwrap_filter(filter_)
             if isinstance(inner, AndFilter):
-                # Дети вложенного фильтра уже обернуты его собственным инлайнингом
                 inlined_filters.extend(inner._filters)
             else:
                 inlined_filters.append(FilterObject(inner))
@@ -99,7 +98,6 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
         for filter_ in self._filters:
             inner = unwrap_filter(filter_)
             if isinstance(inner, OrFilter):
-                # Дети вложенного фильтра уже обернуты его собственным инлайнингом
                 inlined_filters.extend(inner._filters)
             else:
                 inlined_filters.append(FilterObject(inner))
@@ -127,7 +125,6 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
     def _inlining(self) -> None:
         inner = unwrap_filter(self._filter)
         if isinstance(inner, InvertFilter):
-            # Фильтр внутри уже обернут его собственным инлайнингом
             self._filter = inner._filter
             self._inlined = True
         else:
