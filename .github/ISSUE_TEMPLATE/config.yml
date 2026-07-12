@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Связь по всем вопросам
+  - name: Телеграм чат maxo
     url: https://t.me/maxo_py
-    about: ТГ Чат maxo
+    about: Связь по всем вопросам
+  - name: Макс чат maxo
+    url: https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc
+    about: Связь по всем вопросам

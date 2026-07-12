@@ -37,18 +37,23 @@ class ChatMembersIterator(AsyncIterator[ChatMember]):
         if self._chat_members:
             return self._chat_members.popleft()
 
-        while True:
-            result = await self._bot.get_members(
-                chat_id=self._chat_id,
-                user_ids=cast(list[int] | Omitted | None, self._user_ids),
-                marker=cast(int | Omitted, self._marker),
-                count=self._count,
-            )
-            self._marker = result.marker
+        # `marker is None` - предыдущая страница была последней.
+        # Отдать такой маркер обратно нельзя: для апи `marker: null` -
+        # это запрос первой страницы, и итерация пойдёт по кругу.
+        if self._marker is None:
+            raise StopAsyncIteration
 
-            if not result.members:
-                raise StopAsyncIteration
+        result = await self._bot.get_members(
+            chat_id=self._chat_id,
+            user_ids=cast(list[int] | Omitted | None, self._user_ids),
+            marker=self._marker,
+            count=self._count,
+        )
+        self._marker = result.marker
 
-            self._chat_members.extend(result.members)
+        if not result.members:
+            raise StopAsyncIteration
 
-            return self._chat_members.popleft()
+        self._chat_members.extend(result.members)
+
+        return self._chat_members.popleft()
