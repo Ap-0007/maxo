@@ -69,9 +69,6 @@ class Dispatcher(Router):
         # Facade settings
         self.update.middleware.outer(FacadeMiddleware())
 
-    # Запуск поллинга прямо с диспетчера, как в aiogram.
-    # Логика остается в `maxo.transport.long_polling.LongPolling`,
-    # здесь только фасад: имена аргументов те же, что у `LongPolling`.
     async def start_polling(
         self,
         bot: Bot,
@@ -85,7 +82,7 @@ class Dispatcher(Router):
         **workflow_data: Any,
     ) -> None:
         """Запустить лонг-поллинг в текущем event loop."""
-        # Отложенный импорт: long_polling импортирует Dispatcher.
+        # Отложенный импорт: long_polling импортирует Dispatcher
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
 
         await LongPolling(self).start(

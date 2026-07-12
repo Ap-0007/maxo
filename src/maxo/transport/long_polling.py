@@ -136,9 +136,8 @@ class LongPolling:
         """
         Раздает апдейты хендлерам, пока не попросят остановиться.
 
-        Каждое ожидание апдейта гонится с `stop_event`: по сигналу поллинг
-        перестает забирать новые апдейты, а выход из `TaskGroup` дожидается
-        уже запущенных хендлеров. Это и есть graceful shutdown.
+        Ожидание апдейта гонится с `stop_event`: по сигналу поллинг перестает
+        забирать новые апдейты, а выход из `TaskGroup` дожидается запущенных.
         """
         dispatcher = self._dispatcher
         stop_waiter = asyncio.ensure_future(stop_event.wait())
@@ -173,11 +172,7 @@ class LongPolling:
             stop_waiter.cancel()
 
     def _add_signal_handlers(self, stop_event: asyncio.Event) -> Callable[[], None]:
-        """
-        Ставит обработчики SIGINT и SIGTERM, которые просят поллинг остановиться.
-
-        Возвращает функцию снятия обработчиков.
-        """
+        """Ставит обработчики SIGINT и SIGTERM. Возвращает функцию их снятия."""
         loop = asyncio.get_running_loop()
         installed: list[signal.Signals] = []
 
@@ -185,7 +180,7 @@ class LongPolling:
             try:
                 loop.add_signal_handler(sig, stop_event.set)
             except NotImplementedError:
-                # Windows не умеет loop.add_signal_handler.
+                # Windows не умеет loop.add_signal_handler
                 loggers.dispatcher.warning(
                     "Сигнал %s не перехватывается: платформа не поддерживает "
                     "loop.add_signal_handler",
