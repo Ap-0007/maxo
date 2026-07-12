@@ -1,7 +1,8 @@
 import asyncio
 import contextlib
+import signal
 import time
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
 from typing import Any
 
 from adaptix.load_error import LoadError
@@ -43,6 +44,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        handle_signals: bool = True,
         **workflow_data: Any,
     ) -> None:
         asyncio.run(
@@ -54,6 +56,7 @@ class LongPolling:
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
+                handle_signals=handle_signals,
                 **workflow_data,
             ),
         )
@@ -67,6 +70,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        handle_signals: bool = True,
         **workflow_data: Any,
     ) -> None:
         dispatcher = self._dispatcher
@@ -97,13 +101,21 @@ class LongPolling:
                     drop_pending_updates=drop_pending_updates,
                 )
 
-                with contextlib.suppress(KeyboardInterrupt):
-                    async with asyncio.TaskGroup() as tg:
-                        async for update in updates_poller:
-                            # Задача отслеживается TaskGroup, ссылка не нужна.
-                            tg.create_task(  # type: ignore[unused-awaitable]
-                                dispatcher.feed_max_update(update, bot),
-                            )
+                stop_event = asyncio.Event()
+                remove_signal_handlers = (
+                    self._add_signal_handlers(stop_event) if handle_signals else None
+                )
+
+                try:
+                    with contextlib.suppress(KeyboardInterrupt):
+                        await self._consume_updates(
+                            bot=bot,
+                            updates_poller=updates_poller,
+                            stop_event=stop_event,
+                        )
+                finally:
+                    if remove_signal_handlers is not None:
+                        remove_signal_handlers()
 
                 await dispatcher.feed_signal(BeforeShutdown(), bot)
 
@@ -114,6 +126,80 @@ class LongPolling:
                 )
 
         await dispatcher.feed_signal(AfterShutdown())
+
+    async def _consume_updates(
+        self,
+        bot: Bot,
+        updates_poller: AsyncIterator[MaxoUpdate[Any]],
+        stop_event: asyncio.Event,
+    ) -> None:
+        """
+        Раздает апдейты хендлерам, пока не попросят остановиться.
+
+        Каждое ожидание апдейта гонится с `stop_event`: по сигналу поллинг
+        перестает забирать новые апдейты, а выход из `TaskGroup` дожидается
+        уже запущенных хендлеров. Это и есть graceful shutdown.
+        """
+        dispatcher = self._dispatcher
+        stop_waiter = asyncio.ensure_future(stop_event.wait())
+
+        try:
+            async with asyncio.TaskGroup() as tg:
+                while not stop_event.is_set():
+                    update_waiter = asyncio.ensure_future(anext(updates_poller))
+                    done, _ = await asyncio.wait(
+                        (update_waiter, stop_waiter),
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
+                    if update_waiter not in done:
+                        update_waiter.cancel()
+                        loggers.dispatcher.info(
+                            "Получен сигнал остановки, "
+                            "новые апдейты больше не забираются",
+                        )
+                        break
+
+                    try:
+                        update = update_waiter.result()
+                    except StopAsyncIteration:
+                        break
+
+                    # Задача отслеживается TaskGroup, ссылка не нужна.
+                    tg.create_task(  # type: ignore[unused-awaitable]
+                        dispatcher.feed_max_update(update, bot),
+                    )
+        finally:
+            stop_waiter.cancel()
+
+    def _add_signal_handlers(self, stop_event: asyncio.Event) -> Callable[[], None]:
+        """
+        Ставит обработчики SIGINT и SIGTERM, которые просят поллинг остановиться.
+
+        Возвращает функцию снятия обработчиков.
+        """
+        loop = asyncio.get_running_loop()
+        installed: list[signal.Signals] = []
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, stop_event.set)
+            except NotImplementedError:
+                # Windows не умеет loop.add_signal_handler.
+                loggers.dispatcher.warning(
+                    "Сигнал %s не перехватывается: платформа не поддерживает "
+                    "loop.add_signal_handler",
+                    sig.name,
+                )
+                continue
+
+            installed.append(sig)
+
+        def remove_signal_handlers() -> None:
+            for sig in installed:
+                loop.remove_signal_handler(sig)
+
+        return remove_signal_handlers
 
     async def _get_updates(
         self,

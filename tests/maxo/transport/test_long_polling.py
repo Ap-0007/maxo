@@ -1,4 +1,6 @@
 import asyncio
+import signal
+import sys
 from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -248,3 +250,132 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
         )
 
     assert spy.call_args.kwargs["types"] == ["bot_started"]
+
+
+async def test_consume_updates_waits_for_running_handlers_on_stop(
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+) -> None:
+    """Остановка graceful: уже запущенный хендлер добегает до конца."""
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+    stop_event = asyncio.Event()
+    handled: list[Any] = []
+    handler_started = asyncio.Event()
+
+    async def slow_feed(update: MaxoUpdate[Any], bot: Bot | None = None) -> Any:
+        handler_started.set()
+        await asyncio.sleep(0.05)
+        handled.append(update)
+
+    mock_dispatcher.feed_max_update = slow_feed  # type: ignore[method-assign]
+
+    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
+        yield MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
+        # Имитируем висящий долгий поллинг: новых апдейтов нет.
+        await asyncio.sleep(3600)
+        yield MaxoUpdate(  # pragma: no cover
+            update=cast(Updates, MockUpdate(timestamp=2)),
+            marker=2,
+        )
+
+    consumer = asyncio.create_task(
+        long_polling._consume_updates(
+            bot=mock_bot,
+            updates_poller=updates(),
+            stop_event=stop_event,
+        ),
+    )
+
+    await handler_started.wait()
+    stop_event.set()
+    await asyncio.wait_for(consumer, timeout=1)
+
+    assert len(handled) == 1
+
+
+async def test_consume_updates_stops_on_exhausted_poller(
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+    mock_feed_max_update: AsyncMock,
+) -> None:
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+
+    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
+        yield MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
+
+    await asyncio.wait_for(
+        long_polling._consume_updates(
+            bot=mock_bot,
+            updates_poller=updates(),
+            stop_event=asyncio.Event(),
+        ),
+        timeout=1,
+    )
+
+    mock_feed_max_update.assert_awaited_once()
+
+
+async def test_consume_updates_does_not_start_when_already_stopped(
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+    mock_feed_max_update: AsyncMock,
+) -> None:
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+    stop_event = asyncio.Event()
+    stop_event.set()
+
+    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
+        yield MaxoUpdate(  # pragma: no cover
+            update=cast(Updates, MockUpdate(timestamp=1)),
+            marker=1,
+        )
+
+    await asyncio.wait_for(
+        long_polling._consume_updates(
+            bot=mock_bot,
+            updates_poller=updates(),
+            stop_event=stop_event,
+        ),
+        timeout=1,
+    )
+
+    mock_feed_max_update.assert_not_awaited()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="loop.add_signal_handler не поддерживается на Windows",
+)
+async def test_signal_handler_sets_stop_event(long_polling: LongPolling) -> None:
+    stop_event = asyncio.Event()
+
+    remove_signal_handlers = long_polling._add_signal_handlers(stop_event)
+    try:
+        signal.raise_signal(signal.SIGTERM)
+        # Сигнал доезжает до loop через self-pipe, одного тика цикла мало.
+        await asyncio.wait_for(stop_event.wait(), timeout=1)
+
+        assert stop_event.is_set()
+    finally:
+        remove_signal_handlers()
+
+
+async def test_signal_handlers_not_installed_when_disabled(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+        return
+        yield  # pragma: no cover
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(long_polling, "_add_signal_handlers") as add_signal_handlers,
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            handle_signals=False,
+        )
+
+    add_signal_handlers.assert_not_called()
