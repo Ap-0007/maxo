@@ -3,6 +3,73 @@
 История релизов автоматически собирается из [GitHub Releases](https://github.com/K1rL3s/maxo/releases) при каждой сборке документации.
 
 
+## [0.7.0](https://github.com/K1rL3s/maxo/releases/tag/v0.7.0) - 2026-06-03
+
+### What's Changed
+- fix: justfile duplicate recipe error on windows by @begezyan in https://github.com/K1rL3s/maxo/pull/126
+- Сваггер 01.06.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/128
+- `MessageCallback.answer` как `callback_answer` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/125
+  - ! `CallbackMethodsFacade.answer = callback_answer`. Конфликт с `MessageMethodsFacade.answer` в `MessageCallback`
+  - `CallbackMethodsFacade.callback_answer`: `text` как `notification`
+  - `Message` отнаследован от `MessageMethodsFacade`
+
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.6.0...v0.7.0
+
+
+## [0.6.0](https://github.com/K1rL3s/maxo/releases/tag/v0.6.0) - 2026-05-09
+
+### What's Changed
+
+- Мега пример диалогов by @K1rL3s in https://github.com/K1rL3s/maxo/pull/102
+  - Перекопировал мега пример из оригинальных диалогов
+  - Добавил пару алиасов для подражания аиограму и диалогам
+- Убрал из `MagicData` и `MagicFilter` лишний `.cast(bool)` by @K1rL3s in https://github.com/K1rL3s/maxo/pull/105
+- Улучшение вывода ошибок by @K1rL3s in https://github.com/K1rL3s/maxo/pull/106
+  - **!** Добавил `AddMembers` в исключения для патча `success=false` и `status=200`
+  - Убрал дублирование информации в выводе ошибок
+- Улучшение документации by @goduni in https://github.com/K1rL3s/maxo/pull/109
+- Пропертя `user_id` для `MessageCreated` by @Bakhtovar03 in https://github.com/K1rL3s/maxo/pull/100
+- Сваггер 28.04.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/116
+  - Добавил `ContactAttachmentPayload.hash`, починил ссылки на доку в типах
+- `CopyText` и улучшения диалогов by @K1rL3s in https://github.com/K1rL3s/maxo/pull/118
+- `BotMixin` и прокидывание бота через реторту by @K1rL3s in https://github.com/K1rL3s/maxo/pull/103
+  - **!** Перенёс фасады из `maxo.utils.facades` в `maxo.routing.facades`
+  - **!** Удалил `maxo.utils.helpers` и `request_to_attachment` оттуда
+  - Добавил `class BotMixin`, `MaxoType(BaseMaxoType, BotMixin)`, сделал передачу бота в датаклассы через реторту
+  - Отнаследовал `Bot` от `unihttp.clients.base.BaseAsyncClient`, чтобы убрать ошибки `mypy` на `bind_method`
+  - Разделил `create_retort` на `create_retort` и `create_retort_with_bot`
+  - Дополнительно отнаследовал `AttributeIsEmptyError` от `AttributeError`
+  - Убрал `@final`, так как его надо поставить много где, но проще тупо убрать
+  - Отнаследовал фасады от `SubscriptionMethodsFacade` , где они наследовались от `BotMethodsFacade`
+  - Исправил ошибки `slotscheck` и настроил `.justfile`
+  - Переделал доку под `update.<method>` вместо фасадов
+  - Добавил `maxo/loggers.py`: `dialogs = logging.getLogger("maxo.dialogs")`
+- Поправлены ошибки тайпхинтов связанные с фасадами by @tsk8r in https://github.com/K1rL3s/maxo/pull/107
+- perf(dialogs): параллельные show + answer_callback в _callback_handler by @biradrags in https://github.com/K1rL3s/maxo/pull/114
+- fix(dialogs): storage_proxy и access_validator корректно обрабатывают channel-сообщения без user by @biradrags in https://github.com/K1rL3s/maxo/pull/112
+- feat(dialogs)!: убрать лишний get_message_by_id после edit и remove_kbd by @biradrags in https://github.com/K1rL3s/maxo/pull/113
+- Сваггер на 04.05.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/124
+- Продолжение подражания `aiogram`'у by @K1rL3s in https://github.com/K1rL3s/maxo/pull/123
+  - **!** `Dispatcher.feed_update`: `ctx["bots"]` со списком из одного бота, и добавление `ctx["bot"]` только при переданном боте
+  - **!** `Window.parse_mode` по умолчанию `Omitted`, а не `None`, чтобы работали дефолты бота
+  - `ParseMode = TextFormat`
+  - `AttachmentType.PHOTO = IMAGE`
+  - `BaseObserver.outer_middleware` как `BaseObserver.middleware.outer`, `MiddlewareManagerFacade.__call__` как `BaseObserver.middleware.inner`
+  - `maxo.exceptions` как алиас к `maxo.errors`
+  - Передача аргументов в мидлвари позиционно, чтобы можно было писать любые имена аргументов
+  - `MessageCallback.id = callback_id`
+  - `Observer.register = handler`
+  - `Router.edited_message = message_edited`
+  - `User.full_name = fullname`
+
+### New Contributors
+* @tsk8r made their first contribution in https://github.com/K1rL3s/maxo/pull/107
+* @Bakhtovar03 made their first contribution in https://github.com/K1rL3s/maxo/pull/100
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.5.3...v0.6.0
+
+
 ## [0.5.3](https://github.com/K1rL3s/maxo/releases/tag/v0.5.3) - 2026-04-11
 
 ### What's Changed

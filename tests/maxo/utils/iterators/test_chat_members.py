@@ -35,7 +35,6 @@ async def test_chat_members_iterator_single_page(bot: Bot) -> None:
                 members=[create_chat_member(1), create_chat_member(2)],
                 marker=None,
             ),
-            ChatMembersList(members=[], marker=None),
         ],
     )
 
@@ -45,7 +44,7 @@ async def test_chat_members_iterator_single_page(bot: Bot) -> None:
     assert len(members) == 2
     assert members[0].user_id == 1
     assert members[1].user_id == 2
-    assert bot.get_members.await_count == 2
+    assert bot.get_members.await_count == 1
 
 
 async def test_chat_members_iterator_multiple_pages(bot: Bot) -> None:
@@ -59,7 +58,6 @@ async def test_chat_members_iterator_multiple_pages(bot: Bot) -> None:
                 members=[create_chat_member(3), create_chat_member(4)],
                 marker=None,
             ),
-            ChatMembersList(members=[], marker=None),
         ],
     )
 
@@ -71,7 +69,7 @@ async def test_chat_members_iterator_multiple_pages(bot: Bot) -> None:
     assert members[1].user_id == 2
     assert members[2].user_id == 3
     assert members[3].user_id == 4
-    assert bot.get_members.await_count == 3
+    assert bot.get_members.await_count == 2
 
 
 async def test_chat_members_iterator_no_members(bot: Bot) -> None:
@@ -88,7 +86,6 @@ async def test_chat_members_iterator_with_user_ids(bot: Bot) -> None:
     bot.get_members = AsyncMock(
         side_effect=[
             ChatMembersList(members=[create_chat_member(1)], marker=None),
-            ChatMembersList(members=[], marker=None),
         ],
     )
 
@@ -97,5 +94,25 @@ async def test_chat_members_iterator_with_user_ids(bot: Bot) -> None:
     members = [member async for member in iterator]
 
     assert len(members) == 1
-    assert bot.get_members.await_count == 2
+    assert bot.get_members.await_count == 1
     bot.get_members.assert_any_await(chat_id=1, user_ids=user_ids, marker=ANY, count=20)
+
+
+async def test_chat_members_iterator_stops_on_none_marker(bot: Bot) -> None:
+    """`marker=None` - последняя страница, запрашивать следующую нельзя.
+
+    Для апи `marker: null` означает первую страницу, поэтому такой запрос
+    вернул бы участников по кругу.
+    """
+    bot.get_members = AsyncMock(
+        side_effect=[
+            ChatMembersList(members=[create_chat_member(1)], marker=None),
+            ChatMembersList(members=[create_chat_member(1)], marker=None),
+        ],
+    )
+
+    iterator = ChatMembersIterator(bot=bot, chat_id=1)
+    members = [member async for member in iterator]
+
+    assert len(members) == 1
+    assert bot.get_members.await_count == 1

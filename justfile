@@ -37,6 +37,9 @@ mypy:
 test *args:
     uv run pytest tests/ --cov=src --cov-report=term {{ args }}
 
+docs *args:
+    uv run sphinx-build -b html docs docs/_build/html {{ args }}
+
 test-all:
     uv run nox
 
