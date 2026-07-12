@@ -1,9 +1,4 @@
-"""
-Методы MAX Bot API.
-
-Тонкий реэкспорт `maxo.bot.methods` под именем `maxo.methods`.
-Подражание aiogram, где методы лежат в `aiogram.methods`.
-"""
+"""Методы MAX Bot API. Реэкспорт `maxo.bot.methods`."""
 
 from maxo.bot.methods import (
     AddMembers,

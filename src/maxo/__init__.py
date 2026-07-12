@@ -9,8 +9,7 @@ from maxo.utils.text_decorations import (
     markdown_decoration as md,
 )
 
-# Импортируются после `Bot`: `maxo.routing` и `maxo.bot` делают `from maxo import Bot`,
-# поэтому имя `Bot` должно попасть в неймспейс пакета раньше.
+# Только после `Bot`: `maxo.routing` и `maxo.bot` делают `from maxo import Bot`
 from maxo import enums, methods, types  # isort: skip
 
 __all__ = (

@@ -41,13 +41,11 @@ class MiddlewareManager(Generic[_UpdateT]):
         self.state.ensure_add_middleware()
         self.middlewares.extend(middlewares)
 
-    # Подражание aiogram: `dp.message.middleware.register(MyMiddleware())`
     def register(self, middleware: _MiddlewareT) -> _MiddlewareT:
         """Зарегистрировать мидлварь и вернуть ее же."""
         self.add(middleware)
         return middleware
 
-    # Подражание aiogram: `dp.message.middleware.unregister(MyMiddleware())`
     def unregister(self, middleware: BaseMiddleware[_UpdateT]) -> None:
         """Убрать мидлварь. Бросает `ValueError`, если она не зарегистрирована."""
         self.state.ensure_add_middleware()
@@ -89,9 +87,6 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
         self.inner.add(*middlewares)
 
-    # Подражание aiogram,
-    # чтобы `router.message_created.middleware.register(MyMiddleware())`
-    # добавлял в inner-мидлвари
     def register(self, middleware: _MiddlewareT) -> _MiddlewareT:
         """Зарегистрировать inner-мидлварь и вернуть ее же."""
         return self.inner.register(middleware)
