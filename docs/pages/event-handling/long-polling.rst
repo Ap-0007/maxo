@@ -18,14 +18,13 @@ Long Polling (длинный опрос) - простой способ полу�
 Использование
 -------------
 
-Для запуска поллинга используется класс :class:`~maxo.transport.long_polling.LongPolling`.
+Проще всего запустить поллинг прямо с диспетчера - методом ``run_polling``.
 
 .. code-block:: python
 
     import os
 
     from maxo import Bot, Dispatcher
-    from maxo.transport.long_polling import LongPolling
 
     bot = Bot(token=os.environ["TOKEN"])
     dispatcher = Dispatcher()
@@ -33,35 +32,44 @@ Long Polling (длинный опрос) - простой способ полу�
     # ... регистрация хендлеров ...
 
     if __name__ == "__main__":
-        # Запуск поллинга
-        LongPolling(dispatcher).run(bot)
+        # Запуск поллинга: поднимает свой event loop
+        dispatcher.run_polling(bot)
 
-Если вы уже находитесь в асинхронном контексте, используйте метод ``start`` вместо ``run``:
+Если вы уже находитесь в асинхронном контексте, используйте ``start_polling``:
+
+.. code-block:: python
+
+    await dispatcher.start_polling(bot)
+
+Под капотом оба метода зовут :class:`~maxo.transport.long_polling.LongPolling`. Этот класс остается публичным: он нужен, когда требуется свой ``backoff_config`` или несколько поллеров в одном процессе.
 
 .. code-block:: python
 
     from maxo.transport.long_polling import LongPolling
 
-    await LongPolling(dispatcher).start(bot)
+    LongPolling(dispatcher, backoff_config=my_backoff).run(bot)
 
 Параметры запуска
 -----------------
 
-Метод ``run`` принимает несколько аргументов для настройки поллинга:
+``run_polling`` и ``start_polling`` принимают те же аргументы, что и ``LongPolling``:
 
 - ``timeout`` (int, по умолчанию 30) - время в секундах, которое сервер будет держать соединение открытым, ожидая новых событий. Чем больше значение, тем меньше «пустых» запросов делает бот.
 - ``limit`` (int, по умолчанию 100) - максимальное количество обновлений, которое сервер вернет за один запрос.
 - ``drop_pending_updates`` (bool, по умолчанию False) - если ``True``, бот при запуске пропустит все обновления, которые накопились, пока он был выключен. Полезно при разработке.
 - ``types`` (list[str], опционально) - список типов обновлений, которые вы хотите получать. Если не указано, **maxo** автоматически определит этот список на основе зарегистрированных обработчиков.
+- ``auto_close_bot`` (bool, по умолчанию True) - закрывать ли сессию бота после остановки поллинга.
+- ``handle_signals`` (bool, по умолчанию True) - перехватывать ли ``SIGINT`` и ``SIGTERM`` для мягкой остановки.
+
+Все, что не входит в этот список, попадает в ``workflow_data`` и доезжает до хендлеров как контекст.
 
 .. code-block:: python
 
-    from maxo.transport.long_polling import LongPolling
-
-    LongPolling(dispatcher).run(
+    dispatcher.run_polling(
         bot,
         timeout=60,
         drop_pending_updates=True,
+        pool=my_db_pool,  # доедет до хендлеров как аргумент `pool`
     )
 
 Пропуск старых обновлений
@@ -71,9 +79,27 @@ Long Polling (длинный опрос) - простой способ полу�
 
 .. code-block:: python
 
-    from maxo.transport.long_polling import LongPolling
+    dispatcher.run_polling(bot, drop_pending_updates=True)
 
-    LongPolling(dispatcher).run(bot, drop_pending_updates=True)
+Мягкая остановка
+----------------
+
+По ``SIGINT`` (Ctrl+C) и ``SIGTERM`` (``docker stop``, ``systemctl stop``) поллинг останавливается корректно:
+
+1. Перестает забирать новые обновления.
+2. Дожидается хендлеров, которые уже начали работу.
+3. Прогоняет сигналы ``before_shutdown`` и ``after_shutdown``.
+4. Закрывает сессию бота, если не отключено через ``auto_close_bot=False``.
+
+Отключить перехват сигналов можно флагом ``handle_signals=False`` - например, если процессом управляет внешний супервизор, который сам гасит event loop.
+
+.. code-block:: python
+
+    dispatcher.run_polling(bot, handle_signals=False)
+
+.. warning::
+
+    ``loop.add_signal_handler`` не работает на Windows. Там перехват сигналов не ставится, в лог пишется предупреждение, а остановка по Ctrl+C идет через ``KeyboardInterrupt``.
 
 Автоматическая обработка ошибок
 -------------------------------

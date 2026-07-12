@@ -379,3 +379,53 @@ async def test_signal_handlers_not_installed_when_disabled(
         )
 
     add_signal_handlers.assert_not_called()
+
+
+async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+        await dispatcher.start_polling(
+            mock_bot,
+            timeout=5,
+            limit=10,
+            types=["message_created"],
+            auto_close_bot=False,
+            drop_pending_updates=True,
+            handle_signals=False,
+            extra="context",
+        )
+
+    start.assert_awaited_once_with(
+        bot=mock_bot,
+        timeout=5,
+        limit=10,
+        marker=Omitted(),
+        types=["message_created"],
+        auto_close_bot=False,
+        drop_pending_updates=True,
+        handle_signals=False,
+        extra="context",
+    )
+
+
+async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+        await dispatcher.start_polling(mock_bot)
+
+    assert start.await_args is not None
+    assert start.await_args.kwargs["types"] == Omitted()
+
+
+def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+        dispatcher.run_polling(mock_bot, timeout=7, handle_signals=False)
+
+    start.assert_awaited_once()
+    assert start.await_args is not None
+    assert start.await_args.kwargs["timeout"] == 7
+    assert start.await_args.kwargs["handle_signals"] is False
