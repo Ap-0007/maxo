@@ -2,6 +2,7 @@ import pytest
 
 from maxo import Ctx
 from maxo.routing.filters.base import BaseFilter
+from maxo.routing.filters.filter_object import unwrap_filter
 from maxo.routing.filters.logic import AndFilter, InvertFilter, OrFilter
 from maxo.types.base import BaseUpdate
 
@@ -16,7 +17,7 @@ def test_filter_and() -> None:
     f2 = MyTestFilter()
     and_filter = f1 & f2
     assert isinstance(and_filter, AndFilter)
-    assert and_filter._filters == [f1, f2]
+    assert [unwrap_filter(f) for f in and_filter._filters] == [f1, f2]
 
 
 def test_filter_or() -> None:
@@ -24,14 +25,14 @@ def test_filter_or() -> None:
     f2 = MyTestFilter()
     or_filter = f1 | f2
     assert isinstance(or_filter, OrFilter)
-    assert or_filter._filters == [f1, f2]
+    assert [unwrap_filter(f) for f in or_filter._filters] == [f1, f2]
 
 
 def test_filter_invert() -> None:
     f1 = MyTestFilter()
     inverted_filter = ~f1
     assert isinstance(inverted_filter, InvertFilter)
-    assert inverted_filter._filter is f1
+    assert unwrap_filter(inverted_filter._filter) is f1
 
 
 def test_filter_and_not_filter() -> None:

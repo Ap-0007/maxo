@@ -174,3 +174,31 @@ SyncFilter (синхронные предикаты)
         text_length: int,
     ):
         await update.answer_text(f"Длинное сообщение! ({text_length} символов)")
+
+Зависимости фильтра из контекста
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Кроме ``update`` и ``ctx`` фильтр может попросить любое значение из контекста - достаточно объявить его параметром ``__call__`` с тем же именем. **maxo** подставит значение сам, как это делается для обработчиков. Так фильтр получает ``bot``, ``fsm_context``, ``event_from_user`` или зависимость, положенную мидлварью, не доставая ее из ``ctx`` руками.
+
+.. code-block:: python
+
+    from maxo import Bot, Ctx
+    from maxo.fsm import FSMContext
+    from maxo.routing.filters import BaseFilter
+    from maxo.types import MessageCreated
+
+    class IsAdminFilter(BaseFilter[MessageCreated]):
+        async def __call__(
+            self,
+            update: MessageCreated,
+            ctx: Ctx,
+            bot: Bot,
+            fsm_context: FSMContext,
+        ) -> bool:
+            ...
+
+Протокол ``Filter`` допускает произвольные аргументы сверх ``update`` и ``ctx`` - так же, как протокол обработчика. Поэтому объявлять зависимости можно обычными параметрами, ``mypy`` на это не ругается.
+
+.. note::
+
+    Значение подставляется, только если ключ есть в контексте. Если зависимость появляется не всегда (например, ``fsm_context`` есть не у каждого апдейта), объявите параметр со значением по умолчанию - иначе вызов упадет с ``TypeError``.

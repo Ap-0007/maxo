@@ -12,7 +12,22 @@ class Filter(Protocol[_UpdateT]):
     __slots__ = ()
 
     @abstractmethod
-    async def __call__(self, update: _UpdateT, ctx: Ctx) -> bool:
+    async def __call__(
+        self,
+        update: _UpdateT,
+        ctx: Ctx,
+        /,
+        *args: Any,
+        **kwargs: Any,
+    ) -> bool:
+        """
+        Проверить апдейт.
+
+        Кроме `update` и `ctx` фильтр может объявить дополнительные параметры:
+        `FilterObject` подставит в них значения из контекста по именам, как это
+        давно делается для хендлеров. Поэтому протокол, как и `UpdateHandlerFn`,
+        допускает произвольные аргументы сверх обязательных.
+        """
         raise NotImplementedError
 
     @abstractmethod
