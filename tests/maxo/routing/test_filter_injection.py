@@ -70,6 +70,17 @@ class VarKwargsFilter(BaseFilter[Any]):
         return True
 
 
+class ContextKwargsFilter(BaseFilter[Any]):
+    def __init__(self) -> None:
+        self.args: tuple[Any, ...] = ()
+        self.seen: dict[str, Any] = {}
+
+    async def __call__(self, update: Any, *args: Any, **kwargs: Any) -> bool:
+        self.args = args
+        self.seen = kwargs
+        return True
+
+
 async def test_plain_filter_is_called_without_extras() -> None:
     filter_ = PlainFilter()
 
@@ -97,6 +108,15 @@ async def test_varkwargs_filter_receives_whole_ctx_without_reserved() -> None:
 
     assert await FilterObject(filter_)(None, ctx) is True
     assert filter_.seen == {"bot": "BOT", "extra": 1}
+
+
+async def test_only_update_is_positional_and_ctx_is_injected() -> None:
+    filter_ = ContextKwargsFilter()
+    ctx = Ctx({"bot": "BOT"})
+
+    assert await FilterObject(filter_)(None, ctx) is True
+    assert filter_.args == ()
+    assert filter_.seen == {"bot": "BOT", "ctx": ctx}
 
 
 async def test_injection_works_inside_logic_filters() -> None:

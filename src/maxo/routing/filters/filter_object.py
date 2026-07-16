@@ -1,14 +1,15 @@
-import inspect
+from collections.abc import Awaitable, Callable
 from typing import Any, Final, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.base import BaseFilter
 from maxo.routing.interfaces.filter import Filter
+from maxo.routing.utils.callback_params import get_callback_params
 from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 
-# Эти имена фильтр получает позиционно, из контекста их брать не нужно
+# `self` передается методом, `update` и `ctx` - явно при вызове фильтра.
 RESERVED_PARAMS: Final = frozenset({"self", "update", "ctx"})
 
 
@@ -28,21 +29,18 @@ class FilterObject(BaseFilter[_UpdateT], Generic[_UpdateT]):
     __slots__ = ("_params", "_varkw", "filter")
 
     def __init__(self, filter_: Filter[_UpdateT]) -> None:
-        # Обертка идемпотентна
         if isinstance(filter_, FilterObject):
             filter_ = filter_.filter
 
         self.filter = filter_
 
         try:
-            spec = inspect.getfullargspec(type(filter_).__call__)
+            params, self._varkw = get_callback_params(type(filter_).__call__)
         except TypeError:
-            # `__call__` не питоновская функция, сигнатуру не прочитать
             self._params: frozenset[str] = frozenset()
             self._varkw = False
         else:
-            self._params = frozenset({*spec.args, *spec.kwonlyargs}) - RESERVED_PARAMS
-            self._varkw = spec.varkw is not None
+            self._params = frozenset(params) - RESERVED_PARAMS
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.filter!r})"
@@ -56,13 +54,13 @@ class FilterObject(BaseFilter[_UpdateT], Generic[_UpdateT]):
         return {key: ctx[key] for key in self._params if key in ctx}
 
     async def call(self, update: _UpdateT, ctx: Ctx) -> bool:
-        return await self.filter(update, ctx, **self._prepare_kwargs(ctx))
+        callback: Callable[..., Awaitable[bool]] = self.filter
+        return await callback(update, ctx=ctx, **self._prepare_kwargs(ctx))
 
     __call__ = call
 
 
 def unwrap_filter(filter_: Filter[_UpdateT]) -> Filter[_UpdateT]:
-    """Достает исходный фильтр из обертки, если он в нее завернут."""
     if isinstance(filter_, FilterObject):
         return filter_.filter
 
