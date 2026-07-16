@@ -16,7 +16,6 @@ class Filter(Protocol[_UpdateT]):
         self,
         update: _UpdateT,
         ctx: Ctx,
-        /,
         *args: Any,
         **kwargs: Any,
     ) -> bool:
