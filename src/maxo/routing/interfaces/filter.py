@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
-from maxo.routing.ctx import Ctx
 from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
@@ -15,7 +14,7 @@ class Filter(Protocol[_UpdateT]):
     async def __call__(
         self,
         update: _UpdateT,
-        ctx: Ctx,
+        /,
         *args: Any,
         **kwargs: Any,
     ) -> bool:
