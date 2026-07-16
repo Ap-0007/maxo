@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
+from maxo.routing.ctx import Ctx
 from maxo.types.base import BaseUpdate
 
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
@@ -11,19 +12,7 @@ class Filter(Protocol[_UpdateT]):
     __slots__ = ()
 
     @abstractmethod
-    async def __call__(
-        self,
-        update: _UpdateT,
-        /,
-        *args: Any,
-        **kwargs: Any,
-    ) -> bool:
-        """
-        Проверить апдейт.
-
-        Сверх `update` и `ctx` фильтр может объявить дополнительные параметры:
-        `FilterObject` подставит в них значения из контекста по именам.
-        """
+    async def __call__(self, update: _UpdateT, ctx: Ctx, /) -> bool:
         raise NotImplementedError
 
     @abstractmethod

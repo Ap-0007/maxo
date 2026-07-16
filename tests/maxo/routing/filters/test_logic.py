@@ -1,6 +1,5 @@
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters import AlwaysFalseFilter, AlwaysTrueFilter
-from maxo.routing.filters.filter_object import FilterObject, unwrap_filter
 from maxo.routing.filters.logic import (
     AndFilter,
     InvertFilter,
@@ -38,7 +37,7 @@ def test_and_inlining() -> None:
     f2 = FalseF()
     f3 = TrueF()
     and_filter = AndFilter(f1, AndFilter(f2, f3))
-    assert [unwrap_filter(f) for f in and_filter._filters] == [f1, f2, f3]
+    assert and_filter._filters == [f1, f2, f3]
 
 
 def test_or_inlining() -> None:
@@ -46,50 +45,42 @@ def test_or_inlining() -> None:
     f2 = FalseF()
     f3 = TrueF()
     or_filter = OrFilter(f1, OrFilter(f2, f3))
-    assert [unwrap_filter(f) for f in or_filter._filters] == [f1, f2, f3]
+    assert or_filter._filters == [f1, f2, f3]
 
 
 def test_invert_inlining() -> None:
     f1 = TrueF()
     inverted_filter = InvertFilter(InvertFilter(f1))
-    assert unwrap_filter(inverted_filter._filter) is f1
+    assert inverted_filter._filter is f1
     assert inverted_filter._inlined is True
 
 
 def test_combine_filters_empty_returns_always_true() -> None:
     combined: Filter[BaseUpdate] = combine_filters()
-    assert isinstance(unwrap_filter(combined), AlwaysTrueFilter)
+    assert isinstance(combined, AlwaysTrueFilter)
 
 
 def test_combine_filters_only_none_returns_always_true() -> None:
     combined: Filter[BaseUpdate] = combine_filters(None, None)
-    assert isinstance(unwrap_filter(combined), AlwaysTrueFilter)
+    assert isinstance(combined, AlwaysTrueFilter)
 
 
-def test_combine_filters_single_wraps_same_filter() -> None:
+def test_combine_filters_single_returns_same_filter() -> None:
     f1 = FalseF()
-    assert unwrap_filter(combine_filters(f1)) is f1
+    assert combine_filters(f1) is f1
 
 
 def test_combine_filters_single_ignores_none() -> None:
     f1 = FalseF()
-    assert unwrap_filter(combine_filters(None, f1, None)) is f1
-
-
-def test_combine_filters_does_not_wrap_filter_object_twice() -> None:
-    f1 = FalseF()
-    combined = combine_filters(FilterObject(f1))
-
-    assert isinstance(combined, FilterObject)
-    assert combined.filter is f1
+    assert combine_filters(None, f1, None) is f1
 
 
 def test_combine_filters_multiple_returns_and_filter() -> None:
     f1 = TrueF()
     f2 = FalseF()
-    and_filter = unwrap_filter(combine_filters(f1, f2))
-    assert isinstance(and_filter, AndFilter)
-    assert [unwrap_filter(f) for f in and_filter._filters] == [f1, f2]
+    combined = combine_filters(f1, f2)
+    assert isinstance(combined, AndFilter)
+    assert combined._filters == [f1, f2]
 
 
 async def test_combine_filters_multiple_behaves_as_and() -> None:
