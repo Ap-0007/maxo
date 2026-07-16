@@ -8,10 +8,13 @@ from maxo.types.base import BaseUpdate
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
 
 
-class BaseFilter(ABC, Filter[_UpdateT], Generic[_UpdateT]):
+class BaseFilter(ABC, Generic[_UpdateT]):
     __slots__ = ()
 
-    def __and__(self, other: "Filter[_UpdateT] | Any") -> "Filter[_UpdateT]":
+    def __and__(
+        self: "Filter[_UpdateT]",
+        other: "Filter[_UpdateT] | Any",
+    ) -> "Filter[_UpdateT]":
         if not isinstance(other, Filter):
             return NotImplemented
 
@@ -19,7 +22,10 @@ class BaseFilter(ABC, Filter[_UpdateT], Generic[_UpdateT]):
 
         return AndFilter(self, other)
 
-    def __or__(self, other: "Filter[_UpdateT] | Any") -> "Filter[_UpdateT]":
+    def __or__(
+        self: "Filter[_UpdateT]",
+        other: "Filter[_UpdateT] | Any",
+    ) -> "Filter[_UpdateT]":
         if not isinstance(other, Filter):
             return NotImplemented
 
@@ -27,7 +33,7 @@ class BaseFilter(ABC, Filter[_UpdateT], Generic[_UpdateT]):
 
         return OrFilter(self, other)
 
-    def __invert__(self) -> "Filter[_UpdateT]":
+    def __invert__(self: "Filter[_UpdateT]") -> "Filter[_UpdateT]":
         from maxo.routing.filters.logic import InvertFilter
 
         return InvertFilter(self)
