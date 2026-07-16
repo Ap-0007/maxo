@@ -34,7 +34,6 @@ class ContextFilter(BaseFilter[MessageCreated]):
     async def __call__(
         self,
         update: MessageCreated,
-        ctx: Ctx,
         bot: Bot,
         answer: str | None = None,
     ) -> bool:
@@ -43,13 +42,26 @@ class ContextFilter(BaseFilter[MessageCreated]):
         return True
 
 
+class EmptyFilter(BaseFilter[MessageCreated]):
+    @inline_ctx
+    async def __call__(self) -> bool:
+        return True
+
+
 async def test_inline_ctx_expands_context_in_filter() -> None:
     filter_ = ContextFilter()
     bot = make_bot()
 
-    assert await filter_(make_update(), Ctx({"bot": bot, "answer": "yes"})) is True
+    assert await filter_(make_update(), ctx=Ctx({"bot": bot, "answer": "yes"})) is True
     assert filter_.bot is bot
     assert filter_.answer == "yes"
+
+
+async def test_inline_ctx_does_not_require_update_or_ctx_in_filter() -> None:
+    filter_ = EmptyFilter()
+
+    assert await filter_(make_update(), ctx=Ctx({})) is True
+    assert await filter_(make_update(), Ctx({})) is True
 
 
 async def test_inline_ctx_works_in_handler_filter() -> None:

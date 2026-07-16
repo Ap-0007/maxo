@@ -8,7 +8,7 @@ from maxo.routing.interfaces import Filter
 from maxo.types import BaseUpdate
 
 
-class DummyFilter:
+class DummyFilter(Filter[BaseUpdate]):
     async def __call__(self, update: BaseUpdate, ctx: Ctx) -> bool:
         return True
 
