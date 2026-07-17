@@ -45,6 +45,7 @@ class Window(WindowProtocol):
         parse_mode: Omittable[TextFormat | None] = Omitted(),
         disable_web_page_preview: bool | None = None,
         protect_content: bool | None = None,
+        two_step_media_edit: bool = False,
         preview_add_transitions: list[Keyboard] | None = None,
         preview_data: GetterVariant = None,
     ) -> None:
@@ -64,6 +65,9 @@ class Window(WindowProtocol):
         self.markup_factory = markup_factory
         self.parse_mode = parse_mode
         self.protect_content = protect_content
+        # Обход бага iOS-клиента MAX при edit_message "медиа -> медиа".
+        # См. issue #156.
+        self.two_step_media_edit = two_step_media_edit
         self.preview_add_transitions = preview_add_transitions
         if disable_web_page_preview is not None:
             if self.link_preview:
@@ -190,6 +194,7 @@ class Window(WindowProtocol):
                 ),
                 media=media,
                 keyboard=keyboard,
+                two_step_media_edit=self.two_step_media_edit,
             )
         except Exception:
             loggers.dialogs.exception("Cannot render window for state %s", self.state)

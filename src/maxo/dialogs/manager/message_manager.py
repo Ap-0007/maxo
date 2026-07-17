@@ -233,16 +233,46 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
+    def _need_two_step_media_edit(
+        self,
+        new_message: NewMessage,
+        old_message: OldMessage,
+    ) -> bool:
+        # iOS-клиент MAX рассинхронизирует превью и сам файл, если
+        # edit_message меняет медиа на медиа. Обходим двойным рендером.
+        # Только при ShowMode.EDIT: на send/delete_and_send бага нет.
+        # См. issue #156.
+        return (
+            new_message.two_step_media_edit
+            and new_message.show_mode is ShowMode.EDIT
+            and self.had_media(old_message)
+            and self.need_media(new_message)
+        )
+
     async def edit_message(
         self,
         bot: Bot,
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> Message:
+        if self._need_two_step_media_edit(new_message, old_message):
+            # Шаг 1: обновляем текст и клавиатуру, но убираем медиа.
+            await self._edit(bot, new_message, old_message, media=[])
+        # Шаг 2 (или единственный edit): выкладываем медиа, сохраняя текст.
+        await self._edit(bot, new_message, old_message, media=new_message.media)
+        return await bot.get_message_by_id(message_id=old_message.message_id)
+
+    async def _edit(
+        self,
+        bot: Bot,
+        new_message: NewMessage,
+        old_message: OldMessage,
+        media: list[MediaAttachment],
+    ) -> None:
         attachments = await self._build_attachments(
             bot,
             new_message.keyboard,
-            new_message.media,
+            media,
         )
         await bot.edit_message(
             link=new_message.link_to,
@@ -254,7 +284,6 @@ class MessageManager(MessageManagerProtocol):
             ),
             format=new_message.parse_mode,
         )
-        return await bot.get_message_by_id(message_id=old_message.message_id)
 
     async def send_message(self, bot: Bot, new_message: NewMessage) -> Message:
         if new_message.link_preview_options:

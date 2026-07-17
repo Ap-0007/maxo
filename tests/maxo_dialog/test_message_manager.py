@@ -14,7 +14,7 @@ from maxo.dialogs.api.entities import (
     OldMessage,
     ShowMode,
 )
-from maxo.dialogs.api.protocols import MessageNotModified
+from maxo.dialogs.api.protocols import MediaIdStorageProtocol, MessageNotModified
 from maxo.dialogs.manager.message_manager import MessageManager
 from maxo.enums import AttachmentRequestType, AttachmentType, ChatType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
@@ -56,6 +56,23 @@ class StaticAttachmentsMessageManager(MessageManager):
         return []
 
 
+class RecordingMessageManager(MessageManager):
+    """Записывает медиа, переданное в каждый рендер, для проверки двух шагов."""
+
+    def __init__(self, media_id_storage: MediaIdStorageProtocol) -> None:
+        super().__init__(media_id_storage)
+        self.built_media: list[list[MediaAttachment]] = []
+
+    async def _build_attachments(
+        self,
+        bot: object,
+        keyboard: object,
+        media: list[MediaAttachment],
+    ) -> Sequence[AttachmentsRequests]:
+        self.built_media.append(list(media))
+        return []
+
+
 def _make_old_message_with_kbd(mid: str = "55") -> OldMessage:
     return OldMessage(
         recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
@@ -88,6 +105,33 @@ def _make_new_message(
         recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
         text=text,
         show_mode=show_mode,
+    )
+
+
+def _make_old_media_message(mid: str = "55") -> OldMessage:
+    return _make_old_message(
+        mid=mid,
+        text="old",
+        attachments=[
+            PhotoAttachment.factory(
+                photo_id=1,
+                token="old-token",  # noqa: S106
+                url="http://e.com/old.png",
+            ),
+        ],
+    )
+
+
+def _make_new_media_message(
+    show_mode: ShowMode = ShowMode.EDIT,
+    two_step_media_edit: bool = True,
+) -> NewMessage:
+    return NewMessage(
+        recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+        text="new",
+        show_mode=show_mode,
+        two_step_media_edit=two_step_media_edit,
+        media=[MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/new.png")],
     )
 
 
@@ -559,6 +603,68 @@ class TestEditMessageSafe:
         )
 
         assert result is expected
+
+
+class TestTwoStepMediaEdit:
+    """Двойной рендер медиа при edit_message на iOS. См. issue #156."""
+
+    async def test_two_step_when_flag_and_edit_and_media_to_media(self) -> None:
+        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        await manager.edit_message(
+            bot,
+            _make_new_media_message(),
+            _make_old_media_message(),
+        )
+
+        assert bot.edit_message.await_count == 2
+        assert manager.built_media[0] == []  # шаг 1 - без медиа
+        assert len(manager.built_media[1]) == 1  # шаг 2 - медиа вернулось
+
+    async def test_single_step_without_flag(self) -> None:
+        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        await manager.edit_message(
+            bot,
+            _make_new_media_message(two_step_media_edit=False),
+            _make_old_media_message(),
+        )
+
+        assert bot.edit_message.await_count == 1
+        assert len(manager.built_media[0]) == 1
+
+    async def test_show_message_triggers_two_step(self) -> None:
+        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        bot = AsyncMock()
+        bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+
+        await manager.show_message(
+            bot,
+            _make_new_media_message(),
+            _make_old_media_message(),
+        )
+
+        assert bot.edit_message.await_count == 2
+
+    def test_no_two_step_on_non_edit_mode(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert not manager._need_two_step_media_edit(
+            _make_new_media_message(show_mode=ShowMode.SEND),
+            _make_old_media_message(),
+        )
+
+    def test_no_two_step_when_old_has_no_media(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert not manager._need_two_step_media_edit(
+            _make_new_media_message(),
+            _make_old_message(text="old"),
+        )
 
 
 class TestBuildAttachments:
