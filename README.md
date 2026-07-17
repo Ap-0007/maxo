@@ -87,7 +87,7 @@ dependencies = [
 
 ```python
 from maxo import Bot, Dispatcher
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 from maxo.transport.long_polling import LongPolling
 
 bot = Bot("TOKEN")
@@ -106,8 +106,8 @@ LongPolling(dp).run(bot)
 ```python
 from maxo import Bot, Dispatcher
 from maxo.routing.filters import Command, DeeplinkFilter
-from maxo.routing.updates import BotStarted, MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -135,8 +135,8 @@ from magic_filter import F
 from maxo import Bot, Dispatcher
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCallback, MessageCreated
 from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCallback, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
 bot = Bot("TOKEN")
@@ -173,12 +173,12 @@ from aiohttp import web
 
 from maxo import Bot, Dispatcher, Router
 from maxo.enums import TextFormat
-from maxo.routing.updates import BotStarted, MessageCreated
 from maxo.routing.utils import collect_used_updates
 from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
 from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
 router = Router()
