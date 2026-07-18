@@ -102,12 +102,13 @@ class MessageManager(MessageManagerProtocol):
         if not self.need_media(new_message):
             return False
         new_tokens = self._new_media_tokens(new_message)
-        # Токены известны и отличаются от старых -> медиа точно поменялось.
+        # Токены известны и отличаются от старых (по порядку, без sorted -
+        # перестановка тех же медиа на iOS тоже баг) -> медиа точно поменялось.
         # Для url-медиа токен заранее неизвестен -> считаем неизменившимся,
         # чтобы не редактировать на каждом ререндере.
         if not new_tokens:
             return False
-        return sorted(new_tokens) != sorted(self._old_media_tokens(old_message))
+        return new_tokens != self._old_media_tokens(old_message)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -276,9 +277,10 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not new_tokens:
             return False
-        # Токены совпали -> медиа не менялось, двойной рендер не нужен
-        # (иначе моргание на каждом ререндере).
-        return sorted(new_tokens) != sorted(old_tokens)
+        # Сравниваем по порядку, без sorted: на iOS перестановка тех же фото/видео
+        # тоже воспроизводит баг. Совпали токены и порядок -> медиа не менялось,
+        # двойной рендер не нужен (иначе моргание на каждом ререндере).
+        return new_tokens != old_tokens
 
     async def edit_message(
         self,

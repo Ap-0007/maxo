@@ -525,6 +525,21 @@ class TestMessageChanged:
 
         assert not manager._message_changed(new, old)
 
+    def test_media_reorder_is_a_change(self) -> None:
+        # Перестановка тех же медиа - изменение (баг iOS), сравнение по порядку.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [_media_with_token("t2"), _media_with_token("t1")]
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
+            ],
+        )
+
+        assert manager._message_changed(new, old)
+
     def test_can_edit_is_always_true(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
 
@@ -743,8 +758,24 @@ class TestTwoStepMediaEdit:
         assert manager._need_two_step_media_edit(new, _make_old_media_message())
 
     def test_no_two_step_when_album_tokens_unchanged(self) -> None:
-        # Все токены альбома известны и совпадают (порядок не важен) ->
+        # Все токены альбома известны и совпадают в том же порядке ->
         # медиа не менялось, обход не нужен.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
+            ],
+        )
+        new = _make_new_media_message(
+            media=[_media_with_token("t1"), _media_with_token("t2")],
+        )
+
+        assert not manager._need_two_step_media_edit(new, old)
+
+    def test_two_step_when_album_reordered(self) -> None:
+        # На iOS перестановка тех же фото тоже воспроизводит баг -> нужен обход.
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
@@ -757,7 +788,7 @@ class TestTwoStepMediaEdit:
             media=[_media_with_token("t2"), _media_with_token("t1")],
         )
 
-        assert not manager._need_two_step_media_edit(new, old)
+        assert manager._need_two_step_media_edit(new, old)
 
     def test_two_step_when_album_token_changed(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
