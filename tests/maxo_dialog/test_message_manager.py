@@ -706,7 +706,10 @@ class TestTwoStepMediaEdit:
         old = _make_old_message(
             text="old",
             attachments=[
-                VideoAttachment.factory(url="http://e.com/v", token="oldv"),  # noqa: S106
+                VideoAttachment.factory(
+                    url="http://e.com/v",
+                    token="oldv",  # noqa: S106
+                ),
             ],
         )
         new = _make_new_media_message(
