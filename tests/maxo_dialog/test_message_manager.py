@@ -718,8 +718,8 @@ class TestTwoStepMediaEdit:
 
         assert manager._need_two_step_media_edit(new, old)
 
-    def test_no_two_step_when_old_is_album(self) -> None:
-        # Баг не воспроизводится на альбомах: старое сообщение с двумя фото.
+    def test_two_step_when_old_is_album(self) -> None:
+        # Баг воспроизводится и на нескольких медиа в сообщении.
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
@@ -729,9 +729,9 @@ class TestTwoStepMediaEdit:
             ],
         )
 
-        assert not manager._need_two_step_media_edit(_make_new_media_message(), old)
+        assert manager._need_two_step_media_edit(_make_new_media_message(), old)
 
-    def test_no_two_step_when_new_is_album(self) -> None:
+    def test_two_step_when_new_is_album(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_media_message(
             media=[
@@ -740,7 +740,39 @@ class TestTwoStepMediaEdit:
             ],
         )
 
-        assert not manager._need_two_step_media_edit(new, _make_old_media_message())
+        assert manager._need_two_step_media_edit(new, _make_old_media_message())
+
+    def test_no_two_step_when_album_tokens_unchanged(self) -> None:
+        # Все токены альбома известны и совпадают (порядок не важен) ->
+        # медиа не менялось, обход не нужен.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
+            ],
+        )
+        new = _make_new_media_message(
+            media=[_media_with_token("t2"), _media_with_token("t1")],
+        )
+
+        assert not manager._need_two_step_media_edit(new, old)
+
+    def test_two_step_when_album_token_changed(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
+            ],
+        )
+        new = _make_new_media_message(
+            media=[_media_with_token("t1"), _media_with_token("t3")],
+        )
+
+        assert manager._need_two_step_media_edit(new, old)
 
     def test_no_two_step_for_non_photo_or_video(self) -> None:
         # Аудио/файл не подвержены багу превью, обход не нужен.

@@ -101,17 +101,13 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not self.need_media(new_message):
             return False
-        pair = self._single_media_pair(new_message, old_message)
-        if pair is None:
+        new_tokens = self._new_media_tokens(new_message)
+        # Токены известны и отличаются от старых -> медиа точно поменялось.
+        # Для url-медиа токен заранее неизвестен -> считаем неизменившимся,
+        # чтобы не редактировать на каждом ререндере.
+        if not new_tokens:
             return False
-        new_media, old_media = pair
-        # Токен нового медиа известен и отличается от старого -> медиа точно
-        # поменялось. Для url-медиа токен заранее неизвестен -> считаем
-        # неизменившимся, чтобы не редактировать на каждом ререндере.
-        return (
-            new_media.media_id is not None
-            and new_media.media_id.token != old_media.payload.token
-        )
+        return sorted(new_tokens) != sorted(self._old_media_tokens(old_message))
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -245,21 +241,23 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
-    def _single_media_pair(
-        self,
-        new_message: NewMessage,
-        old_message: OldMessage,
-    ) -> tuple[MediaAttachment, PhotoAttachment | VideoAttachment] | None:
-        """Пара (новое, старое) медиа для случая "одно фото/видео", иначе None."""
-        new, old = new_message.media, old_message.media
-        if (
-            len(new) == 1
-            and new[0].type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
-            and len(old) == 1
-            and isinstance(old[0], (PhotoAttachment, VideoAttachment))
-        ):
-            return new[0], old[0]
-        return None
+    def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
+        """Токены новых фото/видео; None, если хотя бы один заранее неизвестен."""
+        tokens = []
+        for media in new_message.media:
+            if media.type not in (AttachmentType.IMAGE, AttachmentType.VIDEO):
+                continue
+            if media.media_id is None:
+                return None
+            tokens.append(media.media_id.token)
+        return tokens
+
+    def _old_media_tokens(self, old_message: OldMessage) -> list[str]:
+        return [
+            attach.payload.token
+            for attach in old_message.media
+            if isinstance(attach, (PhotoAttachment, VideoAttachment))
+        ]
 
     def _need_two_step_media_edit(
         self,
@@ -269,16 +267,18 @@ class MessageManager(MessageManagerProtocol):
         # https://github.com/K1rL3s/maxo/issues/156
         if not new_message.two_step_media_edit:
             return False
-        pair = self._single_media_pair(new_message, old_message)
-        if pair is None:
+        old_tokens = self._old_media_tokens(old_message)
+        if not old_tokens:
             return False
-        new_media, old_media = pair
-        # Токен нового медиа совпал со старым -> медиа не менялось, двойной
-        # рендер не нужен (иначе моргание на каждом ререндере). Для url-медиа
-        # токен заранее неизвестен -> рендерим дважды.
-        if new_media.media_id is None:
+        new_tokens = self._new_media_tokens(new_message)
+        if new_tokens is None:
+            # Токен url-медиа заранее неизвестен -> рендерим дважды.
             return True
-        return new_media.media_id.token != old_media.payload.token
+        if not new_tokens:
+            return False
+        # Токены совпали -> медиа не менялось, двойной рендер не нужен
+        # (иначе моргание на каждом ререндере).
+        return sorted(new_tokens) != sorted(old_tokens)
 
     async def edit_message(
         self,
