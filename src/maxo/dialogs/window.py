@@ -65,8 +65,7 @@ class Window(WindowProtocol):
         self.markup_factory = markup_factory
         self.parse_mode = parse_mode
         self.protect_content = protect_content
-        # Обход бага iOS-клиента MAX при edit_message "медиа -> медиа".
-        # См. issue #156.
+        # https://github.com/K1rL3s/maxo/issues/156
         self.two_step_media_edit = two_step_media_edit
         self.preview_add_transitions = preview_add_transitions
         if disable_web_page_preview is not None:

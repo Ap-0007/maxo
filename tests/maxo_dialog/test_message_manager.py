@@ -48,17 +48,7 @@ KEYBOARD_MEDIA_ID = "keyboard-id"
 
 
 class StaticAttachmentsMessageManager(MessageManager):
-    async def _build_attachments(
-        self,
-        bot: object,
-        keyboard: object,
-        media: object,
-    ) -> Sequence[AttachmentsRequests]:
-        return []
-
-
-class RecordingMessageManager(MessageManager):
-    """Записывает медиа, переданное в каждый рендер, для проверки двух шагов."""
+    """Стаб _build_attachments; записывает медиа каждого рендера в built_media."""
 
     def __init__(self, media_id_storage: MediaIdStorageProtocol) -> None:
         super().__init__(media_id_storage)
@@ -517,6 +507,24 @@ class TestMessageChanged:
 
         assert not manager._message_changed(new, old)
 
+    def test_media_token_changed_is_a_change(self) -> None:
+        # Токен нового медиа известен и отличается -> медиа точно поменялось,
+        # даже если текст и клавиатура не менялись.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [_media_with_token("new")]
+        old = _make_old_media_message(token="old")  # noqa: S106
+
+        assert manager._message_changed(new, old)
+
+    def test_same_media_token_is_not_a_change(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [_media_with_token("tok")]
+        old = _make_old_media_message(token="tok")  # noqa: S106
+
+        assert not manager._message_changed(new, old)
+
     def test_can_edit_is_always_true(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
 
@@ -620,10 +628,10 @@ class TestEditMessageSafe:
 
 
 class TestTwoStepMediaEdit:
-    """Двойной рендер медиа при edit_message на iOS. См. issue #156."""
+    """https://github.com/K1rL3s/maxo/issues/156"""
 
     async def test_two_step_when_flag_and_edit_and_media_to_media(self) -> None:
-        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
 
@@ -638,7 +646,7 @@ class TestTwoStepMediaEdit:
         assert len(manager.built_media[1]) == 1  # шаг 2 - медиа вернулось
 
     async def test_single_step_without_flag(self) -> None:
-        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
 
@@ -653,7 +661,7 @@ class TestTwoStepMediaEdit:
 
     async def test_show_message_triggers_two_step_on_auto(self) -> None:
         # ShowMode.AUTO тоже приводит к edit_message в show_message.
-        manager = RecordingMessageManager(media_id_storage=AsyncMock())
+        manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
 
@@ -664,22 +672,6 @@ class TestTwoStepMediaEdit:
         )
 
         assert bot.edit_message.await_count == 2
-
-    def test_two_step_on_auto_mode(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-
-        assert manager._need_two_step_media_edit(
-            _make_new_media_message(show_mode=ShowMode.AUTO),
-            _make_old_media_message(),
-        )
-
-    def test_no_two_step_on_non_edit_mode(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-
-        assert not manager._need_two_step_media_edit(
-            _make_new_media_message(show_mode=ShowMode.SEND),
-            _make_old_media_message(),
-        )
 
     def test_no_two_step_when_old_has_no_media(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
@@ -713,7 +705,9 @@ class TestTwoStepMediaEdit:
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
-            attachments=[VideoAttachment.factory(url="http://e.com/v", token="oldv")],  # noqa: S106
+            attachments=[
+                VideoAttachment.factory(url="http://e.com/v", token="oldv"),  # noqa: S106
+            ],
         )
         new = _make_new_media_message(
             media=[_media_with_token("newv", AttachmentType.VIDEO)],
@@ -727,8 +721,8 @@ class TestTwoStepMediaEdit:
         old = _make_old_message(
             text="old",
             attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="http://e.com/1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="http://e.com/2"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
             ],
         )
 

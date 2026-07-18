@@ -54,6 +54,5 @@ class NewMessage(MaxoType):
     show_mode: ShowMode = ShowMode.AUTO
     text: str | None = None
     link_to: NewMessageLink | None = None
-    # Двухшаговый рендер медиа при edit_message "медиа -> медиа" ради обхода
-    # бага iOS-клиента MAX. См. issue #156.
+    # https://github.com/K1rL3s/maxo/issues/156
     two_step_media_edit: bool = False

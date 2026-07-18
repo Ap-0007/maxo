@@ -642,9 +642,17 @@ class TestLoadCachedMedia:
 
         storage.get_media_id.assert_not_awaited()
 
-    async def test_cache_hit_same_token_skips_two_step(self) -> None:
-        # Кэш-хит: хранилище возвращает старый токен для url-медиа без media_id.
-        # _load_cached_media проставляет его -> медиа не менялось -> без обхода.
+    @pytest.mark.parametrize(
+        ("cached_token", "need_two_step"),
+        [("cached", False), ("fresh", True)],
+    )
+    async def test_cached_token_decides_two_step(
+        self,
+        cached_token: str,
+        need_two_step: bool,
+    ) -> None:
+        # _load_cached_media проставляет токен из кэша url-медиа; совпал со
+        # старым -> медиа не менялось -> двойной рендер не нужен.
         manager = make_manager()
         new_message = make_new_message()
         new_message.media = [
@@ -653,34 +661,17 @@ class TestLoadCachedMedia:
         new_message.show_mode = ShowMode.EDIT
         new_message.two_step_media_edit = True
         cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
-            return_value=MediaId(token="cached"),  # noqa: S106
+            return_value=MediaId(token=cached_token),
         )
         await manager._load_cached_media(new_message)
 
         message_manager = MessageManager(media_id_storage=manager.media_id_storage)
-        assert not message_manager._need_two_step_media_edit(
-            new_message,
-            make_old_photo_message("cached"),
-        )
-
-    async def test_cache_hit_new_token_triggers_two_step(self) -> None:
-        # Кэш вернул новый токен -> медиа поменялось -> нужен двойной рендер.
-        manager = make_manager()
-        new_message = make_new_message()
-        new_message.media = [
-            MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
-        ]
-        new_message.show_mode = ShowMode.EDIT
-        new_message.two_step_media_edit = True
-        cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
-            return_value=MediaId(token="fresh"),  # noqa: S106
-        )
-        await manager._load_cached_media(new_message)
-
-        message_manager = MessageManager(media_id_storage=manager.media_id_storage)
-        assert message_manager._need_two_step_media_edit(
-            new_message,
-            make_old_photo_message("cached"),
+        assert (
+            message_manager._need_two_step_media_edit(
+                new_message,
+                make_old_photo_message("cached"),
+            )
+            is need_two_step
         )
 
 

@@ -101,7 +101,17 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not self.need_media(new_message):
             return False
-        return False
+        pair = self._single_media_pair(new_message, old_message)
+        if pair is None:
+            return False
+        new_media, old_media = pair
+        # Токен нового медиа известен и отличается от старого -> медиа точно
+        # поменялось. Для url-медиа токен заранее неизвестен -> считаем
+        # неизменившимся, чтобы не редактировать на каждом ререндере.
+        return (
+            new_media.media_id is not None
+            and new_media.media_id.token != old_media.payload.token
+        )
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -235,61 +245,40 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
-    def _single_photo_or_video(
-        self,
-        old_message: OldMessage,
-    ) -> PhotoAttachment | VideoAttachment | None:
-        media = old_message.media
-        if len(media) == 1 and isinstance(media[0], (PhotoAttachment, VideoAttachment)):
-            return media[0]
-        return None
-
-    def _single_new_photo_or_video(
+    def _single_media_pair(
         self,
         new_message: NewMessage,
-    ) -> MediaAttachment | None:
-        media = new_message.media
-        if len(media) == 1 and media[0].type in (
-            AttachmentType.IMAGE,
-            AttachmentType.VIDEO,
+        old_message: OldMessage,
+    ) -> tuple[MediaAttachment, PhotoAttachment | VideoAttachment] | None:
+        """Пара (новое, старое) медиа для случая "одно фото/видео", иначе None."""
+        new, old = new_message.media, old_message.media
+        if (
+            len(new) == 1
+            and new[0].type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
+            and len(old) == 1
+            and isinstance(old[0], (PhotoAttachment, VideoAttachment))
         ):
-            return media[0]
+            return new[0], old[0]
         return None
-
-    def _media_changed(
-        self,
-        new_media: MediaAttachment,
-        old_media: PhotoAttachment | VideoAttachment,
-    ) -> bool:
-        # Токен нового медиа известен заранее (явный media_id или кэш-хит
-        # MediaIdStorage) -> сравниваем со старым. Совпал -> медиа не менялось.
-        # Для url-медиа без токена заранее судить нельзя -> считаем изменившимся.
-        if new_media.media_id is None:
-            return True
-        return new_media.media_id.token != old_media.payload.token
 
     def _need_two_step_media_edit(
         self,
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> bool:
-        # iOS-клиент MAX рассинхронизирует превью и сам файл, если edit_message
-        # меняет одно фото/видео на другое. Обходим двойным рендером. На альбомах
-        # и других типах вложений баг не воспроизводится, поэтому обрабатываем
-        # только одиночное фото/видео. См. issue #156.
+        # https://github.com/K1rL3s/maxo/issues/156
         if not new_message.two_step_media_edit:
             return False
-        # Внутри edit_message и EDIT, и AUTO означают редактирование сообщения
-        # (см. show_message). На send/delete_and_send бага нет.
-        if new_message.show_mode not in (ShowMode.EDIT, ShowMode.AUTO):
+        pair = self._single_media_pair(new_message, old_message)
+        if pair is None:
             return False
-        old_media = self._single_photo_or_video(old_message)
-        new_media = self._single_new_photo_or_video(new_message)
-        if old_media is None or new_media is None:
-            return False
-        # Если медиа не поменялось (тот же токен), двойной рендер не нужен -
-        # иначе картинка будет моргать на каждом ререндере окна.
-        return self._media_changed(new_media, old_media)
+        new_media, old_media = pair
+        # Токен нового медиа совпал со старым -> медиа не менялось, двойной
+        # рендер не нужен (иначе моргание на каждом ререндере). Для url-медиа
+        # токен заранее неизвестен -> рендерим дважды.
+        if new_media.media_id is None:
+            return True
+        return new_media.media_id.token != old_media.payload.token
 
     async def edit_message(
         self,
