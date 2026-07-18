@@ -24,7 +24,9 @@ from maxo.types import (
     MediaAttachments,
     MediaAttachmentsRequests,
     Message,
+    PhotoAttachment,
     PhotoAttachmentRequest,
+    VideoAttachment,
     VideoAttachmentRequest,
 )
 from maxo.utils.upload_media import FSInputFile, InputFile
@@ -233,21 +235,61 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
+    def _single_photo_or_video(
+        self,
+        old_message: OldMessage,
+    ) -> PhotoAttachment | VideoAttachment | None:
+        media = old_message.media
+        if len(media) == 1 and isinstance(media[0], (PhotoAttachment, VideoAttachment)):
+            return media[0]
+        return None
+
+    def _single_new_photo_or_video(
+        self,
+        new_message: NewMessage,
+    ) -> MediaAttachment | None:
+        media = new_message.media
+        if len(media) == 1 and media[0].type in (
+            AttachmentType.IMAGE,
+            AttachmentType.VIDEO,
+        ):
+            return media[0]
+        return None
+
+    def _media_changed(
+        self,
+        new_media: MediaAttachment,
+        old_media: PhotoAttachment | VideoAttachment,
+    ) -> bool:
+        # Токен нового медиа известен заранее (явный media_id или кэш-хит
+        # MediaIdStorage) -> сравниваем со старым. Совпал -> медиа не менялось.
+        # Для url-медиа без токена заранее судить нельзя -> считаем изменившимся.
+        if new_media.media_id is None:
+            return True
+        return new_media.media_id.token != old_media.payload.token
+
     def _need_two_step_media_edit(
         self,
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> bool:
-        # iOS-клиент MAX рассинхронизирует превью и сам файл, если
-        # edit_message меняет медиа на медиа. Обходим двойным рендером.
-        # Только при ShowMode.EDIT: на send/delete_and_send бага нет.
-        # См. issue #156.
-        return (
-            new_message.two_step_media_edit
-            and new_message.show_mode is ShowMode.EDIT
-            and self.had_media(old_message)
-            and self.need_media(new_message)
-        )
+        # iOS-клиент MAX рассинхронизирует превью и сам файл, если edit_message
+        # меняет одно фото/видео на другое. Обходим двойным рендером. На альбомах
+        # и других типах вложений баг не воспроизводится, поэтому обрабатываем
+        # только одиночное фото/видео. См. issue #156.
+        if not new_message.two_step_media_edit:
+            return False
+        # Внутри edit_message и EDIT, и AUTO означают редактирование сообщения
+        # (см. show_message). На send/delete_and_send бага нет.
+        if new_message.show_mode not in (ShowMode.EDIT, ShowMode.AUTO):
+            return False
+        old_media = self._single_photo_or_video(old_message)
+        new_media = self._single_new_photo_or_video(new_message)
+        if old_media is None or new_media is None:
+            return False
+        # Если медиа не поменялось (тот же токен), двойной рендер не нужен -
+        # иначе картинка будет моргать на каждом ререндере окна.
+        return self._media_changed(new_media, old_media)
 
     async def edit_message(
         self,

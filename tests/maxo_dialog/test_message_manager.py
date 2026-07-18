@@ -34,6 +34,7 @@ from maxo.types import (
     Recipient,
     SendMessageResult,
     User,
+    VideoAttachment,
     VideoAttachmentRequest,
 )
 from maxo.utils.upload_media import FSInputFile
@@ -108,14 +109,17 @@ def _make_new_message(
     )
 
 
-def _make_old_media_message(mid: str = "55") -> OldMessage:
+def _make_old_media_message(
+    mid: str = "55",
+    token: str = "old-token",  # noqa: S107
+) -> OldMessage:
     return _make_old_message(
         mid=mid,
         text="old",
         attachments=[
             PhotoAttachment.factory(
                 photo_id=1,
-                token="old-token",  # noqa: S106
+                token=token,
                 url="http://e.com/old.png",
             ),
         ],
@@ -125,14 +129,24 @@ def _make_old_media_message(mid: str = "55") -> OldMessage:
 def _make_new_media_message(
     show_mode: ShowMode = ShowMode.EDIT,
     two_step_media_edit: bool = True,
+    media: list[MediaAttachment] | None = None,
 ) -> NewMessage:
+    if media is None:
+        media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/new.png")]
     return NewMessage(
         recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
         text="new",
         show_mode=show_mode,
         two_step_media_edit=two_step_media_edit,
-        media=[MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/new.png")],
+        media=media,
     )
+
+
+def _media_with_token(
+    token: str,
+    media_type: AttachmentType = AttachmentType.IMAGE,
+) -> MediaAttachment:
+    return MediaAttachment(media_type, media_id=MediaId(token=token))
 
 
 def _make_message(mid: str = "77", text: str | None = "sent") -> Message:
@@ -637,18 +651,27 @@ class TestTwoStepMediaEdit:
         assert bot.edit_message.await_count == 1
         assert len(manager.built_media[0]) == 1
 
-    async def test_show_message_triggers_two_step(self) -> None:
+    async def test_show_message_triggers_two_step_on_auto(self) -> None:
+        # ShowMode.AUTO тоже приводит к edit_message в show_message.
         manager = RecordingMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
 
         await manager.show_message(
             bot,
-            _make_new_media_message(),
+            _make_new_media_message(show_mode=ShowMode.AUTO),
             _make_old_media_message(),
         )
 
         assert bot.edit_message.await_count == 2
+
+    def test_two_step_on_auto_mode(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+
+        assert manager._need_two_step_media_edit(
+            _make_new_media_message(show_mode=ShowMode.AUTO),
+            _make_old_media_message(),
+        )
 
     def test_no_two_step_on_non_edit_mode(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
@@ -665,6 +688,71 @@ class TestTwoStepMediaEdit:
             _make_new_media_message(),
             _make_old_message(text="old"),
         )
+
+    def test_two_step_when_token_changed(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_media_message(media=[_media_with_token("new")])
+
+        assert manager._need_two_step_media_edit(
+            new,
+            _make_old_media_message(token="old"),  # noqa: S106
+        )
+
+    def test_no_two_step_when_token_unchanged(self) -> None:
+        # Токен нового медиа известен и совпадает со старым -> медиа не менялось,
+        # двойной рендер не нужен (иначе моргание на каждом ререндере).
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_media_message(media=[_media_with_token("tok")])
+
+        assert not manager._need_two_step_media_edit(
+            new,
+            _make_old_media_message(token="tok"),  # noqa: S106
+        )
+
+    def test_two_step_for_video_token_changed(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        old = _make_old_message(
+            text="old",
+            attachments=[VideoAttachment.factory(url="http://e.com/v", token="oldv")],  # noqa: S106
+        )
+        new = _make_new_media_message(
+            media=[_media_with_token("newv", AttachmentType.VIDEO)],
+        )
+
+        assert manager._need_two_step_media_edit(new, old)
+
+    def test_no_two_step_when_old_is_album(self) -> None:
+        # Баг не воспроизводится на альбомах: старое сообщение с двумя фото.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        old = _make_old_message(
+            text="old",
+            attachments=[
+                PhotoAttachment.factory(photo_id=1, token="t1", url="http://e.com/1"),  # noqa: S106
+                PhotoAttachment.factory(photo_id=2, token="t2", url="http://e.com/2"),  # noqa: S106
+            ],
+        )
+
+        assert not manager._need_two_step_media_edit(_make_new_media_message(), old)
+
+    def test_no_two_step_when_new_is_album(self) -> None:
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_media_message(
+            media=[
+                MediaAttachment(AttachmentType.IMAGE, url="http://e.com/a"),
+                MediaAttachment(AttachmentType.IMAGE, url="http://e.com/b"),
+            ],
+        )
+
+        assert not manager._need_two_step_media_edit(new, _make_old_media_message())
+
+    def test_no_two_step_for_non_photo_or_video(self) -> None:
+        # Аудио/файл не подвержены багу превью, обход не нужен.
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_media_message(
+            media=[_media_with_token("a", AttachmentType.AUDIO)],
+        )
+
+        assert not manager._need_two_step_media_edit(new, _make_old_media_message())
 
 
 class TestBuildAttachments:
