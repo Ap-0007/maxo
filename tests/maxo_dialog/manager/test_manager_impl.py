@@ -27,6 +27,7 @@ from maxo.dialogs.api.internal import CONTEXT_KEY, STACK_KEY, STORAGE_KEY
 from maxo.dialogs.api.protocols import MessageNotModified
 from maxo.dialogs.manager.bg_manager import BgManager
 from maxo.dialogs.manager.manager import ManagerImpl
+from maxo.dialogs.manager.message_manager import MessageManager
 from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
@@ -39,6 +40,7 @@ from maxo.types import (
     MessageBody,
     MessageButton,
     MessageCallback,
+    PhotoAttachment,
     Recipient,
     UpdateContext,
 )
@@ -133,6 +135,18 @@ def make_new_message() -> NewMessage:
     return NewMessage(
         recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
         text="t",
+    )
+
+
+def make_old_photo_message(token: str) -> OldMessage:
+    return OldMessage(
+        recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
+        message_id="1",
+        sequence_id=1,
+        text="t",
+        attachments=[
+            PhotoAttachment.factory(photo_id=1, token=token, url="http://e.com/a.png"),
+        ],
     )
 
 
@@ -627,6 +641,47 @@ class TestLoadCachedMedia:
         await manager._load_cached_media(new_message)
 
         storage.get_media_id.assert_not_awaited()
+
+    async def test_cache_hit_same_token_skips_two_step(self) -> None:
+        # Кэш-хит: хранилище возвращает старый токен для url-медиа без media_id.
+        # _load_cached_media проставляет его -> медиа не менялось -> без обхода.
+        manager = make_manager()
+        new_message = make_new_message()
+        new_message.media = [
+            MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
+        ]
+        new_message.show_mode = ShowMode.EDIT
+        new_message.two_step_media_edit = True
+        cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
+            return_value=MediaId(token="cached"),  # noqa: S106
+        )
+        await manager._load_cached_media(new_message)
+
+        message_manager = MessageManager(media_id_storage=manager.media_id_storage)
+        assert not message_manager._need_two_step_media_edit(
+            new_message,
+            make_old_photo_message("cached"),
+        )
+
+    async def test_cache_hit_new_token_triggers_two_step(self) -> None:
+        # Кэш вернул новый токен -> медиа поменялось -> нужен двойной рендер.
+        manager = make_manager()
+        new_message = make_new_message()
+        new_message.media = [
+            MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
+        ]
+        new_message.show_mode = ShowMode.EDIT
+        new_message.two_step_media_edit = True
+        cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
+            return_value=MediaId(token="fresh"),  # noqa: S106
+        )
+        await manager._load_cached_media(new_message)
+
+        message_manager = MessageManager(media_id_storage=manager.media_id_storage)
+        assert message_manager._need_two_step_media_edit(
+            new_message,
+            make_old_photo_message("cached"),
+        )
 
 
 class TestGetLastMessage:
