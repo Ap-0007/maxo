@@ -674,15 +674,16 @@ class TestTwoStepMediaEdit:
         assert bot.edit_message.await_count == 1
         assert len(manager.built_media[0]) == 1
 
-    async def test_show_message_triggers_two_step_on_auto(self) -> None:
-        # ShowMode.AUTO тоже приводит к edit_message в show_message.
+    async def test_show_message_triggers_two_step_for_unknown_token(self) -> None:
         manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
+        new = _make_new_media_message(show_mode=ShowMode.AUTO)
+        new.text = "old"
 
         await manager.show_message(
             bot,
-            _make_new_media_message(show_mode=ShowMode.AUTO),
+            new,
             _make_old_media_message(),
         )
 

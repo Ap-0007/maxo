@@ -102,10 +102,8 @@ class MessageManager(MessageManagerProtocol):
         if not self.need_media(new_message):
             return False
         new_tokens = self._new_media_tokens(new_message)
-        # Токены известны и отличаются от старых (по порядку, без sorted -
-        # перестановка тех же медиа на iOS тоже баг) -> медиа точно поменялось.
-        # Для url-медиа токен заранее неизвестен -> считаем неизменившимся,
-        # чтобы не редактировать на каждом ререндере.
+        if new_tokens is None:
+            return new_message.two_step_media_edit
         if not new_tokens:
             return False
         return new_tokens != self._old_media_tokens(old_message)
