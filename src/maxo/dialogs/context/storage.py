@@ -12,7 +12,7 @@ from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.serialization import create_retort
 from maxo.types import Attachments
 
-retort = create_retort()
+_retort = create_retort(warming_up=False)
 
 
 class StorageProxy:
@@ -70,7 +70,7 @@ class StorageProxy:
             return Stack(_id=fixed_stack_id, access_settings=access_settings)
 
         if "last_attachments" in data:
-            data["last_attachments"] = retort.load(
+            data["last_attachments"] = _retort.load(
                 data["last_attachments"],
                 list[Attachments],
             )
@@ -116,7 +116,7 @@ class StorageProxy:
                 "intents": stack.intents,
                 "last_message_id": stack.last_message_id,
                 "last_sequence_id": stack.last_sequence_id,
-                "last_attachments": retort.dump(
+                "last_attachments": _retort.dump(
                     stack.last_attachments,
                     list[Attachments],
                 ),
