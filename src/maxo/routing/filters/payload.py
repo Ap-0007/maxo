@@ -31,7 +31,7 @@ import typing
 from decimal import Decimal
 from enum import Enum
 from fractions import Fraction
-from typing import Any, Self, TypeVar, get_args, get_origin
+from typing import Any, Self, TypeAlias, TypeVar, get_args, get_origin
 from uuid import UUID
 
 from maxo import Ctx
@@ -258,3 +258,7 @@ def _check_field_is_nullable(field: dataclasses.Field[Any]) -> bool:
         return type(None) in args
 
     return False
+
+
+# Подражание aiogram
+CallbackData: TypeAlias = Payload
