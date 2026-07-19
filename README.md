@@ -41,10 +41,13 @@
 ## Почему maxo?
 
 - Интерфейс намеренно близок к `aiogram`: роутеры, фильтры, мидлвари, FSM и диалоги работают так, как вы привыкли
-- 100% аннотаций и `mypy --strict` - ошибки видно в IDE, а не в проде
-- Long-polling и вебхуки (`aiohttp` / `fastapi`), FSM с Redis, диалоги, DI через `dishka` и фильтры на `magic_filter`
+- Диалоги (`maxo.dialogs`): окна, виджеты, пагинация, календарь. Интерфейс можно посмотреть в браузере до запуска бота, а сценарии - тестировать без сети
+- Long-polling и вебхуки (`aiohttp` / `fastapi`), FSM с Redis, DI через `dishka` и фильтры на `magic_filter`
 - Методы, типы и апдейты генерируются по [официальной документации MAX Bot API](https://dev.max.ru/docs-api) - меньше расхождений с платформой
-- Асинхронность на `aiohttp`, покрытие тестами и подробная [документация](https://maxo.readthedocs.io) на русском
+- 100% аннотаций и `mypy --strict` - ошибки видно в IDE, а не в проде
+- Ошибки API типизированы: можно писать `except MaxBotTooManyRequestsError`, а не разбирать голый HTTP-ответ
+- Российский доверенный сертификат уже вшит в HTTP-клиент, настраивать SSL для API MAX вручную не нужно
+- Асинхронность на `aiohttp` и [`unihttp`](https://github.com/goduni/unihttp), валидация данных через [`adaptix`](https://github.com/reagento/adaptix), [документация](https://maxo.readthedocs.io) на русском
 
 ## Установка
 
@@ -60,16 +63,6 @@ dependencies = [
     "maxo",
 ]
 ```
-
-## Особенности
-
-- Асинхронность на базе `aiohttp` и [`unihttp`](https://github.com/goduni/unihttp) ([asyncio](https://docs.python.org/3/library/asyncio.html), [PEP 492](https://peps.python.org/pep-0492/))
-- 100% покрытие типами, [`adaptix`](https://github.com/reagento/adaptix) для валидации данных
-- Роутеры, фильтры, милдвари
-- Встроенная машина состояний (FSM) и диалоги поверх них
-- Поддержка лонг-поллинга и вебхуков через `aiohttp` и `fastapi`
-- Интеграции с `dishka` и `magic_filter`
-- Автогенерация методов, типов и апдейтов по [официальной документации](https://dev.max.ru/docs-api)
 
 ## Для чего подходит maxo
 
@@ -120,7 +113,7 @@ async def deeplink_handler(bot_started: BotStarted, deeplink: str) -> None:
 async def start_handler(bot_started: BotStarted) -> None:
     await bot_started.send_message(f"Привет! Я бот. А ты {bot_started.user.fullname}")
 
-@dp.message(Command("help"))
+@dp.message_created(Command("help"))
 async def help_handler(message: MessageCreated) -> None:
     await message.send_message("За помощью обращайтесь в t.me/maxo_py")
 
@@ -152,14 +145,66 @@ async def start_handler(message: MessageCreated) -> None:
         .add_link(text="Перейти в maxo", url=maxo_url)
         .add_clipboard(text="Скопировать maxo", payload=maxo_url)
         .add_request_contact(text="Поделиться контактами")
-        .add_request_geo_location(text="Поделиться гео позицией")
+        .add_request_geo_location(text="Поделиться геопозицией")
         .adjust(2, 2, 1, 1)
     )
     await message.answer(text="Кнопочки :3", keyboard=keyboard.build())
 
-@dp.message_callback(MagicFilter(F.payload == "callback_payload"))
+@dp.message_callback(MagicFilter(F.payload == "click_me"))
 async def button_handler(callback: MessageCallback) -> None:
     await callback.callback_answer("Вы нажали на кнопку!")
+
+LongPolling(dp).run(bot)
+```
+
+### Диалоги
+
+Многошаговый сценарий - это окна и виджеты, переходами управляет менеджер
+диалога. Окна можно отрисовать в HTML-превью без запуска бота, а сценарии -
+тестировать без сети через `maxo.dialogs.test_tools`:
+
+```python
+from maxo import Bot, Dispatcher
+from maxo.dialogs import Dialog, DialogManager, StartMode, Window, setup_dialogs
+from maxo.dialogs.widgets.kbd import Button
+from maxo.dialogs.widgets.text import Const
+from maxo.fsm import State, StatesGroup
+from maxo.fsm.key_builder import DefaultKeyBuilder
+from maxo.routing.filters import CommandStart
+from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCallback, MessageCreated
+
+bot = Bot("TOKEN")
+# Для диалогов нужен key builder с destiny
+dp = Dispatcher(key_builder=DefaultKeyBuilder(with_destiny=True))
+
+class MainState(StatesGroup):
+    main = State()
+
+async def close_dialog(
+    callback: MessageCallback,
+    button: Button,
+    manager: DialogManager,
+) -> None:
+    await manager.done()
+
+dialog = Dialog(
+    Window(
+        Const("Главное меню"),
+        Button(Const("Закрыть"), id="close", on_click=close_dialog),
+        state=MainState.main,
+    ),
+)
+
+@dp.message_created(CommandStart())
+async def start_handler(
+    message: MessageCreated,
+    dialog_manager: DialogManager,
+) -> None:
+    await dialog_manager.start(MainState.main, mode=StartMode.RESET_STACK)
+
+dp.include(dialog)
+setup_dialogs(dp)
 
 LongPolling(dp).run(bot)
 ```
@@ -261,11 +306,15 @@ FSM встроена в `maxo` - есть `MemoryStorage` из коробки и
 
 ### Можно ли обслуживать несколько ботов в одном приложении?
 
-Да, через вебхуки: токен бота извлекается из входящего запроса (routing), поэтому одно приложение может принимать апдейты сразу для многих ботов.
+Пока частично. Готовый `SimpleEngine` обслуживает одного бота. Для мульти-бот сценария есть заготовки: `PathRouting` и `QueryRouting` извлекают токен бота из URL или query-параметра, а выбор бота по токену реализуется наследником `WebhookEngine` (метод `_get_bot_from_request`).
 
 ### Как масштабировать бота под нагрузку?
 
 Для продакшена используйте вебхуки: сервер MAX доставляет каждый апдейт один раз, и нагрузку можно распределить между воркерами (например, за Nginx или в Kubernetes). Long-polling для этого не подходит - при нескольких процессах с одним токеном апдейты дублируются.
+
+### Как тестировать бота без реального MAX?
+
+Для диалогов есть `maxo.dialogs.test_tools`: `BotClient` эмулирует пользователя, `MockMessageManager` записывает отправленные сообщения, локаторы находят кнопки по тексту. Сценарий "клик по кнопке - смена окна - новый текст" проверяется без единого сетевого вызова. Пример - в [examples/dialogs_testing.py](./examples/dialogs_testing.py).
 
 ### maxo бесплатный? Какая лицензия?
 
@@ -274,4 +323,3 @@ FSM встроена в `maxo` - есть `MemoryStorage` из коробки и
 
 ## Связь
 Если у вас есть вопросы, вы можете задать их в Телеграме [\@maxo_py](https://t.me/maxo_py) или [Максе](https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc)
-
