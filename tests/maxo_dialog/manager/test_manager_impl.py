@@ -660,6 +660,7 @@ class TestLoadCachedMedia:
         ]
         new_message.show_mode = ShowMode.EDIT
         new_message.two_step_media_edit = True
+        # media_id_storage типизирован как Protocol, в тестах это MagicMock
         cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
             return_value=MediaId(token=cached_token),
         )

@@ -3,17 +3,22 @@ from collections.abc import Sequence
 from typing import Any, cast
 
 from maxo import Bot, loggers
-from maxo.dialogs.api.entities import MediaAttachment, NewMessage, OldMessage, ShowMode
+from maxo.dialogs.api.entities import (
+    MediaAttachment,
+    MediaId,
+    NewMessage,
+    OldMessage,
+    ShowMode,
+)
 from maxo.dialogs.api.protocols import (
     MediaIdStorageProtocol,
     MessageManagerProtocol,
     MessageNotModified,
 )
-from maxo.dialogs.manager.attachment_facade import DialogAttachmentsFacade
 from maxo.enums import AttachmentType, UploadType
 from maxo.errors import MaxBotApiError, MaxBotBadRequestError
 from maxo.omit import Omitted
-from maxo.routing.mixins import MediaInput
+from maxo.routing.mixins import AttachmentsFacade, MediaInput
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -103,7 +108,10 @@ class MessageManager(MessageManagerProtocol):
             return False
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
-            return new_message.two_step_media_edit
+            # Токен нового медиа заранее неизвестен (нет в кэше) -> считаем, что
+            # медиа изменилось. Не зависит от two_step_media_edit: это про факт
+            # изменения контента, а не про стратегию рендера.
+            return True
         if not new_tokens:
             return False
         return new_tokens != self._old_media_tokens(old_message)
@@ -275,8 +283,9 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not new_tokens:
             return False
-        # Сравниваем по порядку, без sorted: на iOS перестановка тех же фото/видео
-        # тоже воспроизводит баг. Совпали токены и порядок -> медиа не менялось,
+        # Сравниваем по порядку, без sorted: перестановка тех же медиа считается
+        # изменением (предположительно баг iOS проявляется и на ней, по аналогии
+        # с одиночным медиа). Совпали токены и порядок -> медиа не менялось,
         # двойной рендер не нужен (иначе моргание на каждом ререндере).
         return new_tokens != old_tokens
 
@@ -291,7 +300,9 @@ class MessageManager(MessageManagerProtocol):
             await self._edit(bot, new_message, old_message, media=[])
         # Шаг 2 (или единственный edit): выкладываем медиа, сохраняя текст.
         await self._edit(bot, new_message, old_message, media=new_message.media)
-        return await bot.get_message_by_id(message_id=old_message.message_id)
+        message = await bot.get_message_by_id(message_id=old_message.message_id)
+        await self._save_media_ids(new_message, message)
+        return message
 
     async def _edit(
         self,
@@ -343,6 +354,7 @@ class MessageManager(MessageManagerProtocol):
             format=new_message.parse_mode,
             disable_link_preview=disable_link_preview,
         )
+        await self._save_media_ids(new_message, result.message)
         return result.message
 
     async def _build_attachments(
@@ -360,8 +372,32 @@ class MessageManager(MessageManagerProtocol):
             elif isinstance(attach, MediaAttachmentsRequests):
                 base.append(attach)
 
-        facade = DialogAttachmentsFacade(bot, media_id_storage=self.media_id_storage)
+        facade = AttachmentsFacade(bot)
         return await facade.build_attachments(base=base, keyboard=keyboard, files=files)
+
+    async def _save_media_ids(
+        self,
+        new_message: NewMessage,
+        sent_message: Message,
+    ) -> None:
+        # Кэшируем токен из ОТПРАВЛЕННОГО сообщения (payload.token от API), а не
+        # upload-токен: сравниваем именно кэш с токеном старого сообщения. Так на
+        # следующем ререндере то же медиа (по path/url) даёт совпадающий токен и
+        # не требует ни повторной загрузки, ни двойного рендера. См. issue #156.
+        sent_media = [
+            attach
+            for attach in (sent_message.body.attachments or [])
+            if isinstance(attach, MediaAttachments)
+        ]
+        for media, sent in zip(new_message.media, sent_media, strict=False):
+            if media.path is None and media.url is None:
+                continue
+            await self.media_id_storage.save_media_id(
+                path=media.path,
+                url=media.url,
+                type=media.type,
+                media_id=MediaId(token=sent.payload.token),
+            )
 
     def _convert_media(self, media: MediaAttachment) -> MediaInput | None:
         if media.media_id:

@@ -490,7 +490,9 @@ class TestMessageChanged:
             _make_old_message(text="old"),
         )
 
-    def test_same_media_is_not_a_change(self) -> None:
+    def test_url_media_without_cache_is_a_change(self) -> None:
+        # url-медиа без кэш-токена: доказать, что не менялось, нельзя ->
+        # считаем изменённым (не зависит от two_step_media_edit).
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
@@ -505,7 +507,7 @@ class TestMessageChanged:
             ],
         )
 
-        assert not manager._message_changed(new, old)
+        assert manager._message_changed(new, old)
 
     def test_media_token_changed_is_a_change(self) -> None:
         # Токен нового медиа известен и отличается -> медиа точно поменялось,
@@ -524,6 +526,14 @@ class TestMessageChanged:
         old = _make_old_media_message(token="tok")  # noqa: S106
 
         assert not manager._message_changed(new, old)
+
+    def test_non_photo_video_media_is_not_a_change(self) -> None:
+        # Медиа есть, но не фото/видео (аудио) -> токенов нет -> не «изменилось».
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [_media_with_token("a", AttachmentType.AUDIO)]
+
+        assert not manager._message_changed(new, _make_old_media_message())
 
     def test_media_reorder_is_a_change(self) -> None:
         # Перестановка тех же медиа - изменение (баг iOS), сравнение по порядку.
@@ -643,7 +653,7 @@ class TestEditMessageSafe:
 
 
 class TestTwoStepMediaEdit:
-    """https://github.com/K1rL3s/maxo/issues/156"""
+    """Двойной рендер медиа при редактировании на iOS. См. issue #156."""
 
     async def test_two_step_when_flag_and_edit_and_media_to_media(self) -> None:
         manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
@@ -816,6 +826,68 @@ class TestTwoStepMediaEdit:
         assert not manager._need_two_step_media_edit(new, _make_old_media_message())
 
 
+class TestSaveMediaIds:
+    """Кэширование payload-токена из отправленного сообщения. См. issue #156."""
+
+    def _sent_with_photo(self, token: str, url: str) -> Message:
+        return Message(
+            body=MessageBody(
+                mid="1",
+                seq=1,
+                text="new",
+                attachments=[PhotoAttachment.factory(photo_id=1, token=token, url=url)],
+            ),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+            timestamp=NOW,
+        )
+
+    async def test_caches_payload_token_by_url(self) -> None:
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        new = _make_new_media_message(
+            media=[MediaAttachment(AttachmentType.IMAGE, url="http://e.com/a.png")],
+        )
+
+        await manager._save_media_ids(
+            new,
+            self._sent_with_photo("server-tok", "http://e.com/a.png"),
+        )
+
+        storage.save_media_id.assert_awaited_once_with(
+            path=None,
+            url="http://e.com/a.png",
+            type=AttachmentType.IMAGE,
+            media_id=MediaId(token="server-tok"),  # noqa: S106
+        )
+
+    async def test_skips_media_without_path_or_url(self) -> None:
+        # media_id-only медиа нельзя ключевать по path/url -> не кэшируем.
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        new = _make_new_media_message(media=[_media_with_token("explicit")])
+
+        await manager._save_media_ids(
+            new,
+            self._sent_with_photo("server-tok", "http://e.com/a.png"),
+        )
+
+        storage.save_media_id.assert_not_awaited()
+
+    async def test_send_message_caches_media_id(self) -> None:
+        storage = AsyncMock()
+        manager = StaticAttachmentsMessageManager(media_id_storage=storage)
+        bot = AsyncMock()
+        bot.send_message = AsyncMock(
+            return_value=SendMessageResult(
+                message=self._sent_with_photo("srv", "http://e.com/new.png"),
+            ),
+        )
+
+        await manager.send_message(bot, _make_new_media_message())
+
+        storage.save_media_id.assert_awaited_once()
+
+
 class TestBuildAttachments:
     async def test_splits_files_and_ready_attachments(self, tmp_path: Path) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
@@ -830,7 +902,7 @@ class TestBuildAttachments:
         ]
 
         with patch(
-            "maxo.dialogs.manager.message_manager.DialogAttachmentsFacade",
+            "maxo.dialogs.manager.message_manager.AttachmentsFacade",
         ) as facade_cls:
             facade_cls.return_value.build_attachments = AsyncMock(return_value=[])
             await manager._build_attachments(bot, keyboard=None, media=media)
