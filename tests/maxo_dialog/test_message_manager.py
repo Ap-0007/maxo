@@ -22,6 +22,7 @@ from maxo.omit import is_defined
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
+    AudioAttachment,
     AudioAttachmentRequest,
     Callback,
     CallbackButton,
@@ -523,13 +524,25 @@ class TestMessageChanged:
 
         assert not manager._message_changed(new, old)
 
-    def test_non_photo_video_media_is_not_a_change(self) -> None:
-        # Медиа есть, но не фото/видео (аудио) -> токенов нет -> не изменилось
+    def test_media_type_change_is_a_change(self) -> None:
+        # Смена типа медиа (фото -> аудио) детектится, даже без токенов.
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [_media_with_token("a", AttachmentType.AUDIO)]
 
-        assert not manager._message_changed(new, _make_old_media_message())
+        assert manager._message_changed(new, _make_old_media_message())
+
+    def test_same_audio_type_is_not_a_change(self) -> None:
+        # Тот же тип не-фото/видео (аудио) -> токены не сравниваем -> не изменилось
+        manager = MessageManager(media_id_storage=AsyncMock())
+        new = _make_new_message("old")
+        new.media = [_media_with_token("a", AttachmentType.AUDIO)]
+        old = _make_old_message(
+            text="old",
+            attachments=[AudioAttachment.factory(url="u", token="t")],  # noqa: S106
+        )
+
+        assert not manager._message_changed(new, old)
 
     def test_media_reorder_is_a_change(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())

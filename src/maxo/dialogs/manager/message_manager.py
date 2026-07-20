@@ -106,6 +106,11 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not self.need_media(new_message):
             return False
+        # Сменился набор/типы медиа (в т.ч. фото -> аудио) -> изменение.
+        new_types = [media.type for media in new_message.media]
+        old_types = [attach.type for attach in old_message.media]
+        if new_types != old_types:
+            return True
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
             # Нет токена в кэше -> считаем медиа изменённым
