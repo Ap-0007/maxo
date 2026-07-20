@@ -247,7 +247,6 @@ class MessageManager(MessageManagerProtocol):
 
     @staticmethod
     def _media_tokens(media: Iterable[MediaAttachment]) -> list[str] | None:
-        """Токены медиа; None, если хотя бы один заранее неизвестен (нет в кэше)."""
         tokens = []
         for item in media:
             if item.media_id is None:
@@ -256,11 +255,9 @@ class MessageManager(MessageManagerProtocol):
         return tokens
 
     def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
-        """Токены всех новых медиа (для детекта смены содержимого)."""
         return self._media_tokens(new_message.media)
 
     def _new_visual_tokens(self, new_message: NewMessage) -> list[str] | None:
-        """Токены новых фото/видео (для обхода бага iOS)."""
         return self._media_tokens(
             media
             for media in new_message.media
@@ -268,11 +265,9 @@ class MessageManager(MessageManagerProtocol):
         )
 
     def _old_media_tokens(self, old_message: OldMessage) -> list[str]:
-        """Токены всех медиа старого сообщения."""
         return [attach.payload.token for attach in old_message.media]
 
     def _old_visual_tokens(self, old_message: OldMessage) -> list[str]:
-        """Токены фото/видео старого сообщения."""
         return [
             attach.payload.token
             for attach in old_message.media
@@ -286,17 +281,14 @@ class MessageManager(MessageManagerProtocol):
     ) -> bool:
         if not new_message.two_step_media_edit:
             return False
-        # Только фото/видео: на аудио/файлах бага iOS нет.
         old_tokens = self._old_visual_tokens(old_message)
         if not old_tokens:
             return False
         new_tokens = self._new_visual_tokens(new_message)
         if new_tokens is None:
-            # Токен url-медиа неизвестен -> рендерим дважды
             return True
         if not new_tokens:
             return False
-        # По порядку, без sorted: перестановка = изменение
         return new_tokens != old_tokens
 
     async def edit_message(
@@ -306,9 +298,7 @@ class MessageManager(MessageManagerProtocol):
         old_message: OldMessage,
     ) -> Message:
         if self._need_two_step_media_edit(new_message, old_message):
-            # Шаг 1: текст и клавиатура без медиа
             await self._edit(bot, new_message, old_message, media=[])
-        # Шаг 2: возвращаем медиа
         await self._edit(bot, new_message, old_message, media=new_message.media)
         message = await bot.get_message_by_id(message_id=old_message.message_id)
         await self._save_media_ids(new_message, message)
@@ -390,13 +380,18 @@ class MessageManager(MessageManagerProtocol):
         new_message: NewMessage,
         sent_message: Message,
     ) -> None:
-        # Кэшируем payload.token из ответа: тот же path/url даст совпадающий токен
         sent_media = [
             attach
             for attach in (sent_message.body.attachments or [])
             if isinstance(attach, MediaAttachments)
         ]
-        for media, sent in zip(new_message.media, sent_media, strict=False):
+        base = [media for media in new_message.media if media.media_id or media.url]
+        files = [
+            media
+            for media in new_message.media
+            if not media.media_id and not media.url and media.path
+        ]
+        for media, sent in zip((*base, *files), sent_media, strict=False):
             if media.path is None and media.url is None:
                 continue
             await self.media_id_storage.save_media_id(

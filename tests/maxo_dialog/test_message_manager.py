@@ -900,6 +900,38 @@ class TestSaveMediaIds:
 
         storage.save_media_id.assert_awaited_once()
 
+    async def test_caches_by_request_order_for_mixed_album(self) -> None:
+        # build_attachments шлёт base(url) перед files(path); ответ в том же
+        # порядке. Токены должны лечь своим источникам, а не крест-накрест.
+        storage = AsyncMock()
+        manager = MessageManager(media_id_storage=storage)
+        path_media = MediaAttachment(AttachmentType.IMAGE, path="pic.png")
+        url_media = MediaAttachment(AttachmentType.IMAGE, url="http://e.com/u.png")
+        new = _make_new_media_message(media=[path_media, url_media])
+        sent = Message(
+            body=MessageBody(
+                mid="1",
+                seq=1,
+                text="new",
+                attachments=[
+                    # порядок запроса: base(url) -> files(path)
+                    PhotoAttachment.factory(1, "url-tok", "http://e.com/u.png"),
+                    PhotoAttachment.factory(2, "path-tok", "http://e.com/p.png"),
+                ],
+            ),
+            recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
+            timestamp=NOW,
+        )
+
+        await manager._save_media_ids(new, sent)
+
+        cached = {
+            call.kwargs["url"] or call.kwargs["path"]: call.kwargs["media_id"].token
+            for call in storage.save_media_id.await_args_list
+        }
+        assert cached["http://e.com/u.png"] == "url-tok"
+        assert cached["pic.png"] == "path-tok"
+
 
 class TestBuildAttachments:
     async def test_splits_files_and_ready_attachments(self, tmp_path: Path) -> None:
