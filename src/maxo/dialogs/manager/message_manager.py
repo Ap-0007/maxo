@@ -107,11 +107,11 @@ class MessageManager(MessageManagerProtocol):
         if not self.need_media(new_message):
             return False
         # Сравниваем токены всех медиа (любой тип, в т.ч. audio/file).
-        new_tokens = self._new_media_tokens(new_message)
+        new_tokens = self._media_tokens(new_message.media)
         if new_tokens is None:
             # Нет токена в кэше -> считаем медиа изменённым
             return True
-        return new_tokens != self._old_media_tokens(old_message)
+        return new_tokens != self._old_tokens(old_message.media)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -254,25 +254,9 @@ class MessageManager(MessageManagerProtocol):
             tokens.append(item.media_id.token)
         return tokens
 
-    def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
-        return self._media_tokens(new_message.media)
-
-    def _new_visual_tokens(self, new_message: NewMessage) -> list[str] | None:
-        return self._media_tokens(
-            media
-            for media in new_message.media
-            if media.type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
-        )
-
-    def _old_media_tokens(self, old_message: OldMessage) -> list[str]:
-        return [attach.payload.token for attach in old_message.media]
-
-    def _old_visual_tokens(self, old_message: OldMessage) -> list[str]:
-        return [
-            attach.payload.token
-            for attach in old_message.media
-            if isinstance(attach, (PhotoAttachment, VideoAttachment))
-        ]
+    @staticmethod
+    def _old_tokens(media: Iterable[MediaAttachments]) -> list[str]:
+        return [attach.payload.token for attach in media]
 
     def _need_two_step_media_edit(
         self,
@@ -281,10 +265,18 @@ class MessageManager(MessageManagerProtocol):
     ) -> bool:
         if not new_message.two_step_media_edit:
             return False
-        old_tokens = self._old_visual_tokens(old_message)
+        old_tokens = self._old_tokens(
+            attach
+            for attach in old_message.media
+            if isinstance(attach, (PhotoAttachment, VideoAttachment))
+        )
         if not old_tokens:
             return False
-        new_tokens = self._new_visual_tokens(new_message)
+        new_tokens = self._media_tokens(
+            media
+            for media in new_message.media
+            if media.type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
+        )
         if new_tokens is None:
             return True
         if not new_tokens:
