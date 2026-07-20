@@ -27,7 +27,6 @@ from maxo.dialogs.api.internal import CONTEXT_KEY, STACK_KEY, STORAGE_KEY
 from maxo.dialogs.api.protocols import MessageNotModified
 from maxo.dialogs.manager.bg_manager import BgManager
 from maxo.dialogs.manager.manager import ManagerImpl
-from maxo.dialogs.manager.message_manager import MessageManager
 from maxo.enums import AttachmentType, ChatType
 from maxo.fsm import State, StatesGroup
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
@@ -40,7 +39,6 @@ from maxo.types import (
     MessageBody,
     MessageButton,
     MessageCallback,
-    PhotoAttachment,
     Recipient,
     UpdateContext,
 )
@@ -135,18 +133,6 @@ def make_new_message() -> NewMessage:
     return NewMessage(
         recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
         text="t",
-    )
-
-
-def make_old_photo_message(token: str) -> OldMessage:
-    return OldMessage(
-        recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
-        message_id="1",
-        sequence_id=1,
-        text="t",
-        attachments=[
-            PhotoAttachment.factory(photo_id=1, token=token, url="http://e.com/a.png"),
-        ],
     )
 
 
@@ -641,38 +627,6 @@ class TestLoadCachedMedia:
         await manager._load_cached_media(new_message)
 
         storage.get_media_id.assert_not_awaited()
-
-    @pytest.mark.parametrize(
-        ("cached_token", "need_two_step"),
-        [("cached", False), ("fresh", True)],
-    )
-    async def test_cached_token_decides_two_step(
-        self,
-        cached_token: str,
-        need_two_step: bool,
-    ) -> None:
-        # _load_cached_media берёт токен из кэша; совпал со старым -> без обхода
-        manager = make_manager()
-        new_message = make_new_message()
-        new_message.media = [
-            MediaAttachment(type=AttachmentType.IMAGE, url="https://e.com/a.png"),
-        ]
-        new_message.show_mode = ShowMode.EDIT
-        new_message.two_step_media_edit = True
-        # media_id_storage типизирован как Protocol, в тестах это MagicMock
-        cast(MagicMock, manager.media_id_storage).get_media_id = AsyncMock(
-            return_value=MediaId(token=cached_token),
-        )
-        await manager._load_cached_media(new_message)
-
-        message_manager = MessageManager(media_id_storage=manager.media_id_storage)
-        assert (
-            message_manager._need_two_step_media_edit(
-                new_message,
-                make_old_photo_message("cached"),
-            )
-            is need_two_step
-        )
 
 
 class TestGetLastMessage:

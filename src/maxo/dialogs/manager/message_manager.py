@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Any, cast
 
 from maxo import Bot, loggers
@@ -29,9 +29,7 @@ from maxo.types import (
     MediaAttachments,
     MediaAttachmentsRequests,
     Message,
-    PhotoAttachment,
     PhotoAttachmentRequest,
-    VideoAttachment,
     VideoAttachmentRequest,
 )
 from maxo.utils.upload_media import FSInputFile, InputFile
@@ -104,14 +102,10 @@ class MessageManager(MessageManagerProtocol):
 
         if self.had_media(old_message) != self.need_media(new_message):
             return True
-        if not self.need_media(new_message):
-            return False
-        # Сравниваем токены всех медиа (любой тип, в т.ч. audio/file).
-        new_tokens = self._media_tokens(new_message.media)
-        if new_tokens is None:
-            # Нет токена в кэше -> считаем медиа изменённым
-            return True
-        return new_tokens != self._old_tokens(old_message.media)
+        # Токены медиа сравнивать бессмысленно: payload.token уникален на каждую
+        # отправку (см. 53c5a55), поэтому "старый" и "новый" всегда различаются.
+        # Считаем сообщение изменившимся, если в нём есть медиа.
+        return self.need_media(new_message)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -245,19 +239,6 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
-    @staticmethod
-    def _media_tokens(media: Iterable[MediaAttachment]) -> list[str] | None:
-        tokens = []
-        for item in media:
-            if item.media_id is None:
-                return None
-            tokens.append(item.media_id.token)
-        return tokens
-
-    @staticmethod
-    def _old_tokens(media: Iterable[MediaAttachments]) -> list[str]:
-        return [attach.payload.token for attach in media]
-
     def _need_two_step_media_edit(
         self,
         new_message: NewMessage,
@@ -265,23 +246,10 @@ class MessageManager(MessageManagerProtocol):
     ) -> bool:
         if not new_message.two_step_media_edit:
             return False
-        old_tokens = self._old_tokens(
-            attach
-            for attach in old_message.media
-            if isinstance(attach, (PhotoAttachment, VideoAttachment))
-        )
-        if not old_tokens:
-            return False
-        new_tokens = self._media_tokens(
-            media
-            for media in new_message.media
-            if media.type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
-        )
-        if new_tokens is None:
-            return True
-        if not new_tokens:
-            return False
-        return new_tokens != old_tokens
+        # Токены медиа сравнивать бессмысленно: payload.token уникален на каждую
+        # отправку (см. 53c5a55). Двойной рендер делаем при любом медиа в новом
+        # сообщении.
+        return self.need_media(new_message)
 
     async def edit_message(
         self,

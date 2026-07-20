@@ -22,7 +22,6 @@ from maxo.omit import is_defined
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
-    AudioAttachment,
     AudioAttachmentRequest,
     Callback,
     CallbackButton,
@@ -35,7 +34,6 @@ from maxo.types import (
     Recipient,
     SendMessageResult,
     User,
-    VideoAttachment,
     VideoAttachmentRequest,
 )
 from maxo.utils.upload_media import FSInputFile
@@ -491,81 +489,20 @@ class TestMessageChanged:
             _make_old_message(text="old"),
         )
 
-    def test_url_media_without_cache_is_a_change(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(
-                    photo_id=1,
-                    token="t",  # noqa: S106
-                    url="http://e.com/a",
-                ),
-            ],
-        )
-
-        assert manager._message_changed(new, old)
-
-    def test_media_token_changed_is_a_change(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [_media_with_token("new")]
-        old = _make_old_media_message(token="old")  # noqa: S106
-
-        assert manager._message_changed(new, old)
-
-    def test_same_media_token_is_not_a_change(self) -> None:
+    def test_media_present_is_always_a_change(self) -> None:
+        # Токены не сравниваем (payload.token уникален на отправку) -> любое
+        # медиа в новом сообщении считаем изменением, даже при том же тексте.
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [_media_with_token("tok")]
-        old = _make_old_media_message(token="tok")  # noqa: S106
-
-        assert not manager._message_changed(new, old)
-
-    def test_media_type_change_is_a_change(self) -> None:
-        # Смена типа медиа (фото -> аудио) детектится.
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [_media_with_token("a", AttachmentType.AUDIO)]
-
-        assert manager._message_changed(new, _make_old_media_message())
-
-    def test_audio_token_change_is_a_change(self) -> None:
-        # Смена аудио-вложения тоже детектится (токены всех медиа сравниваются).
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [_media_with_token("new", AttachmentType.AUDIO)]
-        old = _make_old_message(
-            text="old",
-            attachments=[AudioAttachment.factory(url="u", token="old")],  # noqa: S106
-        )
+        old = _make_old_media_message()  # старое тоже с медиа
 
         assert manager._message_changed(new, old)
 
-    def test_same_audio_token_is_not_a_change(self) -> None:
+    def test_media_removed_is_a_change(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [_media_with_token("tok", AttachmentType.AUDIO)]
-        old = _make_old_message(
-            text="old",
-            attachments=[AudioAttachment.factory(url="u", token="tok")],  # noqa: S106
-        )
-
-        assert not manager._message_changed(new, old)
-
-    def test_media_reorder_is_a_change(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_message("old")
-        new.media = [_media_with_token("t2"), _media_with_token("t1")]
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
-            ],
-        )
+        new = _make_new_message("old")  # без медиа
+        old = _make_old_media_message()  # раньше было медиа
 
         assert manager._message_changed(new, old)
 
@@ -718,123 +655,27 @@ class TestTwoStepMediaEdit:
 
         assert bot.edit_message.await_count == 2
 
-    def test_no_two_step_when_old_has_no_media(self) -> None:
+    def test_two_step_when_flag_and_media(self) -> None:
+        # Токены не сравниваем -> двойной рендер при любом медиа в новом
+        # сообщении, если флаг включён.
         manager = MessageManager(media_id_storage=AsyncMock())
-
-        assert not manager._need_two_step_media_edit(
-            _make_new_media_message(),
-            _make_old_message(text="old"),
-        )
-
-    def test_two_step_when_token_changed(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_media_message(media=[_media_with_token("new")])
 
         assert manager._need_two_step_media_edit(
-            new,
-            _make_old_media_message(token="old"),  # noqa: S106
+            _make_new_media_message(),
+            _make_old_media_message(),
         )
 
-    def test_no_two_step_when_token_unchanged(self) -> None:
+    def test_no_two_step_without_flag(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_media_message(media=[_media_with_token("tok")])
 
         assert not manager._need_two_step_media_edit(
-            new,
-            _make_old_media_message(token="tok"),  # noqa: S106
+            _make_new_media_message(two_step_media_edit=False),
+            _make_old_media_message(),
         )
 
-    def test_two_step_for_video_token_changed(self) -> None:
+    def test_no_two_step_without_media(self) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                VideoAttachment.factory(
-                    url="http://e.com/v",
-                    token="oldv",  # noqa: S106
-                ),
-            ],
-        )
-        new = _make_new_media_message(
-            media=[_media_with_token("newv", AttachmentType.VIDEO)],
-        )
-
-        assert manager._need_two_step_media_edit(new, old)
-
-    def test_two_step_when_old_is_album(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
-            ],
-        )
-
-        assert manager._need_two_step_media_edit(_make_new_media_message(), old)
-
-    def test_two_step_when_new_is_album(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_media_message(
-            media=[
-                MediaAttachment(AttachmentType.IMAGE, url="http://e.com/a"),
-                MediaAttachment(AttachmentType.IMAGE, url="http://e.com/b"),
-            ],
-        )
-
-        assert manager._need_two_step_media_edit(new, _make_old_media_message())
-
-    def test_no_two_step_when_album_tokens_unchanged(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
-            ],
-        )
-        new = _make_new_media_message(
-            media=[_media_with_token("t1"), _media_with_token("t2")],
-        )
-
-        assert not manager._need_two_step_media_edit(new, old)
-
-    def test_two_step_when_album_reordered(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
-            ],
-        )
-        new = _make_new_media_message(
-            media=[_media_with_token("t2"), _media_with_token("t1")],
-        )
-
-        assert manager._need_two_step_media_edit(new, old)
-
-    def test_two_step_when_album_token_changed(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        old = _make_old_message(
-            text="old",
-            attachments=[
-                PhotoAttachment.factory(photo_id=1, token="t1", url="u1"),  # noqa: S106
-                PhotoAttachment.factory(photo_id=2, token="t2", url="u2"),  # noqa: S106
-            ],
-        )
-        new = _make_new_media_message(
-            media=[_media_with_token("t1"), _media_with_token("t3")],
-        )
-
-        assert manager._need_two_step_media_edit(new, old)
-
-    def test_no_two_step_for_non_photo_or_video(self) -> None:
-        # Аудио/файл не подвержены багу превью, обход не нужен
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_media_message(
-            media=[_media_with_token("a", AttachmentType.AUDIO)],
-        )
+        new = _make_new_media_message(media=[])
 
         assert not manager._need_two_step_media_edit(new, _make_old_media_message())
 
