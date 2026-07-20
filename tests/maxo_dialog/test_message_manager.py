@@ -524,7 +524,7 @@ class TestMessageChanged:
         assert not manager._message_changed(new, old)
 
     def test_non_photo_video_media_is_not_a_change(self) -> None:
-        # Медиа есть, но не фото/видео (аудио) -> токенов нет -> не «изменилось».
+        # Медиа есть, но не фото/видео (аудио) -> токенов нет -> не изменилось
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [_media_with_token("a", AttachmentType.AUDIO)]
@@ -806,7 +806,7 @@ class TestTwoStepMediaEdit:
         assert manager._need_two_step_media_edit(new, old)
 
     def test_no_two_step_for_non_photo_or_video(self) -> None:
-        # Аудио/файл не подвержены багу превью, обход не нужен.
+        # Аудио/файл не подвержены багу превью, обход не нужен
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_media_message(
             media=[_media_with_token("a", AttachmentType.AUDIO)],
@@ -850,7 +850,7 @@ class TestSaveMediaIds:
         )
 
     async def test_skips_media_without_path_or_url(self) -> None:
-        # media_id-only медиа нельзя ключевать по path/url -> не кэшируем.
+        # media_id-only медиа нельзя ключевать по path/url -> не кэшируем
         storage = AsyncMock()
         manager = MessageManager(media_id_storage=storage)
         new = _make_new_media_message(media=[_media_with_token("explicit")])

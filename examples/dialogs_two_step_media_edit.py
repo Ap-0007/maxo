@@ -1,11 +1,7 @@
 """
-Воспроизведение бага iOS-клиента MAX: при edit_message "медиа -> медиа" клиент
-рассинхронизирует превью и сам файл (фото показывает старое превью, у видео
-играет старый файл). Обход - флаг Window(two_step_media_edit=True).
+Баг iOS-клиента MAX: при edit_message "медиа -> медиа" рассинхронизируются
+превью и файл. Обход - флаг Window(two_step_media_edit=True).
 https://github.com/K1rL3s/maxo/issues/156
-
-Запуск: python examples/dialogs_two_step_media_edit.py
-Открой диалог на iOS, нажимай "Сменить медиа" в обоих окнах и сравни поведение.
 """
 
 import asyncio

@@ -108,7 +108,7 @@ class MessageManager(MessageManagerProtocol):
             return False
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
-            # Нет токена в кэше -> считаем медиа изменённым.
+            # Нет токена в кэше -> считаем медиа изменённым
             return True
         if not new_tokens:
             return False
@@ -247,7 +247,7 @@ class MessageManager(MessageManagerProtocol):
             raise
 
     def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
-        """Токены новых фото/видео; None, если хотя бы один заранее неизвестен."""
+        """Токены новых фото/видео; None, если хотя бы один неизвестен."""
         tokens = []
         for media in new_message.media:
             if media.type not in (AttachmentType.IMAGE, AttachmentType.VIDEO):
@@ -269,7 +269,6 @@ class MessageManager(MessageManagerProtocol):
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> bool:
-        # https://github.com/K1rL3s/maxo/issues/156
         if not new_message.two_step_media_edit:
             return False
         old_tokens = self._old_media_tokens(old_message)
@@ -277,11 +276,11 @@ class MessageManager(MessageManagerProtocol):
             return False
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
-            # Токен url-медиа заранее неизвестен -> рендерим дважды.
+            # Токен url-медиа неизвестен -> рендерим дважды
             return True
         if not new_tokens:
             return False
-        # Сравниваем по порядку, без sorted: перестановка = изменение.
+        # По порядку, без sorted: перестановка = изменение
         return new_tokens != old_tokens
 
     async def edit_message(
@@ -291,9 +290,9 @@ class MessageManager(MessageManagerProtocol):
         old_message: OldMessage,
     ) -> Message:
         if self._need_two_step_media_edit(new_message, old_message):
-            # Шаг 1: обновляем текст и клавиатуру, но убираем медиа.
+            # Шаг 1: текст и клавиатура без медиа
             await self._edit(bot, new_message, old_message, media=[])
-        # Шаг 2 (или единственный edit): выкладываем медиа, сохраняя текст.
+        # Шаг 2: возвращаем медиа
         await self._edit(bot, new_message, old_message, media=new_message.media)
         message = await bot.get_message_by_id(message_id=old_message.message_id)
         await self._save_media_ids(new_message, message)
@@ -375,8 +374,7 @@ class MessageManager(MessageManagerProtocol):
         new_message: NewMessage,
         sent_message: Message,
     ) -> None:
-        # Кэшируем payload.token из ответа API (для path и url): на следующем
-        # ререндере то же медиа даёт совпадающий токен. См. issue #156.
+        # Кэшируем payload.token из ответа: тот же path/url даст совпадающий токен
         sent_media = [
             attach
             for attach in (sent_message.body.attachments or [])

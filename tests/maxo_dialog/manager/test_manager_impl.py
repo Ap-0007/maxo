@@ -651,11 +651,11 @@ class TestLoadCachedMedia:
         cached_token: str,
         need_two_step: bool,
     ) -> None:
-        # _load_cached_media берёт токен из кэша; совпал со старым -> без обхода.
+        # _load_cached_media берёт токен из кэша; совпал со старым -> без обхода
         manager = make_manager()
         new_message = make_new_message()
         new_message.media = [
-            MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a.png"),
+            MediaAttachment(type=AttachmentType.IMAGE, url="https://e.com/a.png"),
         ]
         new_message.show_mode = ShowMode.EDIT
         new_message.two_step_media_edit = True
