@@ -27,12 +27,11 @@ from maxo.types import (
     FileAttachmentRequest,
     InlineButtons,
     MediaAttachments,
-    MediaAttachmentsRequests,
     Message,
     PhotoAttachmentRequest,
     VideoAttachmentRequest,
 )
-from maxo.utils.upload_media import FSInputFile, InputFile
+from maxo.utils.upload_media import FSInputFile
 
 SEND_METHODS = {
     AttachmentType.AUDIO: "send_audio",
@@ -100,12 +99,7 @@ class MessageManager(MessageManagerProtocol):
         ):
             return True
 
-        if self.had_media(old_message) != self.need_media(new_message):
-            return True
-        # Токены медиа сравнивать бессмысленно: payload.token уникален на каждую
-        # отправку (см. 53c5a55), поэтому "старый" и "новый" всегда различаются.
-        # Считаем сообщение изменившимся, если в нём есть медиа.
-        return self.need_media(new_message)
+        return self.had_media(old_message) or self.need_media(new_message)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
         return True
@@ -244,12 +238,11 @@ class MessageManager(MessageManagerProtocol):
         new_message: NewMessage,
         old_message: OldMessage,
     ) -> bool:
-        if not new_message.two_step_media_edit:
-            return False
-        # Токены медиа сравнивать бессмысленно: payload.token уникален на каждую
-        # отправку (см. 53c5a55). Двойной рендер делаем при любом медиа в новом
-        # сообщении.
-        return self.need_media(new_message)
+        return (
+            new_message.two_step_media_edit
+            and self.had_media(old_message)
+            and self.need_media(new_message)
+        )
 
     async def edit_message(
         self,
@@ -323,17 +316,16 @@ class MessageManager(MessageManagerProtocol):
         keyboard: Sequence[Sequence[InlineButtons]] | None,
         media: list[MediaAttachment],
     ) -> Sequence[AttachmentsRequests]:
-        converted_media = [self._convert_media(m) for m in media]
-        base: list[MediaAttachmentsRequests] = []
-        files: list[InputFile] = []
-        for attach in converted_media:
-            if isinstance(attach, InputFile):
-                files.append(attach)
-            elif isinstance(attach, MediaAttachmentsRequests):
-                base.append(attach)
-
-        facade = AttachmentsFacade(bot)
-        return await facade.build_attachments(base=base, keyboard=keyboard, files=files)
+        converted_media = [
+            converted
+            for item in media
+            if (converted := self._convert_media(item)) is not None
+        ]
+        return await AttachmentsFacade(bot).build_attachments(
+            base=[],
+            keyboard=keyboard,
+            files=converted_media,
+        )
 
     async def _save_media_ids(
         self,
@@ -345,13 +337,7 @@ class MessageManager(MessageManagerProtocol):
             for attach in (sent_message.body.attachments or [])
             if isinstance(attach, MediaAttachments)
         ]
-        base = [media for media in new_message.media if media.media_id or media.url]
-        files = [
-            media
-            for media in new_message.media
-            if not media.media_id and not media.url and media.path
-        ]
-        for media, sent in zip((*base, *files), sent_media, strict=False):
+        for media, sent in zip(new_message.media, sent_media, strict=False):
             if media.path is None and media.url is None:
                 continue
             await self.media_id_storage.save_media_id(

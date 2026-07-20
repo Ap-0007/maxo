@@ -626,21 +626,35 @@ class TestTwoStepMediaEdit:
         assert manager.built_media[0] == []  # шаг 1 - без медиа
         assert len(manager.built_media[1]) == 1  # шаг 2 - медиа вернулось
 
-    async def test_single_step_without_flag(self) -> None:
+    @pytest.mark.parametrize(
+        ("new_message", "old_message"),
+        [
+            (
+                _make_new_media_message(two_step_media_edit=False),
+                _make_old_media_message(),
+            ),
+            (_make_new_media_message(), _make_old_message()),
+            (_make_new_media_message(media=[]), _make_old_media_message()),
+        ],
+    )
+    async def test_single_step_otherwise(
+        self,
+        new_message: NewMessage,
+        old_message: OldMessage,
+    ) -> None:
         manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
 
         await manager.edit_message(
             bot,
-            _make_new_media_message(two_step_media_edit=False),
-            _make_old_media_message(),
+            new_message,
+            old_message,
         )
 
         assert bot.edit_message.await_count == 1
-        assert len(manager.built_media[0]) == 1
 
-    async def test_show_message_triggers_two_step_for_unknown_token(self) -> None:
+    async def test_show_message_triggers_two_step_in_auto_mode(self) -> None:
         manager = StaticAttachmentsMessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         bot.get_message_by_id = AsyncMock(return_value=_make_message("55", "new"))
@@ -655,33 +669,8 @@ class TestTwoStepMediaEdit:
 
         assert bot.edit_message.await_count == 2
 
-    def test_two_step_when_flag_and_media(self) -> None:
-        # Токены не сравниваем -> двойной рендер при любом медиа в новом
-        # сообщении, если флаг включён.
-        manager = MessageManager(media_id_storage=AsyncMock())
-
-        assert manager._need_two_step_media_edit(
-            _make_new_media_message(),
-            _make_old_media_message(),
-        )
-
-    def test_no_two_step_without_flag(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-
-        assert not manager._need_two_step_media_edit(
-            _make_new_media_message(two_step_media_edit=False),
-            _make_old_media_message(),
-        )
-
-    def test_no_two_step_without_media(self) -> None:
-        manager = MessageManager(media_id_storage=AsyncMock())
-        new = _make_new_media_message(media=[])
-
-        assert not manager._need_two_step_media_edit(new, _make_old_media_message())
-
-
 class TestSaveMediaIds:
-    """Кэширование payload-токена из отправленного сообщения. См. issue #156."""
+    """Кэширование payload-токена из отправленного сообщения для path и url."""
 
     def _sent_with_photo(self, token: str, url: str) -> Message:
         return Message(
@@ -742,8 +731,6 @@ class TestSaveMediaIds:
         storage.save_media_id.assert_awaited_once()
 
     async def test_caches_by_request_order_for_mixed_album(self) -> None:
-        # build_attachments шлёт base(url) перед files(path); ответ в том же
-        # порядке. Токены должны лечь своим источникам, а не крест-накрест.
         storage = AsyncMock()
         manager = MessageManager(media_id_storage=storage)
         path_media = MediaAttachment(AttachmentType.IMAGE, path="pic.png")
@@ -755,9 +742,8 @@ class TestSaveMediaIds:
                 seq=1,
                 text="new",
                 attachments=[
-                    # порядок запроса: base(url) -> files(path)
-                    PhotoAttachment.factory(1, "url-tok", "http://e.com/u.png"),
                     PhotoAttachment.factory(2, "path-tok", "http://e.com/p.png"),
+                    PhotoAttachment.factory(1, "url-tok", "http://e.com/u.png"),
                 ],
             ),
             recipient=Recipient(chat_type=ChatType.DIALOG, user_id=1, chat_id=1),
@@ -775,7 +761,7 @@ class TestSaveMediaIds:
 
 
 class TestBuildAttachments:
-    async def test_splits_files_and_ready_attachments(self, tmp_path: Path) -> None:
+    async def test_preserves_media_order(self, tmp_path: Path) -> None:
         manager = MessageManager(media_id_storage=AsyncMock())
         bot = AsyncMock()
         media = [
@@ -794,6 +780,7 @@ class TestBuildAttachments:
             await manager._build_attachments(bot, keyboard=None, media=media)
 
         kwargs = facade_cls.return_value.build_attachments.await_args.kwargs
-        assert len(kwargs["files"]) == 1
-        assert all(isinstance(f, FSInputFile) for f in kwargs["files"])
-        assert len(kwargs["base"]) == 2
+        assert kwargs["base"] == []
+        assert isinstance(kwargs["files"][0], PhotoAttachmentRequest)
+        assert isinstance(kwargs["files"][1], FSInputFile)
+        assert isinstance(kwargs["files"][2], PhotoAttachmentRequest)
