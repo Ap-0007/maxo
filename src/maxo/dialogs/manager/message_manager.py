@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, cast
 
 from maxo import Bot, loggers
@@ -106,17 +106,11 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not self.need_media(new_message):
             return False
-        # Сменился набор/типы медиа (в т.ч. фото -> аудио) -> изменение.
-        new_types = [media.type for media in new_message.media]
-        old_types = [attach.type for attach in old_message.media]
-        if new_types != old_types:
-            return True
+        # Сравниваем токены всех медиа (любой тип, в т.ч. audio/file).
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
             # Нет токена в кэше -> считаем медиа изменённым
             return True
-        if not new_tokens:
-            return False
         return new_tokens != self._old_media_tokens(old_message)
 
     def _can_edit(self, new_message: NewMessage, old_message: OldMessage) -> bool:
@@ -251,18 +245,34 @@ class MessageManager(MessageManagerProtocol):
                 return await self.send_message(bot, new_message)
             raise
 
-    def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
-        """Токены новых фото/видео; None, если хотя бы один неизвестен."""
+    @staticmethod
+    def _media_tokens(media: Iterable[MediaAttachment]) -> list[str] | None:
+        """Токены медиа; None, если хотя бы один заранее неизвестен (нет в кэше)."""
         tokens = []
-        for media in new_message.media:
-            if media.type not in (AttachmentType.IMAGE, AttachmentType.VIDEO):
-                continue
-            if media.media_id is None:
+        for item in media:
+            if item.media_id is None:
                 return None
-            tokens.append(media.media_id.token)
+            tokens.append(item.media_id.token)
         return tokens
 
+    def _new_media_tokens(self, new_message: NewMessage) -> list[str] | None:
+        """Токены всех новых медиа (для детекта смены содержимого)."""
+        return self._media_tokens(new_message.media)
+
+    def _new_visual_tokens(self, new_message: NewMessage) -> list[str] | None:
+        """Токены новых фото/видео (для обхода бага iOS)."""
+        return self._media_tokens(
+            media
+            for media in new_message.media
+            if media.type in (AttachmentType.IMAGE, AttachmentType.VIDEO)
+        )
+
     def _old_media_tokens(self, old_message: OldMessage) -> list[str]:
+        """Токены всех медиа старого сообщения."""
+        return [attach.payload.token for attach in old_message.media]
+
+    def _old_visual_tokens(self, old_message: OldMessage) -> list[str]:
+        """Токены фото/видео старого сообщения."""
         return [
             attach.payload.token
             for attach in old_message.media
@@ -276,10 +286,11 @@ class MessageManager(MessageManagerProtocol):
     ) -> bool:
         if not new_message.two_step_media_edit:
             return False
-        old_tokens = self._old_media_tokens(old_message)
+        # Только фото/видео: на аудио/файлах бага iOS нет.
+        old_tokens = self._old_visual_tokens(old_message)
         if not old_tokens:
             return False
-        new_tokens = self._new_media_tokens(new_message)
+        new_tokens = self._new_visual_tokens(new_message)
         if new_tokens is None:
             # Токен url-медиа неизвестен -> рендерим дважды
             return True
