@@ -651,8 +651,7 @@ class TestLoadCachedMedia:
         cached_token: str,
         need_two_step: bool,
     ) -> None:
-        # _load_cached_media проставляет токен из кэша url-медиа; совпал со
-        # старым -> медиа не менялось -> двойной рендер не нужен.
+        # _load_cached_media берёт токен из кэша; совпал со старым -> без обхода.
         manager = make_manager()
         new_message = make_new_message()
         new_message.media = [

@@ -108,9 +108,7 @@ class MessageManager(MessageManagerProtocol):
             return False
         new_tokens = self._new_media_tokens(new_message)
         if new_tokens is None:
-            # Токен нового медиа заранее неизвестен (нет в кэше) -> считаем, что
-            # медиа изменилось. Не зависит от two_step_media_edit: это про факт
-            # изменения контента, а не про стратегию рендера.
+            # Нет токена в кэше -> считаем медиа изменённым.
             return True
         if not new_tokens:
             return False
@@ -283,10 +281,7 @@ class MessageManager(MessageManagerProtocol):
             return True
         if not new_tokens:
             return False
-        # Сравниваем по порядку, без sorted: перестановка тех же медиа считается
-        # изменением (предположительно баг iOS проявляется и на ней, по аналогии
-        # с одиночным медиа). Совпали токены и порядок -> медиа не менялось,
-        # двойной рендер не нужен (иначе моргание на каждом ререндере).
+        # Сравниваем по порядку, без sorted: перестановка = изменение.
         return new_tokens != old_tokens
 
     async def edit_message(
@@ -380,10 +375,8 @@ class MessageManager(MessageManagerProtocol):
         new_message: NewMessage,
         sent_message: Message,
     ) -> None:
-        # Кэшируем токен из ОТПРАВЛЕННОГО сообщения (payload.token от API), а не
-        # upload-токен: сравниваем именно кэш с токеном старого сообщения. Так на
-        # следующем ререндере то же медиа (по path/url) даёт совпадающий токен и
-        # не требует ни повторной загрузки, ни двойного рендера. См. issue #156.
+        # Кэшируем payload.token из ответа API (для path и url): на следующем
+        # ререндере то же медиа даёт совпадающий токен. См. issue #156.
         sent_media = [
             attach
             for attach in (sent_message.body.attachments or [])

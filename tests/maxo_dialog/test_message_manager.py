@@ -491,8 +491,6 @@ class TestMessageChanged:
         )
 
     def test_url_media_without_cache_is_a_change(self) -> None:
-        # url-медиа без кэш-токена: доказать, что не менялось, нельзя ->
-        # считаем изменённым (не зависит от two_step_media_edit).
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [MediaAttachment(type=AttachmentType.IMAGE, url="http://e.com/a")]
@@ -510,8 +508,6 @@ class TestMessageChanged:
         assert manager._message_changed(new, old)
 
     def test_media_token_changed_is_a_change(self) -> None:
-        # Токен нового медиа известен и отличается -> медиа точно поменялось,
-        # даже если текст и клавиатура не менялись.
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [_media_with_token("new")]
@@ -536,7 +532,6 @@ class TestMessageChanged:
         assert not manager._message_changed(new, _make_old_media_message())
 
     def test_media_reorder_is_a_change(self) -> None:
-        # Перестановка тех же медиа - изменение (баг iOS), сравнение по порядку.
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_message("old")
         new.media = [_media_with_token("t2"), _media_with_token("t1")]
@@ -717,8 +712,6 @@ class TestTwoStepMediaEdit:
         )
 
     def test_no_two_step_when_token_unchanged(self) -> None:
-        # Токен нового медиа известен и совпадает со старым -> медиа не менялось,
-        # двойной рендер не нужен (иначе моргание на каждом ререндере).
         manager = MessageManager(media_id_storage=AsyncMock())
         new = _make_new_media_message(media=[_media_with_token("tok")])
 
@@ -745,7 +738,6 @@ class TestTwoStepMediaEdit:
         assert manager._need_two_step_media_edit(new, old)
 
     def test_two_step_when_old_is_album(self) -> None:
-        # Баг воспроизводится и на нескольких медиа в сообщении.
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
@@ -769,8 +761,6 @@ class TestTwoStepMediaEdit:
         assert manager._need_two_step_media_edit(new, _make_old_media_message())
 
     def test_no_two_step_when_album_tokens_unchanged(self) -> None:
-        # Все токены альбома известны и совпадают в том же порядке ->
-        # медиа не менялось, обход не нужен.
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
@@ -786,7 +776,6 @@ class TestTwoStepMediaEdit:
         assert not manager._need_two_step_media_edit(new, old)
 
     def test_two_step_when_album_reordered(self) -> None:
-        # На iOS перестановка тех же фото тоже воспроизводит баг -> нужен обход.
         manager = MessageManager(media_id_storage=AsyncMock())
         old = _make_old_message(
             text="old",
