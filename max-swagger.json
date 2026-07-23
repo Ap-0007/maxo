@@ -1164,7 +1164,7 @@
                                                 "type": "integer",
                                                 "format": "int64",
                                                 "pattern": "\\-?\\d+"
-                                            }f
+                                            }
                                         }
                                     ],
                                     "responses": {
