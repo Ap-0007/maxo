@@ -56,6 +56,8 @@ just mypy
 just test
 just test-all
 just all
+just butcher       # генерация типов/enum'ов/методов по max-swagger.json
+just butcher-test  # тесты самого генератора
 ```
 
 Полезно помнить:
@@ -570,6 +572,34 @@ TAG_PROVIDERS = concat_provider(
   update-модель, facade/mixin при пользовательском удобстве, сериализацию,
   тесты и документацию.
 
+## Кодогенерация: butcher
+
+`src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
+`max-swagger.json` в корне - это единственный источник правды по контракту API.
+
+- Запуск: `just butcher` (пишет прямо в `src/maxo`, результат ревьюится через
+  `git diff`). Тесты генератора: `just butcher-test`.
+- Свагер butcher **не парсит сам**: за `allOf`, `oneOf`/`anyOf`, `nullable`,
+  форматы, дефолты, `readOnly`, дискриминаторы и тела запросов отвечает
+  `unihttp-openapi-generator` - сабмодуль `butcher/unihttp-openapi-generator`
+  (форк `goduni/unihttp-openapi-generator`). Если каталог пуст, выполни
+  `just butcher-init`.
+- IR строится с `inheritance=True` (поля родителя остаются у родителя, подтипы
+  наследуются) и `omit_optionals=True` (`Omittable[...] = Omitted()`).
+- Всё, чем maxo намеренно отличается от свагера, лежит в
+  `butcher/overrides.py`: пропуски схем и операций, union-алиасы
+  (`Attachments`, `InlineButtons`, `Updates`, ...), самодельные члены enum'ов,
+  aiogram-алиасы, фасады-миксины и ручные символы для `__init__.py`.
+  **Если после генерации приходится править файл руками одинаковым образом -
+  правь таблицу в `overrides.py`, а не `src/maxo`.**
+- Генератор не создаёт: `types/base.py`, `factory()`/`to_request()` у
+  attachment-типов, методы вне свагера (`GetChatByLink`, `DeleteChat`,
+  `UploadMedia`, `EditBotInfo`, `GetChats`, `SetAdmins`), кастомные хвосты
+  вроде `GetUpdates.make_response`, `serialization.py` и `warming_up.py`.
+  Эти места после генерации восстанавливай по `git diff`.
+- Если проблема в самом генераторе - чини её в сабмодуле и оформляй PR в
+  апстрим, а не обходи костылём в butcher.
+
 ## Зависимости и optional extras
 
 - Runtime-зависимости задаются в `pyproject.toml`; не добавляй новые
@@ -906,9 +936,13 @@ uv run sphinx-build -b html docs docs/_build/html
 - Используются `justfile` для локальных команд.
 - `pyproject.toml` содержит строгие правила `ruff` и `mypy`.
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
-  фактически являются generated API surface.
+  фактически являются generated API surface. Генерирует их `just butcher` -
+  см. секцию «Кодогенерация: butcher».
 - `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
   surface и требуют синхронизации с типами, enum и сериализацией.
+- В дереве один сабмодуль: `butcher/unihttp-openapi-generator` - движок
+  кодогенерации. Он исключён из `ruff` в `pyproject.toml` и линтуется в своём
+  репозитории.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
   `aiogram_dialog` и `aiogram-webhook`, поэтому рядом с изменениями нужно
   проверять совместимость паттернов.

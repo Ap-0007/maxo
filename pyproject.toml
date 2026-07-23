@@ -191,7 +191,8 @@ fix = true
 line-length = 88
 indent-width = 4
 target-version = "py312"
-exclude = ["docs/conf.py"]
+# Сабмодуль живёт по своим правилам и линтуется в своём репозитории.
+exclude = ["docs/conf.py", "butcher/unihttp-openapi-generator"]
 
 [tool.ruff.lint]
 select = [
@@ -267,6 +268,14 @@ ignore = [
     "SLF001",
 ]
 "examples/**/*.py" = ["T201", "D", "TID252"]
+"butcher/tests/**/*.py" = [
+    "S101", # assert
+    "ANN", # type annotations
+    "D", # docstrings
+    "E501", # длинные строки
+    "PLR", # complexity
+]
+"butcher/__main__.py" = ["T201"] # CLI печатает итог генерации
 "src/maxo/types/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/enums/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/bot/methods/*.py" = ["E501", "D", "W291", "W293"]
@@ -293,6 +302,9 @@ include = 'src/.*\.py$|tests/.*\.py$|examples/.*\.py$'
 # log_cli печатал DEBUG-лог на каждый тест и раздувал вывод в несколько раз.
 # Для отладки включай точечно: `uv run pytest --log-cli-level=DEBUG`.
 asyncio_mode = "auto"
+# Тесты butcher (butcher/tests) требуют unihttp-openapi-generator и запускаются
+# отдельно через `just butcher-test`, поэтому в автосбор не попадают.
+testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
