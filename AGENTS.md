@@ -17,8 +17,13 @@
 Не выноси обязательные правила в Claude-only skills или другие инструменты,
 которые не читают Codex, Cursor, Copilot, Gemini и похожие агенты. Если
 инструкции разрастутся, добавляй вложенные `AGENTS.md` ближе к области
-ответственности, например `src/maxo/bot/AGENTS.md`, `tests/AGENTS.md` или
-`docs/AGENTS.md`.
+ответственности - так уже сделано для кодогенерации (`butcher/AGENTS.md`);
+по тому же принципу можно завести `src/maxo/bot/AGENTS.md`, `tests/AGENTS.md`
+или `docs/AGENTS.md`.
+
+Вложенный `AGENTS.md` дополняет корневой, а не заменяет: общие правила проекта
+действуют и в подкаталоге. Рядом с ним держи симлинк `CLAUDE.md -> ./AGENTS.md`,
+как в корне.
 
 Специфичные файлы для отдельных инструментов допустимы только как тонкий слой
 поверх `AGENTS.md`. В них нельзя держать единственную копию знаний о проекте.
@@ -576,29 +581,12 @@ TAG_PROVIDERS = concat_provider(
 
 `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
 `max-swagger.json` в корне - это единственный источник правды по контракту API.
+Генератор живёт в `butcher/` и работает поверх сабмодуля
+`butcher/unihttp-openapi-generator`. Запуск - `just butcher`.
 
-- Запуск: `just butcher` (пишет прямо в `src/maxo`, результат ревьюится через
-  `git diff`). Тесты генератора: `just butcher-test`.
-- Свагер butcher **не парсит сам**: за `allOf`, `oneOf`/`anyOf`, `nullable`,
-  форматы, дефолты, `readOnly`, дискриминаторы и тела запросов отвечает
-  `unihttp-openapi-generator` - сабмодуль `butcher/unihttp-openapi-generator`
-  (форк `goduni/unihttp-openapi-generator`). Если каталог пуст, выполни
-  `just butcher-init`.
-- IR строится с `inheritance=True` (поля родителя остаются у родителя, подтипы
-  наследуются) и `omit_optionals=True` (`Omittable[...] = Omitted()`).
-- Всё, чем maxo намеренно отличается от свагера, лежит в
-  `butcher/overrides.py`: пропуски схем и операций, union-алиасы
-  (`Attachments`, `InlineButtons`, `Updates`, ...), самодельные члены enum'ов,
-  aiogram-алиасы, фасады-миксины и ручные символы для `__init__.py`.
-  **Если после генерации приходится править файл руками одинаковым образом -
-  правь таблицу в `overrides.py`, а не `src/maxo`.**
-- Генератор не создаёт: `types/base.py`, `factory()`/`to_request()` у
-  attachment-типов, методы вне свагера (`GetChatByLink`, `DeleteChat`,
-  `UploadMedia`, `EditBotInfo`, `GetChats`, `SetAdmins`), кастомные хвосты
-  вроде `GetUpdates.make_response`, `serialization.py` и `warming_up.py`.
-  Эти места после генерации восстанавливай по `git diff`.
-- Если проблема в самом генераторе - чини её в сабмодуле и оформляй PR в
-  апстрим, а не обходи костылём в butcher.
+**Правила генерации - в `butcher/AGENTS.md`.** Читай его перед любой правкой
+`butcher/`, перед синхронизацией со свагером и когда нужно понять, почему
+сгенерированный файл выглядит именно так.
 
 ## Зависимости и optional extras
 
@@ -937,7 +925,7 @@ uv run sphinx-build -b html docs docs/_build/html
 - `pyproject.toml` содержит строгие правила `ruff` и `mypy`.
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
   фактически являются generated API surface. Генерирует их `just butcher` -
-  см. секцию «Кодогенерация: butcher».
+  правила в `butcher/AGENTS.md`.
 - `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
   surface и требуют синхронизации с типами, enum и сериализацией.
 - В дереве один сабмодуль: `butcher/unihttp-openapi-generator` - движок
