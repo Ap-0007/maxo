@@ -5,33 +5,16 @@ import pytest
 from maxo.enums import ChatType
 from maxo.errors import AttributeIsEmptyError
 from maxo.types import (
-    Callback,
     Message,
     MessageBody,
     MessageCallback,
     Recipient,
     SendMessageResult,
     SimpleQueryResult,
-    User,
 )
 from tests.constants import NOW
 
-
-def make_user() -> User:
-    return User(user_id=5, is_bot=False, first_name="U", last_activity_time=NOW)
-
-
-def make_callback() -> Callback:
-    return Callback(callback_id="cb1", timestamp=NOW, user=make_user())
-
-
-def make_message() -> Message:
-    return Message(
-        timestamp=NOW,
-        recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=5),
-        body=MessageBody(mid="m1", seq=1, text="hi"),
-        sender=make_user(),
-    )
+from .conftest import make_callback, make_message
 
 
 @pytest.fixture
@@ -100,7 +83,7 @@ class TestMessageCallbackWithoutMessage:
         await callback_without_message.callback_answer(notification="ok")
 
         bot.answer_on_callback.assert_awaited_once_with(
-            callback_id="cb1",
+            callback_id="cb",
             notification="ok",
             message=None,
         )
@@ -139,4 +122,4 @@ class TestMessageCallbackWithMessage:
     ) -> None:
         await callback_with_message.delete_message()
 
-        bot.delete_message.assert_awaited_once_with(message_id="m1")
+        bot.delete_message.assert_awaited_once_with(message_id="mid")
