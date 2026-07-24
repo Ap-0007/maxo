@@ -26,21 +26,11 @@ class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):  
 
     callback: Callback
 
-    message: Message | None = None  # type: ignore[assignment]
+    message: Message | None = None
     """Изначальное сообщение, содержащее встроенную клавиатуру. Может быть `null`, если оно было удалено к моменту, когда бот получил это событие"""
 
     user_locale: Omittable[str | None] = Omitted()
     """Текущий язык пользователя в формате IETF BCP 47"""
-
-    @property
-    def unsafe_message(self) -> Message:
-        if is_defined(self.message):
-            return self.message
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="message",
-        )
 
     @property
     def unsafe_user_locale(self) -> str:
