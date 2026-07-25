@@ -55,13 +55,14 @@ FORBIDDEN_STACK_KEY = "aiogd_stack_forbidden"
 
 
 def event_context_from_callback(event: MessageCallback, ctx: Ctx) -> EventContext:
+    recipient = event.message.recipient if event.message is not None else None
     return EventContext(
         bot=ctx["bot"],
         user=event.callback.user,
         user_id=event.callback.user.user_id,
-        chat_id=event.unsafe_message.recipient.chat_id,
+        chat_id=recipient.chat_id if recipient is not None else None,
         chat=None,
-        chat_type=event.unsafe_message.recipient.chat_type,
+        chat_type=recipient.chat_type if recipient is not None else None,
     )
 
 
