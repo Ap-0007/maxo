@@ -214,14 +214,14 @@ ConfirmButton
         widget: ConfirmButton,
         manager: DialogManager,
     ) -> None:
-        await callback.message.answer("Действие подтверждено!")
+        await callback.unsafe_message.answer("Действие подтверждено!")
 
     async def on_cancel(
         callback: MessageCallback,
         widget: ConfirmButton,
         manager: DialogManager,
     ) -> None:
-        await callback.message.answer("Действие отменено.")
+        await callback.unsafe_message.answer("Действие отменено.")
 
     # Режим с предупредительным текстом (2 шага):
     # primary → warning + [Отмена] [Подтвердить] → on_confirm / on_cancel
