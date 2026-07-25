@@ -36,7 +36,10 @@ def test_inheritance_keeps_only_own_fields(document: MaxoDocument) -> None:
 def test_discriminator_becomes_enum(document: MaxoDocument) -> None:
     enum = _enum(document, "AttachmentType")
     assert enum.description == "Вложение"
-    assert [(m.name, m.value) for m in enum.members] == [("IMAGE", "image"), ("VIDEO", "video")]
+    assert [(m.name, m.value) for m in enum.members] == [
+        ("IMAGE", "image"),
+        ("VIDEO", "video"),
+    ]
 
 
 def test_base_tag_field_is_typed_by_enum(document: MaxoDocument) -> None:
@@ -46,7 +49,9 @@ def test_base_tag_field_is_typed_by_enum(document: MaxoDocument) -> None:
 
 
 def test_subtype_tag_field_gets_enum_default(document: MaxoDocument) -> None:
-    tag = next(f for f in _model(document, "PhotoAttachment").fields if f.name == "type")
+    tag = next(
+        f for f in _model(document, "PhotoAttachment").fields if f.name == "type"
+    )
     assert tag.annotation == "AttachmentType"
     assert tag.default == "AttachmentType.IMAGE"
     assert not tag.bare_assignment
@@ -74,7 +79,9 @@ def test_int64_timestamp_becomes_datetime(document: MaxoDocument) -> None:
 
 
 def test_base_reference_is_replaced_by_union_alias(document: MaxoDocument) -> None:
-    attachments = next(f for f in _model(document, "Message").fields if f.name == "attachments")
+    attachments = next(
+        f for f in _model(document, "Message").fields if f.name == "attachments"
+    )
     assert attachments.annotation == "list[Attachments] | None"
 
 
@@ -93,7 +100,9 @@ def test_union_files_are_built_from_discriminator(document: MaxoDocument) -> Non
 def test_union_skips_members_absent_from_spec(document: MaxoDocument) -> None:
     # В таблице MediaAttachments перечислены ещё audio и file, но их в спеке нет.
     attachments = next(item for item in document.unions if item.module == "attachments")
-    members = next(a for a in attachments.aliases if a.name == "MediaAttachments").members
+    members = next(
+        a for a in attachments.aliases if a.name == "MediaAttachments"
+    ).members
     assert "AudioAttachment" not in members
 
 
@@ -122,7 +131,11 @@ def test_method_url_uses_snake_case_placeholders(document: MaxoDocument) -> None
 def test_method_ignores_spec_defaults(document: MaxoDocument) -> None:
     # `disable_link_preview` объявлен с `default: false`, но у maxo необязательный
     # параметр - это `Omitted()`, а не подставленное значение.
-    field = next(f for f in _method(document, "SendMessage").fields if f.name.startswith("disable"))
+    field = next(
+        f
+        for f in _method(document, "SendMessage").fields
+        if f.name.startswith("disable")
+    )
     assert field.omittable
     assert field.default is None
 
@@ -193,7 +206,11 @@ def test_method_field_type_override(
 ) -> None:
     # METHOD_FIELD_TYPES перекрывает тип поля метода, минуя генератор (нужно
     # там, где свагер описан неверно и тип выводится в `Any`).
-    monkeypatch.setitem(overrides.METHOD_FIELD_TYPES, ("SendMessage", "text"), "list[int]")
+    monkeypatch.setitem(
+        overrides.METHOD_FIELD_TYPES,
+        ("SendMessage", "text"),
+        "list[int]",
+    )
     path = tmp_path / "spec.json"
     path.write_text(json.dumps(SPEC), encoding="utf-8")
     document = build_profile(load(str(path)))
