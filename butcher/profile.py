@@ -17,6 +17,7 @@ from unihttp_openapi_generator.ir.operations import (
 )
 from unihttp_openapi_generator.ir.types import (
     DATETIME,
+    INT,
     IRType,
     Import,
     ListType,
@@ -201,6 +202,7 @@ class _Profile:
         self._tags: dict[str, tuple[str, str, str]] = {}
         self._union_modules: dict[str, str] = {}
         self._enum_names: set[str] = set()
+        self._used_unions: set[str] = set()
 
     # -- подготовка --------------------------------------------------------
 
@@ -322,6 +324,7 @@ class _Profile:
                     message = f"union-алиас {alias!r} не объявлен в UNION_FILES"
                     raise ProfileError(message)
                 imports.add(Import(f"{naming.TYPES_PACKAGE}.{module}", alias))
+                self._used_unions.add(alias)
             return union_expression
 
         if name in self._enum_names:
@@ -343,11 +346,27 @@ class _Profile:
         """int64 с описанием про время - в maxo это `datetime`."""
         if ir_field.constraints.get("format") != "int64":
             return False
-        description = (ir_field.description or "").lower()
-        return any(hint in description for hint in overrides.TIMESTAMP_HINTS)
+        return _has_timestamp_hint(ir_field.description)
 
     def _field_type(self, ir_field: IRField) -> IRType:
         return DATETIME if self._is_timestamp(ir_field) else ir_field.type
+
+    @staticmethod
+    def _parameter_type(ir_type: IRType, description: str | None) -> IRType:
+        """
+        То же правило для параметров и полей тела запроса.
+
+        У `IRParameter`/`IRBodyField` нет `constraints`, поэтому формат int64 от
+        int32 не отличить - хватает того, что тип целочисленный, а описание
+        говорит про время.
+        """
+        if not _has_timestamp_hint(description):
+            return ir_type
+        if _is_int(ir_type):
+            return DATETIME
+        if isinstance(ir_type, OptionalType) and _is_int(ir_type.inner):
+            return OptionalType(DATETIME)
+        return ir_type
 
     # -- модели ------------------------------------------------------------
 
@@ -430,7 +449,12 @@ class _Profile:
         model = self._models.get(name)
         if model is None or model.discriminator is None:
             return None
-        return f"{name}Type", model.discriminator.property_name
+        enum_name = f"{name}Type"
+        if enum_name not in self._enum_names:
+            # Все подтипы базы пропущены - enum не собрался, типизировать поле
+            # им нельзя: получился бы импорт несуществующего модуля.
+            return None
+        return enum_name, model.discriminator.property_name
 
     def _build_tag_field(
         self,
@@ -555,7 +579,10 @@ class _Profile:
     ) -> tuple[Field, ...]:
         fields: list[Field] = []
         for parameter in operation.parameters:
-            annotation = self._annotate(parameter.type, imports)
+            annotation = self._annotate(
+                self._parameter_type(parameter.type, parameter.description),
+                imports,
+            )
             fields.append(
                 Field(
                     name=parameter.name,
@@ -587,7 +614,10 @@ class _Profile:
             return tuple(fields)
 
         for body_field in body.fields:
-            annotation = self._annotate(body_field.type, imports)
+            annotation = self._annotate(
+                self._parameter_type(body_field.type, body_field.description),
+                imports,
+            )
             if body_field.is_file:
                 marker = "File"
                 imports.update(body_field.type.imports())
@@ -612,12 +642,31 @@ class _Profile:
         self._collect_class_names()
         self._collect_enums()
         self._collect_union_modules()
-        return MaxoDocument(
+        unions = self._build_unions()
+        document = MaxoDocument(
             enums=tuple(sorted(self._enums.values(), key=lambda item: item.name)),
             models=self._build_models(),
-            unions=self._build_unions(),
+            unions=unions,
             methods=self._build_methods(),
         )
+        self._check_union_imports(unions)
+        return document
+
+    def _check_union_imports(self, unions: tuple[Unions, ...]) -> None:
+        """
+        Каждый алиас, на который сослались аннотации, должен попасть в вывод.
+
+        Алиас без членов молча выпадает из union-файла, а `_annotate_ref` всё
+        равно импортирует его в каждую ссылающуюся модель - получился бы
+        `ImportError` на импорте `maxo`.
+        """
+        generated = {name for item in unions for name in item.exported_names}
+        missing = sorted(self._used_unions - generated)
+        if missing:
+            raise ProfileError(
+                f"union-алиасы {missing} используются в аннотациях, но не "
+                f"собрались. Проверь UNION_FILES и спеку.",
+            )
 
 
 def _model_field_groups(fields: tuple[Field, ...]) -> tuple[tuple[Field, ...], ...]:
@@ -642,8 +691,10 @@ def _method_field_groups(fields: tuple[Field, ...]) -> tuple[tuple[Field, ...], 
         group = [item for item in fields if item.marker == marker]
         if not group:
             continue
-        plain = (f for f in group if not f.omittable)
-        required = sorted((f for f in plain if not f.optional), key=_by_name)
+        required = sorted(
+            (f for f in group if not f.omittable and not f.optional),
+            key=_by_name,
+        )
         optional = sorted(
             (f for f in group if not f.omittable and f.optional),
             key=_by_name,
@@ -651,6 +702,21 @@ def _method_field_groups(fields: tuple[Field, ...]) -> tuple[tuple[Field, ...], 
         omittable = sorted((f for f in group if f.omittable), key=_by_name)
         groups.append((*required, *optional, *omittable))
     return tuple(groups)
+
+
+def _is_int(ir_type: IRType) -> bool:
+    """Целое число - как напрямую, так и через `INLINE_ALIASES` (схема `bigint`)."""
+    if ir_type == INT:
+        return True
+    return (
+        isinstance(ir_type, RefType)
+        and overrides.INLINE_ALIASES.get(ir_type.name) == "int"
+    )
+
+
+def _has_timestamp_hint(description: str | None) -> bool:
+    text = (description or "").lower()
+    return any(hint in text for hint in overrides.TIMESTAMP_HINTS)
 
 
 def _by_name(item: Field) -> str:

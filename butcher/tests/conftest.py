@@ -30,6 +30,14 @@ SPEC: dict[str, Any] = {
                         "in": "query",
                         "schema": {"type": "boolean", "default": False},
                     },
+                    {
+                        "name": "from",
+                        "description": "Время, начиная с которого нужны сообщения",
+                        "in": "query",
+                        # Через `$ref`, как в настоящей спеке: формат виден только
+                        # после разворачивания `INLINE_ALIASES`.
+                        "schema": {"$ref": "#/components/schemas/bigint"},
+                    },
                 ],
                 "requestBody": {
                     "required": True,

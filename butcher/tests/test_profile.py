@@ -119,6 +119,14 @@ def test_method_ignores_spec_defaults(document: MaxoDocument) -> None:
     assert field.default is None
 
 
+def test_method_parameter_timestamp_becomes_datetime(document: MaxoDocument) -> None:
+    # То же правило, что и для полей моделей: целое с описанием про время - datetime.
+    fields = {f.name: f for f in _method(document, "SendMessage").fields}
+    assert fields["from_"].annotation == "datetime"
+    # У `chat_id` тот же тип, но описание не про время - остаётся int.
+    assert fields["chat_id"].annotation == "int"
+
+
 def test_method_body_fields_keep_descriptions(document: MaxoDocument) -> None:
     text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
     assert text.marker == "Body"

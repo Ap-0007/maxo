@@ -12,7 +12,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 
 ```bash
 just butcher       # генерация в src/maxo
-just butcher-test  # тесты butcher (31 шт.)
+just butcher-test  # тесты butcher (32 шт.)
 just butcher-init  # git submodule update --init, если каталог генератора пуст
 ```
 
@@ -97,6 +97,12 @@ Butcher не создаёт и при генерации затрёт, если 
   `UploadMedia.validate_response`.
 - `serialization.py` (`TAG_PROVIDERS`) и `warming_up.py` - butcher их не
   трогает, но при новом полиморфном типе их нужно обновить руками.
+- Поля, которых нет в свагере: `Chat.chat_message_id` вместе с
+  `unsafe_chat_message_id`. Butcher их не знает и вычистит.
+- Алиасы-свойства и сужения типов с `# type: ignore[assignment]`:
+  `Message.message`, `Chat.id`, `User.id`/`fullname`, `Callback.id`/`data`,
+  `MessageCallback.message`, `MessageButton.text`. Без них `just mypy` после
+  генерации падает - восстанавливай их вместе с остальным ручным кодом.
 
 Рабочий процесс: `just butcher` пишет прямо в `src/maxo`, дальше результат
 ревьюится через `git diff` и ручные куски восстанавливаются точечно.
