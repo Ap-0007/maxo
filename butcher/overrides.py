@@ -70,6 +70,14 @@ REPLACED_BASES: dict[str, str] = {
 #: Схема-предок апдейтов - по ней профиль отличает апдейты от обычных типов.
 UPDATE_BASE_SCHEMA = "Update"
 
+#: Суффикс в именах схем-апдейтов, снимаемый с класса:
+#: `MessageCreatedUpdate` -> `MessageCreated`.
+UPDATE_CLASS_SUFFIX = "Update"
+
+#: Имя, под которым дискриминатор апдейта выставляется в классе. Должно совпадать
+#: с `MaxUpdate.type: ClassVar[UpdateType]` в `maxo/types/base.py`.
+UPDATE_TYPE_ATTR = "type"
+
 #: Корень иерархии типов.
 ROOT_BASE_CLASS = "MaxoType"
 

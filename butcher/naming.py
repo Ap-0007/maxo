@@ -4,7 +4,6 @@ from unihttp_openapi_generator.ir.naming import to_snake_case
 
 TYPES_PACKAGE = "maxo.types"
 ENUMS_PACKAGE = "maxo.enums"
-METHODS_PACKAGE = "maxo.bot.methods"
 
 
 def module_stem(class_name: str) -> str:
@@ -20,10 +19,11 @@ def enum_module(class_name: str) -> str:
     return f"{ENUMS_PACKAGE}.{module_stem(class_name)}"
 
 
-def method_module(tag: str, class_name: str) -> str:
-    return f"{METHODS_PACKAGE}.{tag}.{module_stem(class_name)}"
-
-
 def enum_member(value: str) -> str:
     """Имя члена enum: ``inline_keyboard`` -> ``INLINE_KEYBOARD``."""
     return value.upper().replace("-", "_")
+
+
+def discriminator_enum(base_name: str) -> str:
+    """Имя enum из дискриминатора базы: ``Attachment`` -> ``AttachmentType``."""
+    return f"{base_name}Type"

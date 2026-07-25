@@ -6,6 +6,7 @@ maxo-профиль: превращает IR генератора в струк�
 union-алиасы вместо ссылок на базу, пропуски, ручные добавки и фасады.
 """
 
+import re
 from dataclasses import dataclass, field
 
 from unihttp_openapi_generator.ir.document import IRDocument
@@ -21,16 +22,14 @@ from unihttp_openapi_generator.ir.types import (
     IRType,
     Import,
     ListType,
-    LiteralType,
     MappingType,
     OptionalType,
-    PrimitiveType,
     RefType,
     UnionType,
 )
 
 from butcher import naming, overrides
-from butcher.overrides import EnumExtras, UnionAlias, UnionFile
+from butcher.overrides import EnumExtras, EnumMember, UnionAlias, UnionFile
 
 _MARKER_BY_LOCATION = {
     ParamLocation.PATH: "Path",
@@ -62,13 +61,17 @@ class Field:
     annotation: str
     description: str | None = None
     omittable: bool = False
-    optional: bool = False
     default: str | None = None
     marker: str | None = None
     bare_assignment: bool = False
     """Печатать как ``type = UpdateType.X`` - без аннотации."""
     comment: str | None = None
     """Хвостовой комментарий после объявления поля (``# ...``)."""
+
+    @property
+    def optional(self) -> bool:
+        """Тип допускает ``None`` - поле рендерится с ``= None``."""
+        return self.annotation.endswith(" | None")
 
     @property
     def unsafe(self) -> bool:
@@ -95,7 +98,7 @@ class Model:
 
     @property
     def fields(self) -> tuple[Field, ...]:
-        return tuple(item for group in self.field_groups for item in group)
+        return _flatten(self.field_groups)
 
     @property
     def module_stem(self) -> str:
@@ -108,14 +111,6 @@ class Model:
     @property
     def exported_names(self) -> tuple[str, ...]:
         return (self.name, *(alias for alias, _ in self.type_aliases))
-
-
-@dataclass(slots=True, frozen=True)
-class EnumMember:
-    name: str
-    value: str
-    comment: str | None = None
-    alias_of: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -167,7 +162,7 @@ class Method:
 
     @property
     def fields(self) -> tuple[Field, ...]:
-        return tuple(item for group in self.field_groups for item in group)
+        return _flatten(self.field_groups)
 
     @property
     def module_stem(self) -> str:
@@ -203,7 +198,6 @@ class _Profile:
         self._enums: dict[str, Enum] = {}
         self._tags: dict[str, tuple[str, str, str]] = {}
         self._union_modules: dict[str, str] = {}
-        self._enum_names: set[str] = set()
         self._used_unions: set[str] = set()
 
     # -- подготовка --------------------------------------------------------
@@ -225,7 +219,9 @@ class _Profile:
             if name in self._skipped:
                 continue
             self._class_names[name] = (
-                name.removesuffix("Update") if self._is_update(name) else name
+                name.removesuffix(overrides.UPDATE_CLASS_SUFFIX)
+                if self._is_update(name)
+                else name
             )
 
     def _is_update(self, name: str) -> bool:
@@ -246,18 +242,11 @@ class _Profile:
         for name, ir_enum in self._ir_enums.items():
             if name in self._skipped:
                 continue
-            self._enums[name] = Enum(
-                name=name,
-                description=ir_enum.description,
-                members=tuple(
-                    EnumMember(name=member, value=str(value))
-                    for member, value in sorted(
-                        ir_enum.members,
-                        key=lambda item: item[0],
-                    )
-                ),
-                extras=overrides.ENUM_EXTRAS.get(name, EnumExtras()),
+            members = tuple(
+                EnumMember(name=member, value=str(value))
+                for member, value in sorted(ir_enum.members, key=lambda item: item[0])
             )
+            self._enums[name] = _make_enum(name, ir_enum.description, members)
 
         for base_name, model in self._models.items():
             if model.discriminator is None or base_name in overrides.SKIP_ENUMS:
@@ -269,20 +258,15 @@ class _Profile:
             }
             if not mapping:
                 continue
-            enum_name = f"{base_name}Type"
-            self._enums[enum_name] = Enum(
-                name=enum_name,
-                description=model.description,
-                members=tuple(
-                    EnumMember(name=naming.enum_member(tag), value=tag)
-                    for tag in sorted(mapping)
-                ),
-                extras=overrides.ENUM_EXTRAS.get(enum_name, EnumExtras()),
+            enum_name = naming.discriminator_enum(base_name)
+            members = tuple(
+                EnumMember(name=naming.enum_member(tag), value=tag)
+                for tag in sorted(mapping)
             )
+            self._enums[enum_name] = _make_enum(enum_name, model.description, members)
+            property_name = model.discriminator.property_name
             for tag, subtype in mapping.items():
-                property_name = model.discriminator.property_name
                 self._tags[subtype] = (enum_name, property_name, tag)
-        self._enum_names = set(self._enums)
 
     def _collect_union_modules(self) -> None:
         for union_file in overrides.UNION_FILES:
@@ -304,12 +288,7 @@ class _Profile:
         if isinstance(ir_type, UnionType):
             members = (self._annotate(member, imports) for member in ir_type.members)
             return " | ".join(members)
-        if isinstance(ir_type, LiteralType):
-            imports.update(ir_type.imports())
-            return ir_type.annotation()
-        if isinstance(ir_type, PrimitiveType):
-            imports.update(ir_type.imports())
-            return ir_type.annotation()
+        # Литералы, примитивы и всё остальное аннотируются одинаково.
         imports.update(ir_type.imports())
         return ir_type.annotation()
 
@@ -329,7 +308,7 @@ class _Profile:
                 self._used_unions.add(alias)
             return union_expression
 
-        if name in self._enum_names:
+        if name in self._enums:
             imports.add(Import(naming.enum_module(name), name))
             return name
 
@@ -454,7 +433,6 @@ class _Profile:
             annotation=annotation,
             description=ir_field.description,
             omittable=omittable,
-            optional=annotation.endswith(" | None"),
             comment=comment,
         )
 
@@ -462,8 +440,8 @@ class _Profile:
         model = self._models.get(name)
         if model is None or model.discriminator is None:
             return None
-        enum_name = f"{name}Type"
-        if enum_name not in self._enum_names:
+        enum_name = naming.discriminator_enum(name)
+        if enum_name not in self._enums:
             # Все подтипы базы пропущены - enum не собрался, типизировать поле
             # им нельзя: получился бы импорт несуществующего модуля.
             return None
@@ -483,7 +461,7 @@ class _Profile:
         # только присваивает значение.
         if is_update:
             return Field(
-                name="type",
+                name=overrides.UPDATE_TYPE_ATTR,
                 annotation=enum_name,
                 default=default,
                 bare_assignment=True,
@@ -618,10 +596,8 @@ class _Profile:
                     name=parameter.name,
                     annotation=annotation,
                     description=parameter.description,
-                    # Дефолты свагера намеренно игнорируются: у maxo необязательный
-                    # параметр - это `Omitted()`, а не подставленное значение.
+                    # Дефолты свагера игнорируем: необязательный параметр - `Omitted()`.
                     omittable=not parameter.required,
-                    optional=annotation.endswith(" | None"),
                     marker=_MARKER_BY_LOCATION[parameter.location],
                 ),
             )
@@ -637,7 +613,6 @@ class _Profile:
                     name="body",
                     annotation=annotation,
                     omittable=not body.required,
-                    optional=annotation.endswith(" | None"),
                     marker="Body",
                 ),
             )
@@ -662,7 +637,6 @@ class _Profile:
                     annotation=annotation,
                     description=body_field.description,
                     omittable=not body_field.required,
-                    optional=annotation.endswith(" | None"),
                     marker=marker,
                 ),
             )
@@ -756,6 +730,24 @@ def _by_name(item: Field) -> str:
     return item.name
 
 
+def _flatten(field_groups: tuple[tuple[Field, ...], ...]) -> tuple[Field, ...]:
+    return tuple(item for group in field_groups for item in group)
+
+
+def _make_enum(
+    name: str,
+    description: str | None,
+    members: tuple[EnumMember, ...],
+) -> Enum:
+    """Собрать `Enum` с ручными добавками из `ENUM_EXTRAS`."""
+    return Enum(
+        name=name,
+        description=description,
+        members=members,
+        extras=overrides.ENUM_EXTRAS.get(name, EnumExtras()),
+    )
+
+
 def _method_url(operation: IROperation) -> str:
     """URL для `__url__`: без ведущего слэша и с path-параметрами в snake_case."""
     url = operation.path.lstrip("/")
@@ -766,21 +758,9 @@ def _method_url(operation: IROperation) -> str:
 
 
 def _doc_link(operation: IROperation) -> str:
-    path = operation.path.lstrip("/")
-    for placeholder in _placeholders(path):
-        path = path.replace(f"{{{placeholder}}}", f"-{placeholder}-")
+    # `{chatId}` в пути ссылки на доку записывается как `-chatId-`.
+    path = re.sub(r"\{([^}]+)\}", r"-\1-", operation.path.lstrip("/"))
     return f"{DOC_BASE_URL}/methods/{operation.http_method.upper()}/{path}"
-
-
-def _placeholders(path: str) -> list[str]:
-    result: list[str] = []
-    rest = path
-    while "{" in rest and "}" in rest:
-        start = rest.index("{")
-        end = rest.index("}", start)
-        result.append(rest[start + 1 : end])
-        rest = rest[end + 1 :]
-    return result
 
 
 def build_profile(document: IRDocument) -> MaxoDocument:

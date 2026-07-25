@@ -12,7 +12,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 
 ```bash
 just butcher       # генерация в src/maxo
-just butcher-test  # тесты butcher (44 шт.)
+just butcher-test  # тесты butcher (45 шт.)
 just butcher-init  # git submodule update --init, если каталог генератора пуст
 ```
 

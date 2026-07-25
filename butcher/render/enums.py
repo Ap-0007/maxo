@@ -2,7 +2,8 @@
 
 import json
 
-from butcher.profile import Enum, EnumMember
+from butcher.overrides import EnumMember
+from butcher.profile import Enum
 from butcher.render import docs
 
 

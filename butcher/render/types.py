@@ -14,14 +14,12 @@ def render(model: Model) -> str:
         f"class {model.name}({', '.join(model.bases)}):",
     ]
 
+    ordered = sorted(model.fields, key=lambda field_: field_.name)
     doc = docs.render(
         docs.build_parts(
             summary=None,
             description=model.description,
-            parameters=[
-                (item.name, item.description)
-                for item in sorted(model.fields, key=lambda field_: field_.name)
-            ],
+            parameters=[(item.name, item.description) for item in ordered],
             reflow=True,
         ),
     )
@@ -34,7 +32,7 @@ def render(model: Model) -> str:
         for item in group:
             body.extend(fields.render(item, reflow=True))
 
-    for item in sorted(model.fields, key=lambda field_: field_.name):
+    for item in ordered:
         if item.unsafe:
             body.extend(fields.render_unsafe(item))
 
