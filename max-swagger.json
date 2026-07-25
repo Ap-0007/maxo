@@ -998,9 +998,7 @@
                         "style": "simple",
                         "schema": {
                             "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "format": "string"
                         }
                     },
                     {
@@ -3996,14 +3994,19 @@
             "UserIdsList": {
                 "properties": {
                     "user_ids": {
+                        "name": "user_ids",
                         "description": "Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов",
-                        "type": "array",
-                        "uniqueItems": true,
-                        "items": {
-                            "type": "integer",
-                            "format": "int64",
-                            "maxItems": "100"
-                        }
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "uniqueItems": true,
+                            "items": {
+                                "type": "integer",
+                                "format": "int64",
+                                "maxItems": "100"
+                            }
+                        },
+                        "style": "simple"
                     }
                 },
                 "required": [

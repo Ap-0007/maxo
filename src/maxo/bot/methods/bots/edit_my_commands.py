@@ -15,7 +15,7 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
 
     #### Пример запроса:
     ```bash
-    curl -X  "https://platform-api2.max.ru/me/commands" \
+    curl -X PATCH "https://platform-api2.max.ru/me/commands" \
       -H "Authorization: {access_token}" \
       -H "Content-Type: application/json" \
       -d '{
@@ -26,6 +26,7 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
               }
             ]
           }'
+    ```
 
     Args:
         commands: Команды, которые поддерживает бот
