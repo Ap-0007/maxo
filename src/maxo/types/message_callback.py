@@ -33,6 +33,16 @@ class MessageCallback(MaxUpdate, CallbackMethodsFacade, MessageMethodsFacade):  
     """Текущий язык пользователя в формате IETF BCP 47"""
 
     @property
+    def unsafe_message(self) -> Message:
+        if is_defined(self.message):
+            return self.message
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="message",
+        )
+
+    @property
     def unsafe_user_locale(self) -> str:
         if is_defined(self.user_locale):
             return self.user_locale

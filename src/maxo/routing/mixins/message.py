@@ -32,7 +32,6 @@ class MessageMethodsFacade(ChatMethodsFacade):
 
     @property
     def unsafe_message(self) -> "Message":
-        """Сообщение апдейта. Кидает ошибку, если сообщения нет."""
         if is_defined(self.message):
             return self.message
 
