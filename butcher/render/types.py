@@ -22,6 +22,7 @@ def render(model: Model) -> str:
                 (item.name, item.description)
                 for item in sorted(model.fields, key=lambda field_: field_.name)
             ],
+            reflow=True,
         ),
     )
     lines.extend(doc)
@@ -31,9 +32,9 @@ def render(model: Model) -> str:
         if body:
             body.append("")
         for item in group:
-            body.extend(fields.render(item))
+            body.extend(fields.render(item, reflow=True))
 
-    for item in model.fields:
+    for item in sorted(model.fields, key=lambda field_: field_.name):
         if item.unsafe:
             body.extend(fields.render_unsafe(item))
 

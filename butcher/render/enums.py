@@ -13,7 +13,7 @@ def render(enum: Enum) -> str:
         header.append("from typing import TypeAlias")
 
     lines = [*header, "", "", f"class {enum.name}(StrEnum):"]
-    lines.extend(docs.render(docs.build_parts(None, enum.description, [])))
+    lines.extend(docs.render(docs.build_parts(None, enum.description, [], reflow=True)))
     if enum.description:
         lines.append("")
 

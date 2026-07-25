@@ -1,6 +1,14 @@
 """Тесты трансформаций maxo-профиля."""
 
-from butcher.profile import Enum, MaxoDocument, Method, Model
+import json
+from pathlib import Path
+
+import pytest
+
+from butcher import overrides
+from butcher.profile import Enum, MaxoDocument, Method, Model, build_profile
+from butcher.spec import load
+from butcher.tests.conftest import SPEC
 
 
 def _model(document: MaxoDocument, name: str) -> Model:
@@ -151,3 +159,43 @@ def test_unsafe_properties_only_for_absent_values(document: MaxoDocument) -> Non
     fields = {f.name: f for f in _model(document, "Message").fields}
     assert fields["url"].unsafe
     assert not fields["timestamp"].unsafe
+
+
+def test_model_field_ignores_spec_default(document: MaxoDocument) -> None:
+    # У поля есть `default: true`, но оно необязательное - в maxo это `Omitted()`,
+    # а не `= True` (дефолты свагера игнорируем и в моделях, как в методах).
+    notify = next(f for f in _model(document, "Message").fields if f.name == "notify")
+    assert notify.omittable
+    assert notify.default is None
+
+
+def test_model_field_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # MODEL_FIELD_OVERRIDES перекрывает тип/омиттабельность и добавляет коммент.
+    monkeypatch.setitem(
+        overrides.MODEL_FIELD_OVERRIDES,
+        ("Message", "url"),
+        overrides.FieldOverride(omittable=True, comment="type: ignore[assignment]"),
+    )
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+    document = build_profile(load(str(path)))
+    url = next(f for f in _model(document, "Message").fields if f.name == "url")
+    assert url.omittable
+    assert url.comment == "type: ignore[assignment]"
+
+
+def test_method_field_type_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # METHOD_FIELD_TYPES перекрывает тип поля метода, минуя генератор (нужно
+    # там, где свагер описан неверно и тип выводится в `Any`).
+    monkeypatch.setitem(overrides.METHOD_FIELD_TYPES, ("SendMessage", "text"), "list[int]")
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+    document = build_profile(load(str(path)))
+    text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
+    assert text.annotation == "list[int]"

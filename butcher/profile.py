@@ -67,6 +67,8 @@ class Field:
     marker: str | None = None
     bare_assignment: bool = False
     """Печатать как ``type = UpdateType.X`` - без аннотации."""
+    comment: str | None = None
+    """Хвостовой комментарий после объявления поля (``# ...``)."""
 
     @property
     def unsafe(self) -> bool:
@@ -437,12 +439,23 @@ class _Profile:
             )
 
         annotation = self._annotate(self._field_type(ir_field), imports)
+        # Дефолты свагера игнорируем: необязательное поле - это `Omitted()`.
+        omittable = not ir_field.required
+        comment: str | None = None
+        override = overrides.MODEL_FIELD_OVERRIDES.get((owner, ir_field.name))
+        if override is not None:
+            if override.annotation is not None:
+                annotation = override.annotation
+            if override.omittable is not None:
+                omittable = override.omittable
+            comment = override.comment
         return Field(
             name=ir_field.name,
             annotation=annotation,
             description=ir_field.description,
-            omittable=ir_field.omittable,
+            omittable=omittable,
             optional=annotation.endswith(" | None"),
+            comment=comment,
         )
 
     def _base_discriminator(self, name: str) -> tuple[str, str] | None:
@@ -572,6 +585,20 @@ class _Profile:
             imports=frozenset(imports),
         )
 
+    def _method_field_type(
+        self,
+        class_name: str,
+        field_name: str,
+        ir_type: IRType,
+        description: str | None,
+        imports: set[Import],
+    ) -> str:
+        # Замена обходит генератор, чтобы не тянуть его импорты (лишний `Any`).
+        override = overrides.METHOD_FIELD_TYPES.get((class_name, field_name))
+        if override is not None:
+            return override
+        return self._annotate(self._parameter_type(ir_type, description), imports)
+
     def _build_method_fields(
         self,
         operation: IROperation,
@@ -579,8 +606,11 @@ class _Profile:
     ) -> tuple[Field, ...]:
         fields: list[Field] = []
         for parameter in operation.parameters:
-            annotation = self._annotate(
-                self._parameter_type(parameter.type, parameter.description),
+            annotation = self._method_field_type(
+                operation.class_name,
+                parameter.name,
+                parameter.type,
+                parameter.description,
                 imports,
             )
             fields.append(
@@ -614,8 +644,11 @@ class _Profile:
             return tuple(fields)
 
         for body_field in body.fields:
-            annotation = self._annotate(
-                self._parameter_type(body_field.type, body_field.description),
+            annotation = self._method_field_type(
+                operation.class_name,
+                body_field.name,
+                body_field.type,
+                body_field.description,
                 imports,
             )
             if body_field.is_file:

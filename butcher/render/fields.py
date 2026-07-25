@@ -4,7 +4,7 @@ from butcher.profile import Field
 from butcher.render import docs
 
 
-def render(field: Field, indent: str = "    ") -> list[str]:
+def render(field: Field, indent: str = "    ", reflow: bool = False) -> list[str]:
     """Строки объявления поля вместе с его docstring'ом."""
     if field.bare_assignment:
         return [f"{indent}{field.name} = {field.default}"]
@@ -22,8 +22,10 @@ def render(field: Field, indent: str = "    ") -> list[str]:
         line += " = Omitted()"
     elif field.optional:
         line += " = None"
+    if field.comment is not None:
+        line += f"  # {field.comment}"
 
-    return [line, *docs.render_field(field.description, indent)]
+    return [line, *docs.render_field(field.description, indent, reflow=reflow)]
 
 
 def render_unsafe(field: Field, indent: str = "    ") -> list[str]:

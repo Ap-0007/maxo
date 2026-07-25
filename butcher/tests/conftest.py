@@ -116,6 +116,11 @@ SPEC: dict[str, Any] = {
                         "items": {"$ref": "#/components/schemas/Attachment"},
                     },
                     "url": {"type": "string", "nullable": True},
+                    "notify": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Уведомлять ли участников",
+                    },
                 },
             },
             "Attachment": {

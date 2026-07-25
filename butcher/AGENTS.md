@@ -12,7 +12,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 
 ```bash
 just butcher       # генерация в src/maxo
-just butcher-test  # тесты butcher (32 шт.)
+just butcher-test  # тесты butcher (44 шт.)
 just butcher-init  # git submodule update --init, если каталог генератора пуст
 ```
 
@@ -61,6 +61,24 @@ IR строится с двумя обязательными для maxo фла�
 - `omit_optionals=True` - необязательные поля остаются
   `Omittable[...] = Omitted()`, а не схлопываются в `T | None = None`.
 
+### Docstring'и типов и enum'ов
+
+`render/docs.py` печатает описания «как есть», но приводит к порядку списки:
+
+- `<br/>` (и `<br>`, `</br>`) разворачиваются в перенос строки.
+- `collapse_list_blanks` убирает пустые строки **перед пунктами** списка -
+  печатаем списки плотно за вводной. ``` не трогаем. Работает для всех
+  docstring'ов, включая методы.
+- `reflow_lists` сдвигает пункты плотного списка на +4, если список идёт
+  вплотную за вводной (отступ решается по первому пункту и держится на весь
+  список). Только для типов и enum'ов (`reflow=True`); у методов списки и
+  curl-примеры вперемешку.
+
+`unsafe_*`-свойства печатаются по алфавиту имени поля.
+
+Дефолты свагера у полей моделей игнорируются, как и у методов: `required:
+false` - это `Omittable[...] = Omitted()`, а не `= <default>`.
+
 ## Слой оверрайдов
 
 `overrides.py` - место для всего, чем maxo намеренно отличается от свагера:
@@ -80,6 +98,15 @@ IR строится с двумя обязательными для maxo фла�
 - `TYPES_EXTRA_EXPORTS` / `METHODS_EXTRA_EXPORTS` - ручные символы, которые
   должны попасть в сгенерированные `__init__.py`.
 - `INLINE_ALIASES`, `TIMESTAMP_HINTS` - мелкие правила типов.
+- `METHOD_FIELD_TYPES` - точечная замена типа поля метода по
+  `(класс, поле)` там, где свагер описан неверно и генератор выводит `Any`
+  (например, тело `UserIdsList` записано как parameters-объект -> `user_ids`;
+  `GetMessages.message_ids` - массив без `items`).
+- `MODEL_FIELD_OVERRIDES` (`FieldOverride`) - правки полей моделей по
+  `(класс, поле)`: заменить тип, форсировать `Omittable` и добавить хвостовой
+  комментарий. Так генерируются `MessageButton.text` (сужение до `Omittable` с
+  `# type: ignore`) и `PhotoAttachmentRequestPayload.photos` (map в свагере, но
+  на деле список).
 
 **Главное правило: если после генерации приходится править файл руками
 одинаковым образом - правь таблицу в `overrides.py`, а не `src/maxo`.**
@@ -101,8 +128,9 @@ Butcher не создаёт и при генерации затрёт, если 
   `unsafe_chat_message_id`. Butcher их не знает и вычистит.
 - Алиасы-свойства и сужения типов с `# type: ignore[assignment]`:
   `Message.message`, `Chat.id`, `User.id`/`fullname`, `Callback.id`/`data`,
-  `MessageCallback.message`, `MessageButton.text`. Без них `just mypy` после
-  генерации падает - восстанавливай их вместе с остальным ручным кодом.
+  `MessageCallback.message`. Без них `just mypy` после генерации падает -
+  восстанавливай их вместе с остальным ручным кодом. (`MessageButton.text`
+  теперь генерируется через `MODEL_FIELD_OVERRIDES`.)
 
 Рабочий процесс: `just butcher` пишет прямо в `src/maxo`, дальше результат
 ревьюится через `git diff` и ручные куски восстанавливаются точечно.

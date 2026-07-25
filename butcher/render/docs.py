@@ -1,27 +1,22 @@
-"""
-Docstring'и в стиле maxo: описание, блок ``Args:`` и ссылка на источник.
-
-Стиль отличается от генераторного (`render/serializers/base.py:docstring`): тот
-переформатирует абзацы по ширине и ломает markdown, который приходит из спеки.
-Здесь текст сохраняется как есть, меняются только тире, ссылки и переносы.
-"""
+"""Docstring'и в стиле maxo: описание, ``Args:`` и ссылка на источник."""
 
 import re
 
 DOC_BASE_URL = "https://dev.max.ru"
 
-# Ссылки в спеке относительные от корня сайта: `](/docs-api/methods/...)`,
-# `](/docs-api#Якорь)`, `](/docs/webapps/bridge#WebAppData)`.
+# Относительные ссылки на доку: `](/docs-api/...)`, `](/docs-api#Якорь)`.
 _LINK_PATTERN = re.compile(r"]\((/[^)]*)\)")
-_NORMALIZED = {
-    0x2010: "-",  # hyphen
-    0x2011: "-",  # non-breaking hyphen
-    0x2012: "-",  # figure dash
-    0x2013: "-",  # en dash
-    0x2014: "-",  # em dash
-    0x2015: "-",  # horizontal bar
-    0x2212: "-",  # minus sign
-    0x00A0: " ",  # non-breaking space
+# Пункт списка: `- `/`-  `, но не `-H`, `--flag`, `-1`.
+_LIST_ITEM = re.compile(r"-\s")
+_DASHES = {
+    0x2010: "-",
+    0x2011: "-",
+    0x2012: "-",
+    0x2013: "-",
+    0x2014: "-",
+    0x2015: "-",
+    0x2212: "-",
+    0x00A0: " ",
 }
 
 
@@ -31,8 +26,8 @@ def convert_links(text: str) -> str:
 
 
 def normalize(text: str) -> str:
-    """Привести к обычному дефису все Unicode-тире (и nbsp - к пробелу)."""
-    return text.translate(_NORMALIZED)
+    """Все Unicode-тире - к обычному дефису, nbsp - к пробелу."""
+    return text.translate(_DASHES)
 
 
 def clean(text: str) -> str:
@@ -40,11 +35,52 @@ def clean(text: str) -> str:
     return convert_links(
         normalize(text)
         .strip()
+        .replace("<br/>", "\n")
         .replace("<br>", "\n")
         .replace("</br>", "\n")
-        .replace("<br/>", "\n")
         .replace('"""', "'''"),
     )
+
+
+def _is_item(line: str) -> bool:
+    return bool(_LIST_ITEM.match(line.lstrip(" ")))
+
+
+def collapse_list_blanks(text: str) -> str:
+    """Убрать пустые строки перед пунктами списка - печатаем списки плотно."""
+    lines = text.split("\n")
+    out: list[str] = []
+    in_fence = False
+    for i, line in enumerate(lines):
+        if line.lstrip(" ").startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and not line.strip():
+            nxt = next((s for s in lines[i + 1 :] if s.strip()), "")
+            if _is_item(nxt):
+                continue
+        out.append(line)
+    return "\n".join(out)
+
+
+def reflow_lists(text: str) -> str:
+    """Сдвинуть пункты списка на +4, если он идёт вплотную за вводной."""
+    # Отступ решаем по первому пункту и держим на весь список, иначе съедет
+    # частично. Содержимое ``` не трогаем.
+    out: list[str] = []
+    in_fence = False
+    prev = ""
+    indent = False
+    for line in text.split("\n"):
+        stripped = line.lstrip(" ")
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and _LIST_ITEM.match(stripped):
+            if not _is_item(prev):
+                indent = bool(prev.strip())
+            line = f"    {line}" if indent else line
+        out.append(line)
+        prev = line
+    return "\n".join(out)
 
 
 def build_parts(
@@ -52,8 +88,9 @@ def build_parts(
     description: str | None,
     parameters: list[tuple[str, str | None]],
     source_link: str | None = None,
+    reflow: bool = False,
 ) -> list[str]:
-    """Собрать строки docstring'а класса."""
+    """Собрать строки docstring'а; ``reflow`` сдвигает пункты списка."""
     parts: list[str] = []
 
     if summary:
@@ -62,7 +99,10 @@ def build_parts(
     if description:
         if parts and parts[-1] != "":
             parts.append("")
-        parts.extend(clean(description).split("\n"))
+        cleaned = collapse_list_blanks(clean(description))
+        if reflow:
+            cleaned = reflow_lists(cleaned)
+        parts.extend(cleaned.split("\n"))
 
     if parameters:
         if parts and parts[-1] != "":
@@ -82,7 +122,7 @@ def build_parts(
 
 
 def render(parts: list[str], indent: str = "    ") -> list[str]:
-    """Готовые строки docstring'а вместе с тройными кавычками (или пустой список)."""
+    """Готовые строки docstring'а с тройными кавычками (или пустой список)."""
     if not parts:
         return []
 
@@ -100,11 +140,17 @@ def render(parts: list[str], indent: str = "    ") -> list[str]:
     return [f'{indent}"""', *lines, f'{indent}"""']
 
 
-def render_field(description: str | None, indent: str = "    ") -> list[str]:
+def render_field(
+    description: str | None,
+    indent: str = "    ",
+    reflow: bool = False,
+) -> list[str]:
     """Docstring под полем: однострочный или блоком."""
     if not description:
         return []
-    text = clean(description)
+    text = collapse_list_blanks(clean(description))
+    if reflow:
+        text = reflow_lists(text)
     if "\n" not in text:
         return [f'{indent}"""{text}"""']
     body = [f"{indent}{line}" if line else "" for line in text.split("\n")]

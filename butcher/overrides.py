@@ -76,6 +76,41 @@ ROOT_BASE_CLASS = "MaxoType"
 #: Слова в описании, по которым int64 распознаётся как таймстемп.
 TIMESTAMP_HINTS: tuple[str, ...] = ("time", "date", "время")
 
+#: Тип поля метода там, где свагер неверен и генератор выводит `Any` (тело
+#: `UserIdsList` - parameters-объект; `message_ids` - массив без `items`).
+METHOD_FIELD_TYPES: dict[tuple[str, str], str] = {
+    ("AddMembers", "user_ids"): "list[int]",
+    ("GetMessages", "message_ids"): "list[str] | None",
+}
+
+
+@dataclass(slots=True, frozen=True)
+class FieldOverride:
+    """Ручная правка поля модели поверх того, что дал генератор."""
+
+    annotation: str | None = None
+    """Заменить тип поля (импорты берутся от исходного типа)."""
+    omittable: bool | None = None
+    """Форсировать `Omittable`/обычное поле независимо от `required` в свагере."""
+    comment: str | None = None
+    """Хвостовой комментарий после объявления (``# ...``)."""
+
+
+#: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
+#: ``(класс, поле)``.
+MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
+    # `Button.text` обязателен, но принятая кнопка может прийти без него.
+    ("MessageButton", "text"): FieldOverride(
+        omittable=True,
+        comment="type: ignore[assignment]",
+    ),
+    # В свагере `photos` - map, но на деле приходит список токенов.
+    ("PhotoAttachmentRequestPayload", "photos"): FieldOverride(
+        annotation="list[PhotoToken] | None",
+        comment="TODO: Проверить кто это",
+    ),
+}
+
 
 # --- union-алиасы ------------------------------------------------------------
 
