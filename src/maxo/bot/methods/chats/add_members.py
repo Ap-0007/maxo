@@ -11,7 +11,7 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
 
      Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого чата с соответствующим правом `add_remove_members`. Чтобы получить информацию о правах бота, используйте [GET /chats/-chatId-/members/admins](https://dev.max.ru/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах - в описании объекта [`Chat`](https://dev.max.ru/docs-api/objects/Chat)
 
-     >Добавить подписчиков в канал с помощью этого метода нельзя 
+     >Добавить подписчиков в канал с помощью этого метода нельзя
 
     **Пример запроса**:
     ```bash
@@ -25,7 +25,7 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
 
     Args:
         chat_id: ID группового чата
-        user_ids: 
+        user_ids: Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов
 
     Источник: https://dev.max.ru/docs-api/methods/POST/chats/-chatId-/members
     """
@@ -37,3 +37,4 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     """ID группового чата"""
 
     user_ids: Body[list[int]]
+    """Массив ID пользователей, которых вы хотите добавить в групповой чат. В одном запросе можно передать максимум 100 идентификаторов"""

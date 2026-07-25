@@ -8,6 +8,7 @@ class ChatType(StrEnum):
     CHAT = "chat"
     DIALOG = "dialog"
 
-    PRIVATE = DIALOG  # Подражание aiogram
-    GROUP = CHAT  # Подражание aiogram
-    SUPERGROUP = CHAT  # Подражание aiogram
+    # Подражание aiogram
+    PRIVATE = DIALOG
+    GROUP = CHAT
+    SUPERGROUP = CHAT
