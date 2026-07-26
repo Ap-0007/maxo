@@ -1,19 +1,17 @@
-import json
 import pathlib
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import TracebackType
-from typing import Any, BinaryIO, Self, TypeVar
+from typing import BinaryIO, Self, TypeVar
 
 from adaptix import Retort
-from aiohttp import ClientTimeout
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
 from unihttp.method import BaseMethod, ResponseType
 from unihttp.middlewares import AsyncMiddleware
 
 from maxo import loggers
-from maxo.bot.api_client import MaxApiClient
+from maxo.bot.api_client import MaxApiClient, default_transport
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AddMembers,
@@ -67,19 +65,7 @@ from maxo.utils.upload_media import InputFile
 _MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 
 
-class Bot(BaseAsyncClient):
-    __slots__ = (
-        "_defaults",
-        "_json_dumps",
-        "_json_loads",
-        "_middleware",
-        "_retort",
-        "_state",
-        "_token",
-        "_upload_config",
-        "_warming_up",
-    )
-
+class Bot:
     def __init__(
         self,
         token: str,
@@ -88,18 +74,16 @@ class Bot(BaseAsyncClient):
         upload_config: UploadConfig | None = None,
         warming_up: bool = True,
         middleware: list[AsyncMiddleware] | None = None,
-        json_dumps: Callable[[Any], str] = json.dumps,
-        json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
+        transport: BaseAsyncClient | None = None,
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
         self._warming_up = warming_up
         self._middleware = middleware
+        self._transport = transport
         self._upload_config = (
             upload_config if upload_config is not None else UploadConfig()
         )
-        self._json_dumps = json_dumps
-        self._json_loads = json_loads
 
         self._retort = create_retort_with_bot(
             bot=self,
@@ -142,15 +126,17 @@ class Bot(BaseAsyncClient):
         if self.state.started:
             return
 
-        api_client = MaxApiClient(
-            token=self._token,
+        transport = self._transport or default_transport(
             request_dumper=self._retort,
             response_loader=self._retort,
-            middleware=self._middleware,
-            upload_config=self._upload_config,
-            json_dumps=self._json_dumps,
-            json_loads=self._json_loads,
         )
+        transport.middleware.extend(self._middleware or [])
+        api_client = MaxApiClient(
+            token=self._token,
+            transport=transport,
+            upload_config=self._upload_config,
+        )
+
         self._state = ConnectingBotState(api_client=api_client)
 
         info = await self.get_my_info()
@@ -163,11 +149,11 @@ class Bot(BaseAsyncClient):
         await self.state.api_client.close()
         self._state = ClosedBotState()
 
-    async def call_method(
+    async def call_method(  # for unihttp bind_method
         self,
         method: BaseMethod[ResponseType],
     ) -> ResponseType:
-        return await self.state.api_client.call_method(method)
+        return await self.state.api_client.transport.call_method(method)
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
         try:
@@ -192,14 +178,12 @@ class Bot(BaseAsyncClient):
         self,
         url: str | AttachmentPayload,
         destination: BinaryIO | pathlib.Path | str | None = None,
-        timeout: float | ClientTimeout = 30,
         chunk_size: int = 65536,
         seek: bool = True,
     ) -> BinaryIO | None:
         return await self.state.api_client.download(
             url=url,
             destination=destination,
-            timeout=timeout,
             chunk_size=chunk_size,
             seek=seek,
         )
@@ -218,12 +202,10 @@ class Bot(BaseAsyncClient):
         return await self.state.api_client.upload_resumable(upload_url, file, size)
 
     # Bots
-
     edit_bot_info = bind_method(EditBotInfo)
     get_my_info = bind_method(GetMyInfo)
 
     # Chats
-
     add_members = bind_method(AddMembers)
     delete_admin = bind_method(DeleteAdmin)
     delete_chat = bind_method(DeleteChat)
@@ -243,7 +225,6 @@ class Bot(BaseAsyncClient):
     unpin_message = bind_method(UnpinMessage)
 
     # Messages
-
     answer_on_callback = bind_method(AnswerOnCallback)
     delete_message = bind_method(DeleteMessage)
     edit_message = bind_method(EditMessage)
@@ -253,13 +234,11 @@ class Bot(BaseAsyncClient):
     send_message = bind_method(SendMessage)
 
     # Subscriptions
-
     get_subscriptions = bind_method(GetSubscriptions)
     get_updates = bind_method(GetUpdates)
     subscribe = bind_method(Subscribe)
     unsubscribe = bind_method(Unsubscribe)
 
     # Uploads
-
     get_upload_url = bind_method(GetUploadUrl)
     upload_media = bind_method(UploadMedia)
