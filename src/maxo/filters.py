@@ -25,7 +25,7 @@ from maxo.routing.filters.logic import (
     invert_f,
     or_f,
 )
-from maxo.routing.filters.payload import Payload
+from maxo.routing.filters.payload import CallbackData, Payload
 from maxo.routing.filters.state import StateFilter
 
 __all__ = (
@@ -33,6 +33,7 @@ __all__ = (
     "AlwaysTrueFilter",
     "AndFilter",
     "BaseFilter",
+    "CallbackData",
     "Command",
     "CommandObject",
     "CommandStart",

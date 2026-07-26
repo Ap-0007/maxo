@@ -32,7 +32,7 @@ body:
     attributes:
       label: Версия Python
       description: (`python --version` внутри виртуального окружения)
-      placeholder: Например, 3.10.1
+      placeholder: Например, 3.12.1
     validations:
       required: true
 
@@ -40,7 +40,7 @@ body:
     attributes:
       label: Версия maxo
       description: (`pip show maxo` внутри виртуального окружения)
-      placeholder: Например, 0.1.0 или 2.0.1b2
+      placeholder: Например, 0.8.0 или 2.0.1b2
     validations:
       required: true
 

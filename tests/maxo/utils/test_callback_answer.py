@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.updates.message_callback import MessageCallback
+from maxo.types import MessageCallback
 from maxo.utils.callback_answer import (
     CALLBACK_ANSWER_KEY,
     CallbackAnswer,

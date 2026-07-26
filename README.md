@@ -41,10 +41,13 @@
 ## Почему maxo?
 
 - Интерфейс намеренно близок к `aiogram`: роутеры, фильтры, мидлвари, FSM и диалоги работают так, как вы привыкли
-- 100% аннотаций и `mypy --strict` - ошибки видно в IDE, а не в проде
-- Long-polling и вебхуки (`aiohttp` / `fastapi`), FSM с Redis, диалоги, DI через `dishka` и фильтры на `magic_filter`
+- Диалоги (`maxo.dialogs`): окна, виджеты, пагинация, календарь. Интерфейс можно посмотреть в браузере до запуска бота, а сценарии - тестировать без сети
+- Long-polling и вебхуки (`aiohttp` / `fastapi`), FSM с Redis, DI через `dishka` и фильтры на `magic_filter`
 - Методы, типы и апдейты генерируются по [официальной документации MAX Bot API](https://dev.max.ru/docs-api) - меньше расхождений с платформой
-- Асинхронность на `aiohttp`, покрытие тестами и подробная [документация](https://maxo.readthedocs.io) на русском
+- 100% аннотаций и `mypy --strict` - ошибки видно в IDE, а не в проде
+- Ошибки API типизированы: можно писать `except MaxBotTooManyRequestsError`, а не разбирать голый HTTP-ответ
+- Российский доверенный сертификат уже вшит в HTTP-клиент, настраивать SSL для API MAX вручную не нужно
+- Асинхронность на `aiohttp` и [`unihttp`](https://github.com/goduni/unihttp), валидация данных через [`adaptix`](https://github.com/reagento/adaptix), [документация](https://maxo.readthedocs.io) на русском
 
 ## Установка
 
@@ -87,7 +90,7 @@ dependencies = [
 
 ```python
 from maxo import Bot, Dispatcher
-from maxo.routing.updates import MessageCreated
+from maxo.types import MessageCreated
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -105,7 +108,7 @@ dp.run_polling(bot)
 ```python
 from maxo import Bot, Dispatcher
 from maxo.routing.filters import Command, DeeplinkFilter
-from maxo.routing.updates import BotStarted, MessageCreated
+from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -133,7 +136,8 @@ from magic_filter import F
 from maxo import Bot, Dispatcher
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.routing.updates import MessageCallback, MessageCreated
+from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCallback, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
 bot = Bot("TOKEN")
@@ -149,16 +153,68 @@ async def start_handler(message: MessageCreated) -> None:
         .add_link(text="Перейти в maxo", url=maxo_url)
         .add_clipboard(text="Скопировать maxo", payload=maxo_url)
         .add_request_contact(text="Поделиться контактами")
-        .add_request_geo_location(text="Поделиться гео позицией")
+        .add_request_geo_location(text="Поделиться геопозицией")
         .adjust(2, 2, 1, 1)
     )
     await message.answer(text="Кнопочки :3", keyboard=keyboard.build())
 
-@dp.message_callback(MagicFilter(F.payload == "callback_payload"))
+@dp.message_callback(MagicFilter(F.payload == "click_me"))
 async def button_handler(callback: MessageCallback) -> None:
     await callback.callback_answer("Вы нажали на кнопку!")
 
 dp.run_polling(bot)
+```
+
+### Диалоги
+
+Многошаговый сценарий - это окна и виджеты, переходами управляет менеджер
+диалога. Окна можно отрисовать в HTML-превью без запуска бота, а сценарии -
+тестировать без сети через `maxo.dialogs.test_tools`:
+
+```python
+from maxo import Bot, Dispatcher
+from maxo.dialogs import Dialog, DialogManager, StartMode, Window, setup_dialogs
+from maxo.dialogs.widgets.kbd import Button
+from maxo.dialogs.widgets.text import Const
+from maxo.fsm import State, StatesGroup
+from maxo.fsm.key_builder import DefaultKeyBuilder
+from maxo.routing.filters import CommandStart
+from maxo.transport.long_polling import LongPolling
+from maxo.types import MessageCallback, MessageCreated
+
+bot = Bot("TOKEN")
+# Для диалогов нужен key builder с destiny
+dp = Dispatcher(key_builder=DefaultKeyBuilder(with_destiny=True))
+
+class MainState(StatesGroup):
+    main = State()
+
+async def close_dialog(
+    callback: MessageCallback,
+    button: Button,
+    manager: DialogManager,
+) -> None:
+    await manager.done()
+
+dialog = Dialog(
+    Window(
+        Const("Главное меню"),
+        Button(Const("Закрыть"), id="close", on_click=close_dialog),
+        state=MainState.main,
+    ),
+)
+
+@dp.message_created(CommandStart())
+async def start_handler(
+    message: MessageCreated,
+    dialog_manager: DialogManager,
+) -> None:
+    await dialog_manager.start(MainState.main, mode=StartMode.RESET_STACK)
+
+dp.include(dialog)
+setup_dialogs(dp)
+
+LongPolling(dp).run(bot)
 ```
 
 ### Вебхук
@@ -170,12 +226,12 @@ from aiohttp import web
 
 from maxo import Bot, Dispatcher, Router
 from maxo.enums import TextFormat
-from maxo.routing.updates import BotStarted, MessageCreated
 from maxo.routing.utils import collect_used_updates
 from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
 from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
 from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
 router = Router()
@@ -258,11 +314,15 @@ FSM встроена в `maxo` - есть `MemoryStorage` из коробки и
 
 ### Можно ли обслуживать несколько ботов в одном приложении?
 
-Да, через вебхуки: токен бота извлекается из входящего запроса (routing), поэтому одно приложение может принимать апдейты сразу для многих ботов.
+Пока частично. Готовый `SimpleEngine` обслуживает одного бота. Для мульти-бот сценария есть заготовки: `PathRouting` и `QueryRouting` извлекают токен бота из URL или query-параметра, а выбор бота по токену реализуется наследником `WebhookEngine` (метод `_get_bot_from_request`).
 
 ### Как масштабировать бота под нагрузку?
 
 Для продакшена используйте вебхуки: сервер MAX доставляет каждый апдейт один раз, и нагрузку можно распределить между воркерами (например, за Nginx или в Kubernetes). Long-polling для этого не подходит - при нескольких процессах с одним токеном апдейты дублируются.
+
+### Как тестировать бота без реального MAX?
+
+Для диалогов есть `maxo.dialogs.test_tools`: `BotClient` эмулирует пользователя, `MockMessageManager` записывает отправленные сообщения, локаторы находят кнопки по тексту. Сценарий "клик по кнопке - смена окна - новый текст" проверяется без единого сетевого вызова. Пример - в [examples/dialogs_testing.py](./examples/dialogs_testing.py).
 
 ### maxo бесплатный? Какая лицензия?
 

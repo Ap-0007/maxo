@@ -6,7 +6,7 @@
 языке.
 
 `maxo` - асинхронный Python-фреймворк для разработки ботов российского
-мессенджера MAX (`https://max.ru`). Текущая версия проекта: `0.7.0`.
+мессенджера MAX (`https://max.ru`). Текущая версия проекта: `0.8.0`.
 Поддерживаемые версии Python: `3.12`, `3.13`, `3.14`.
 
 ## Единый источник инструкций
@@ -78,21 +78,21 @@ just all
 
 Ключевые директории:
 
-| Путь                     | Назначение                                                                                              |
-|--------------------------|---------------------------------------------------------------------------------------------------------|
-| `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                        |
-| `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                       |
-| `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                       |
-| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares, facades, updates, signals.           |
-| `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                            |
-| `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools. |
-| `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                |
-| `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                         |
-| `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                   |
-| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers, facades.                                   |
-| `docs/`                  | Sphinx-документация на русском языке.                                                                   |
-| `examples/`              | Рабочие примеры использования публичного API.                                                           |
-| `tests/`                 | Pytest-тесты по подсистемам.                                                                            |
+| Путь                     | Назначение                                                                                                                        |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `src/maxo/bot/`          | `Bot`, `MaxApiClient`, состояния бота, declarative Bot API methods на `unihttp`.                                                  |
+| `src/maxo/types/`        | Типы MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
+| `src/maxo/enums/`        | Enum MAX Bot API. Многие файлы сгенерированы по документации API.                                                                 |
+| `src/maxo/routing/`      | `Dispatcher`, `Router`, observers, handlers, filters, middlewares, facades и signals; `updates/` - устаревший слой совместимости. |
+| `src/maxo/fsm/`          | FSM: `State`, `StatesGroup`, `FSMContext`, storage, isolation, key builders.                                                      |
+| `src/maxo/dialogs/`      | Диалоги, портированные из `aiogram_dialog`: `Dialog`, `Window`, widgets, managers, preview, test tools.                           |
+| `src/maxo/transport/`    | Long polling и webhook engine/adapters/routing/security.                                                                          |
+| `src/maxo/errors/`       | Исключения публичного API и ошибки MAX Bot API.                                                                                   |
+| `src/maxo/integrations/` | Интеграции `dishka` и `magic_filter`.                                                                                             |
+| `src/maxo/utils/`        | Builders, upload helpers, formatting, deeplink/link helpers, facades.                                                             |
+| `docs/`                  | Sphinx-документация на русском языке.                                                                                             |
+| `examples/`              | Рабочие примеры использования публичного API.                                                                                     |
+| `tests/`                 | Pytest-тесты по подсистемам.                                                                                                      |
 
 Общая модель системы:
 
@@ -247,6 +247,14 @@ router.callback_query = router.message_callback  # алиас
 Используй явные имена (`message_created`) в новом коде. Алиасы нужны для
 миграции с aiogram.
 
+### Исключения, алиасы и канонические импорты
+
+- Канонические update-типы находятся в `maxo.types`. Пакет
+  `maxo.routing.updates` сохраняется только как устаревший слой совместимости.
+- Общие и API-исключения находятся в `maxo.errors`, dialog-исключения - в
+  `maxo.dialogs.api.exceptions`, а управляющие исключения routing - в
+  `maxo.routing.sentinels`.
+
 **Конфликт метаклассов: BaseMethodsFacade = BotMixin**
 
 `src/maxo/routing/mixins/base.py` содержит комментарий-исповедь:
@@ -386,6 +394,10 @@ def new_int_id() -> int:
 ID конвертируются в короткую base62-подобную строку для использования в
 callback payload. Это позволяет уместить ID в ограничения MAX API на длину
 payload.
+
+**Известное ограничение:** ID могут совпасть, если диалоги запущены в одну
+миллисекунду. Формат сохранен ради короткого callback payload; не добавляй
+локальные обходы коллизии без отдельного изменения публичного контракта.
 
 ### Webhook и collect_used_updates
 
@@ -844,7 +856,7 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 - Новые пользовательские возможности требуют обновления docs и, если уместно,
   `examples/`.
 - Примеры должны импортировать только публичный API и быть совместимыми с
-  текущей версией `0.7.0`.
+  текущей версией `0.8.0`.
 - При изменении структуры docs обновляй `docs/index.rst` и соответствующие
   `toctree`.
 - В README держи короткие актуальные примеры. Детальные объяснения отправляй в

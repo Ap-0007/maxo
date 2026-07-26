@@ -30,7 +30,7 @@ from typing import Any
 from maxo.errors import MaxoError
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
-from maxo.routing.updates.message_callback import MessageCallback
+from maxo.types import MessageCallback
 
 CALLBACK_ANSWER_KEY = "callback_answer"
 
