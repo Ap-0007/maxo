@@ -22,6 +22,7 @@ from maxo.bot.methods import (
     EditBotInfo,
     EditChat,
     EditMessage,
+    EditMyCommands,
     GetAdmins,
     GetChat,
     GetChatByLink,
@@ -204,6 +205,7 @@ class Bot:
     # Bots
     edit_bot_info = bind_method(EditBotInfo)
     get_my_info = bind_method(GetMyInfo)
+    edit_my_commands = bind_method(EditMyCommands)
 
     # Chats
     add_members = bind_method(AddMembers)
