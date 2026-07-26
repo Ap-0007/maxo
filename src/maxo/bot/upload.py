@@ -1,24 +1,26 @@
-from collections.abc import Callable
 from contextlib import aclosing
 from enum import StrEnum
-from typing import Any, Never
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-from aiohttp import ClientError, ClientSession
-from aiohttp.hdrs import CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE
-from unihttp.serialize import ResponseLoader
-
 from maxo.backoff import Backoff, BackoffConfig
+from maxo.bot.methods.upload.chunk_upload import UploadResponseBody, _ChunkUpload
 from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
-from maxo.errors.network import to_network_error
+from maxo.errors.network import MaxBotNetworkError
 from maxo.types import BaseMaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
+if TYPE_CHECKING:
+    from maxo.bot.api_client import MaxApiClient
+
 _MIB = 1024 * 1024
 _OCTET_STREAM = "application/octet-stream"
+_CONTENT_TYPE = "Content-Type"
+_CONTENT_DISPOSITION = "Content-Disposition"
+_CONTENT_RANGE = "Content-Range"
 _CLIENT_ERROR_STATUS = 400
 _SERVER_ERROR_STATUS = 500
 
@@ -99,17 +101,17 @@ async def resumable_upload(
     *,
     url: str,
     file: InputFile,
-    session: ClientSession,
-    response_loader: ResponseLoader,
-    json_loads: Callable[[bytes], Any],
+    api_client: "MaxApiClient",
     config: UploadConfig | None = None,
     size: int | None = None,
 ) -> UploadMediaResult | None:
     """
-    Загружает файл частями через выделенную keep-alive сессию.
+    Загружает файл частями через `api_client`.
 
     `size` - заранее известный размер файла в байтах
     """
+    response_loader = api_client.transport.response_loader
+
     if config is None:
         config = UploadConfig()
 
@@ -123,24 +125,23 @@ async def resumable_upload(
     disposition = f'attachment; filename="{encoded_name}"'
 
     offset = 0
-    final_body = b""
+    final_body: UploadResponseBody = b""
     # aclosing: при ошибке `async for` не закрывает генератор, а у
     # `FSInputFile.stream` внутри него остаётся открытый файл.
     async with aclosing(file.stream(config.chunk_size)) as chunks:
         async for chunk in chunks:
             end = offset + len(chunk) - 1
             headers: dict[str, str] = {
-                CONTENT_TYPE: _OCTET_STREAM,
-                CONTENT_DISPOSITION: disposition,
-                CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
+                _CONTENT_TYPE: _OCTET_STREAM,
+                _CONTENT_DISPOSITION: disposition,
+                _CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
             }
             final_body = await _send_chunk(
-                session=session,
+                api_client=api_client,
                 url=url,
                 chunk=chunk,
                 headers=headers,
                 config=config,
-                json_loads=json_loads,
             )
             offset += len(chunk)
 
@@ -149,72 +150,47 @@ async def resumable_upload(
         msg = f"Размер файла изменился во время загрузки: {size} -> {offset} байт"
         raise ValueError(msg)
 
-    return _parse_result(final_body, response_loader, json_loads)
+    if not isinstance(final_body, dict):
+        return None
+    return response_loader.load(final_body, UploadMediaResult)
 
 
 async def _send_chunk(
     *,
-    session: ClientSession,
+    api_client: "MaxApiClient",
     url: str,
     chunk: bytes,
     headers: dict[str, str],
     config: UploadConfig,
-    json_loads: Callable[[bytes], Any],
-) -> bytes:
+) -> UploadResponseBody:
     backoff = Backoff(config.chunk_backoff)
     while True:
         try:
-            async with session.post(url, data=chunk, headers=headers) as response:
-                body = await response.read()
-                if response.status < _CLIENT_ERROR_STATUS:
-                    return body
-                # 4xx считаем неретраибельными, ретраим только 5xx.
-                if (
-                    response.status < _SERVER_ERROR_STATUS
-                    or backoff.counter >= config.chunk_retries
-                ):
-                    _raise_upload_error(response.status, body, json_loads)
-        # aiohttp кидает голый TimeoutError, он не наследник ClientError.
-        except (ClientError, TimeoutError) as error:
+            response = await api_client.transport.call_method(
+                _ChunkUpload(url=url, chunk=chunk, headers=headers),
+            )
+        except MaxBotNetworkError:
             if backoff.counter >= config.chunk_retries:
-                raise to_network_error(error) from error
+                raise
+        else:
+            body = response.data
+            if response.status_code < _CLIENT_ERROR_STATUS:
+                return body
+            # 4xx считаем неретраибельными, ретраим только 5xx.
+            if (
+                response.status_code < _SERVER_ERROR_STATUS
+                or backoff.counter >= config.chunk_retries
+            ):
+                if isinstance(body, dict):
+                    raise_api_error(response.status_code, body)
+                raise MaxBotApiError(
+                    code="",
+                    error=f"upload failed with status {response.status_code}",
+                    message=body.decode("utf-8", "replace")
+                    if isinstance(body, bytes)
+                    else str(body or ""),
+                    raw_data=body,
+                )
 
         backoff.next()
         await backoff.sleep()
-
-
-def _raise_upload_error(
-    status: int,
-    body: bytes,
-    json_loads: Callable[[bytes], Any],
-) -> Never:
-    raw_data: object = body
-    try:
-        data = json_loads(body)
-    except (ValueError, TypeError):
-        message = body.decode("utf-8", "replace")
-    else:
-        raw_data = data
-        if isinstance(data, dict):
-            raise_api_error(status, data)
-        message = str(data)
-    raise MaxBotApiError(
-        code="",
-        error=f"upload failed with status {status}",
-        message=message,
-        raw_data=raw_data,
-    )
-
-
-def _parse_result(
-    body: bytes,
-    response_loader: ResponseLoader,
-    json_loads: Callable[[bytes], Any],
-) -> UploadMediaResult | None:
-    try:
-        data = json_loads(body)
-    except (ValueError, TypeError):
-        return None
-    if not isinstance(data, dict):
-        return None
-    return response_loader.load(data, UploadMediaResult)
