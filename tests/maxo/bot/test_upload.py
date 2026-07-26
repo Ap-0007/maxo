@@ -1,12 +1,11 @@
-import json
 from collections.abc import AsyncGenerator, Iterable
 from typing import Any
 from unittest.mock import AsyncMock, patch
 from urllib.parse import unquote
 
 import pytest
-from aiohttp import ClientConnectionError
 
+from maxo.bot.methods.upload.chunk_upload import UploadResponseBody
 from maxo.bot.upload import UploadConfig, UploadMethod, resumable_upload
 from maxo.enums import UploadType
 from maxo.errors import (
@@ -18,43 +17,27 @@ from maxo.errors import (
     MaxBotUnsupportedMediaTypeError,
     MaxoError,
 )
+from maxo.errors.network import to_network_error
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile, InputFile
 
 _MIB = 1024 * 1024
 
 
+def _network_error(cause: Exception) -> MaxBotNetworkError:
+    """Имитирует `raise to_network_error(error) from error` из `make_request`."""
+    error = to_network_error(cause)
+    error.__cause__ = cause
+    return error
+
+
 class _FakeResponse:
-    def __init__(self, status: int, body: bytes) -> None:
-        self.status = status
-        self._body = body
+    """`data` - как его уже отдал бы `AiohttpAsyncClient.make_request`: JSON
+    распарсен в dict/list, а нераспарсиваемое тело осталось raw-байтами."""
 
-    async def read(self) -> bytes:
-        return self._body
-
-    async def __aenter__(self) -> "_FakeResponse":
-        return self
-
-    async def __aexit__(self, *_: object) -> None:
-        return None
-
-
-class _FakeSession:
-    def __init__(self, responses: Iterable[_FakeResponse | Exception]) -> None:
-        self._responses = list(responses)
-        self.calls: list[dict[str, Any]] = []
-
-    def post(
-        self,
-        url: str,
-        data: bytes,
-        headers: dict[str, str],
-    ) -> _FakeResponse:
-        self.calls.append({"url": url, "data": data, "headers": headers})
-        item = self._responses.pop(0)
-        if isinstance(item, Exception):
-            raise item
-        return item
+    def __init__(self, status_code: int, data: UploadResponseBody) -> None:
+        self.status_code = status_code
+        self.data = data
 
 
 class _Retort:
@@ -62,8 +45,27 @@ class _Retort:
         return tp(**data)
 
 
+class _FakeApiClient:
+    """Подменяет `MaxApiClient` для `_send_chunk`, который зовёт `transport.call_method`."""
+
+    def __init__(self, responses: Iterable[_FakeResponse | Exception]) -> None:
+        self._responses = list(responses)
+        self.calls: list[dict[str, Any]] = []
+        self.transport = self
+        self.response_loader = _Retort()
+
+    async def call_method(self, method: Any) -> _FakeResponse:
+        self.calls.append(
+            {"url": method.url, "data": method.chunk, "headers": method.headers},
+        )
+        item = self._responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
 async def _run(
-    session: _FakeSession,
+    api_client: _FakeApiClient,
     data: bytes,
     chunk_size: int,
     chunk_retries: int = 3,
@@ -72,26 +74,24 @@ async def _run(
     return await resumable_upload(
         url="https://upload.example/upload.do",
         file=file,
-        session=session,  # type: ignore[arg-type]
-        response_loader=_Retort(),
-        json_loads=json.loads,
+        api_client=api_client,  # type: ignore[arg-type]
         config=UploadConfig(chunk_size=chunk_size, chunk_retries=chunk_retries),
     )
 
 
 async def test_sends_chunks_with_correct_content_range() -> None:
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
             _FakeResponse(201, b"0-3/10"),
             _FakeResponse(201, b"0-7/10"),
-            _FakeResponse(200, b'{"token": "tok"}'),
+            _FakeResponse(200, {"token": "tok"}),
         ],
     )
 
     result = await _run(session, b"abcdefghij", 4)
 
     assert isinstance(result, UploadMediaResult)
-    assert result.token == "tok"  # noqa: S105
+    assert result.token == "tok"
     ranges = [call["headers"]["Content-Range"] for call in session.calls]
     assert ranges == ["bytes 0-3/10", "bytes 4-7/10", "bytes 8-9/10"]
     assert [call["data"] for call in session.calls] == [b"abcd", b"efgh", b"ij"]
@@ -99,45 +99,43 @@ async def test_sends_chunks_with_correct_content_range() -> None:
 
 
 async def test_single_chunk_small_file() -> None:
-    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    session = _FakeApiClient([_FakeResponse(200, {"token": "tok"})])
 
     result = await _run(session, b"hello", 1024)
 
     assert result is not None
-    assert result.token == "tok"  # noqa: S105
+    assert result.token == "tok"
     assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
 
 
 async def test_non_json_final_body_returns_none() -> None:
-    session = _FakeSession([_FakeResponse(200, b"0-4/5")])
+    session = _FakeApiClient([_FakeResponse(200, b"0-4/5")])
 
     assert await _run(session, b"hello", 1024) is None
 
 
 async def test_json_non_dict_final_body_returns_none() -> None:
-    session = _FakeSession([_FakeResponse(200, b'["0-4/5"]')])
+    session = _FakeApiClient([_FakeResponse(200, ["0-4/5"])])
 
     assert await _run(session, b"hello", 1024) is None
 
 
 async def test_empty_file_raises() -> None:
-    session = _FakeSession([])
+    session = _FakeApiClient([])
 
     with pytest.raises(ValueError, match="пустой файл"):
         await _run(session, b"", 1024)
 
 
 async def test_content_disposition_is_latin1_safe() -> None:
-    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    session = _FakeApiClient([_FakeResponse(200, {"token": "tok"})])
     file_name = 'файл "1".bin'
     file = BufferedInputFile.file(b"hello", file_name)
 
     await resumable_upload(
         url="https://upload.example/upload.do",
         file=file,
-        session=session,  # type: ignore[arg-type]
-        response_loader=_Retort(),
-        json_loads=json.loads,
+        api_client=session,  # type: ignore[arg-type]
     )
 
     disposition = session.calls[0]["headers"]["Content-Disposition"]
@@ -147,7 +145,7 @@ async def test_content_disposition_is_latin1_safe() -> None:
 
 
 async def test_explicit_total_skips_size_call() -> None:
-    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    session = _FakeApiClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
 
     with patch.object(
@@ -158,9 +156,7 @@ async def test_explicit_total_skips_size_call() -> None:
         result = await resumable_upload(
             url="https://upload.example/upload.do",
             file=file,
-            session=session,  # type: ignore[arg-type]
-            response_loader=_Retort(),
-            json_loads=json.loads,
+            api_client=session,  # type: ignore[arg-type]
             size=5,
         )
 
@@ -195,16 +191,14 @@ class _TrackingInputFile(InputFile):
 
 
 async def test_stream_is_closed_when_chunk_fails() -> None:
-    session = _FakeSession([_FakeResponse(400, b"nope")])
+    session = _FakeApiClient([_FakeResponse(400, b"nope")])
     file = _TrackingInputFile()
 
     with pytest.raises(MaxBotApiError):
         await resumable_upload(
             url="https://upload.example/upload.do",
             file=file,
-            session=session,  # type: ignore[arg-type]
-            response_loader=_Retort(),
-            json_loads=json.loads,
+            api_client=session,  # type: ignore[arg-type]
             config=UploadConfig(chunk_size=4),
         )
 
@@ -229,23 +223,21 @@ def test_upload_config_rejects_invalid_values(kwargs: dict[str, int]) -> None:
 
 
 async def test_default_config_is_used() -> None:
-    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    session = _FakeApiClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
 
     result = await resumable_upload(
         url="https://upload.example/upload.do",
         file=file,
-        session=session,  # type: ignore[arg-type]
-        response_loader=_Retort(),
-        json_loads=json.loads,
+        api_client=session,  # type: ignore[arg-type]
     )
 
     assert result is not None
-    assert result.token == "tok"  # noqa: S105
+    assert result.token == "tok"
 
 
 async def test_client_error_status_raises_without_retry() -> None:
-    session = _FakeSession([_FakeResponse(406, b'{"code": "upload.error"}')])
+    session = _FakeApiClient([_FakeResponse(406, {"code": "upload.error"})])
 
     with pytest.raises(MaxBotApiError):
         await _run(session, b"hello", 1024)
@@ -254,7 +246,7 @@ async def test_client_error_status_raises_without_retry() -> None:
 
 
 async def test_non_json_error_status_raises_base_error() -> None:
-    session = _FakeSession([_FakeResponse(406, b"plain error")])
+    session = _FakeApiClient([_FakeResponse(406, b"plain error")])
 
     with pytest.raises(MaxBotApiError) as exc_info:
         await _run(session, b"hello", 1024)
@@ -266,7 +258,7 @@ async def test_non_json_error_status_raises_base_error() -> None:
 
 
 async def test_json_non_dict_error_status_raises_base_error() -> None:
-    session = _FakeSession([_FakeResponse(406, b'["plain error"]')])
+    session = _FakeApiClient([_FakeResponse(406, ["plain error"])])
 
     with pytest.raises(MaxBotApiError) as exc_info:
         await _run(session, b"hello", 1024)
@@ -294,7 +286,7 @@ async def test_client_error_status_preserves_typed_api_error(
         "error_data": "attachment.not.ready",
         "message": "cannot process attachment",
     }
-    session = _FakeSession([_FakeResponse(status, json.dumps(payload).encode())])
+    session = _FakeApiClient([_FakeResponse(status, payload)])
 
     with pytest.raises(error_class) as exc_info:
         await _run(session, b"hello", 1024)
@@ -308,10 +300,10 @@ async def test_client_error_status_preserves_typed_api_error(
 
 
 async def test_server_error_is_retried_then_succeeds() -> None:
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
-            _FakeResponse(500, b'{"message": "temporary"}'),
-            _FakeResponse(200, b'{"token": "tok"}'),
+            _FakeResponse(500, {"message": "temporary"}),
+            _FakeResponse(200, {"token": "tok"}),
         ],
     )
 
@@ -319,15 +311,15 @@ async def test_server_error_is_retried_then_succeeds() -> None:
         result = await _run(session, b"hello", 1024, chunk_retries=3)
 
     assert result is not None
-    assert result.token == "tok"  # noqa: S105
+    assert result.token == "tok"
     assert len(session.calls) == 2
 
 
 async def test_network_error_is_retried_then_reraised() -> None:
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
-            ClientConnectionError("boom"),
-            ClientConnectionError("boom"),
+            _network_error(ConnectionError("boom")),
+            _network_error(ConnectionError("boom")),
         ],
     )
 
@@ -339,15 +331,15 @@ async def test_network_error_is_retried_then_reraised() -> None:
 
     assert len(session.calls) == 2
     # Исходная ошибка aiohttp не теряется.
-    assert isinstance(exc_info.value.__cause__, ClientConnectionError)
+    assert isinstance(exc_info.value.__cause__, ConnectionError)
 
 
 async def test_timeout_is_retried_then_succeeds() -> None:
     # aiohttp кидает голый TimeoutError, он не наследник ClientError.
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
-            TimeoutError("timed out"),
-            _FakeResponse(200, b'{"token": "tok"}'),
+            _network_error(TimeoutError("timed out")),
+            _FakeResponse(200, {"token": "tok"}),
         ],
     )
 
@@ -355,12 +347,17 @@ async def test_timeout_is_retried_then_succeeds() -> None:
         result = await _run(session, b"hello", 1024, chunk_retries=3)
 
     assert result is not None
-    assert result.token == "tok"  # noqa: S105
+    assert result.token == "tok"
     assert len(session.calls) == 2
 
 
 async def test_timeout_is_reraised_after_retries() -> None:
-    session = _FakeSession([TimeoutError("timed out"), TimeoutError("timed out")])
+    session = _FakeApiClient(
+        [
+            _network_error(TimeoutError("timed out")),
+            _network_error(TimeoutError("timed out")),
+        ],
+    )
 
     with (
         patch("asyncio.sleep", new_callable=AsyncMock),
@@ -379,17 +376,17 @@ async def test_network_error_is_a_maxo_error() -> None:
 
 
 async def test_empty_aiohttp_error_message_falls_back_to_class_name() -> None:
-    session = _FakeSession([ClientConnectionError()])
+    session = _FakeApiClient([_network_error(ConnectionError())])
 
-    with pytest.raises(MaxBotNetworkError, match="ClientConnectionError"):
+    with pytest.raises(MaxBotNetworkError, match="ConnectionError"):
         await _run(session, b"hello", 1024, chunk_retries=0)
 
 
 async def test_first_retry_waits_backoff_min_delay() -> None:
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
             _FakeResponse(500, b"temporary"),
-            _FakeResponse(200, b'{"token": "tok"}'),
+            _FakeResponse(200, {"token": "tok"}),
         ],
     )
 
@@ -402,7 +399,7 @@ async def test_first_retry_waits_backoff_min_delay() -> None:
 
 
 async def test_size_mismatch_raises() -> None:
-    session = _FakeSession([_FakeResponse(200, b'{"token": "tok"}')])
+    session = _FakeApiClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
 
     # Файл «усох» между замером размера и стримом.
@@ -410,15 +407,13 @@ async def test_size_mismatch_raises() -> None:
         await resumable_upload(
             url="https://upload.example/upload.do",
             file=file,
-            session=session,  # type: ignore[arg-type]
-            response_loader=_Retort(),
-            json_loads=json.loads,
+            api_client=session,  # type: ignore[arg-type]
             size=999,
         )
 
 
 async def test_server_error_is_raised_after_retries() -> None:
-    session = _FakeSession(
+    session = _FakeApiClient(
         [
             _FakeResponse(500, b"temporary"),
             _FakeResponse(500, b"temporary"),
