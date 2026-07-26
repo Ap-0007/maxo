@@ -55,7 +55,7 @@ async def test_bot_start_and_close() -> None:
     with patch("maxo.bot.bot.MaxApiClient") as mock_api_client_class:
         mock_api_client = AsyncMock()
         mock_api_client_class.return_value = mock_api_client
-        mock_api_client.call_method.return_value = BotInfo(
+        mock_api_client.transport.call_method.return_value = BotInfo(
             user_id=1,
             is_bot=True,
             first_name="Test",
@@ -65,7 +65,7 @@ async def test_bot_start_and_close() -> None:
 
         await bot.start()
         assert isinstance(bot.state, RunningBotState)
-        mock_api_client.call_method.assert_awaited_once()
+        mock_api_client.transport.call_method.assert_awaited_once()
 
         await bot.close()
         assert isinstance(bot.state, ClosedBotState)
@@ -84,10 +84,12 @@ async def test_bot_context(bot: Bot) -> None:
 
 async def test_bot_call_method(bot: Bot) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
-        mock_state.api_client.call_method = AsyncMock(return_value="test_result")
+        mock_state.api_client.transport.call_method = AsyncMock(
+            return_value="test_result",
+        )
         result: object = await bot.call_method(MagicMock())
         assert result == "test_result"
-        mock_state.api_client.call_method.assert_awaited_once()
+        mock_state.api_client.transport.call_method.assert_awaited_once()
 
 
 async def test_bot_silent_call_method(
@@ -95,7 +97,7 @@ async def test_bot_silent_call_method(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with patch.object(bot, "_state", MagicMock()) as mock_state:
-        mock_state.api_client.call_method = AsyncMock(
+        mock_state.api_client.transport.call_method = AsyncMock(
             side_effect=MockMaxBotApiError("test error"),
         )
         await bot.silent_call_method(MagicMock())
