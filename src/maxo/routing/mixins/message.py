@@ -32,7 +32,12 @@ class MessageMethodsFacade(ChatMethodsFacade):
 
     @property
     def unsafe_message(self) -> "Message":
-        """Сообщение апдейта. Кидает ошибку, если сообщения нет."""
+        """
+        Сообщение апдейта. Кидает ошибку, если сообщения нет.
+
+        Сообщения может не быть только у `MessageCallback`: MAX присылает
+        `null`, если исходное сообщение удалили до получения колбэка.
+        """
         if is_defined(self.message):
             return self.message
 

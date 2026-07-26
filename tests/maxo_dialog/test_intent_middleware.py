@@ -76,6 +76,15 @@ def make_ctx(bot: Any = None) -> dict[Any, Any]:
     }
 
 
+def make_callback(payload: str = "data") -> Callback:
+    return Callback(
+        callback_id="c",
+        user=make_user(),
+        timestamp=NOW,
+        payload=payload,
+    )
+
+
 def make_message_callback(payload: str = "data") -> MessageCallback:
     return MessageCallback(
         timestamp=NOW,
@@ -84,12 +93,7 @@ def make_message_callback(payload: str = "data") -> MessageCallback:
             recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
             body=MessageBody(mid="m", seq=1),
         ),
-        callback=Callback(
-            callback_id="c",
-            user=make_user(),
-            timestamp=NOW,
-            payload=payload,
-        ),
+        callback=make_callback(payload),
     )
 
 
@@ -98,12 +102,7 @@ def make_message_callback_without_message(payload: str = "data") -> MessageCallb
     return MessageCallback(
         timestamp=NOW,
         message=None,
-        callback=Callback(
-            callback_id="c",
-            user=make_user(),
-            timestamp=NOW,
-            payload=payload,
-        ),
+        callback=make_callback(payload),
     )
 
 

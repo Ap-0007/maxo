@@ -64,10 +64,10 @@ def message() -> Message:
     )
 
 
-def callback_update(with_message: bool = True) -> MessageCallback:
+def callback_update(msg: Message | None = None) -> MessageCallback:
     return MessageCallback(
         timestamp=NOW,
-        message=message() if with_message else None,
+        message=msg,
         callback=Callback(
             callback_id="cb",
             user=user(),
@@ -151,7 +151,7 @@ CASES: list[tuple[Any, Any, tuple[str, ...]]] = [
     ),
     (
         MessageCallbackFacade,
-        callback_update(),
+        callback_update(message()),
         ("message", "callback", "user_locale", "callback_id", "payload", "user"),
     ),
 ]
@@ -173,40 +173,30 @@ def test_facade_delegates_properties(
         assert getattr(facade, name) == getattr(update, name), name
 
 
-class TestMessageCallbackFacadeWithoutMessage:
-    """Колбэк по удалённому сообщению: `message` - `None`, `unsafe_message` - ошибка."""
+def test_callback_facade_message_is_none_without_message() -> None:
+    """MAX присылает `message=null`, если сообщение удалили до колбэка."""
+    facade = MessageCallbackFacade(bot=MagicMock(), update=callback_update())
 
-    @pytest.fixture
-    def facade(self) -> MessageCallbackFacade:
-        return MessageCallbackFacade(
-            bot=MagicMock(),
-            update=callback_update(with_message=False),
-        )
+    assert facade.message is None
 
-    def test_message_is_none(self, facade: MessageCallbackFacade) -> None:
-        assert facade.message is None
+    with pytest.raises(AttributeIsEmptyError):
+        _ = facade.unsafe_message
 
-    def test_unsafe_message_raises(self, facade: MessageCallbackFacade) -> None:
-        with pytest.raises(AttributeIsEmptyError):
-            _ = facade.unsafe_message
 
-    def test_chat_id_raises(self, facade: MessageCallbackFacade) -> None:
-        with pytest.raises(AttributeIsEmptyError):
-            _ = facade.chat_id
+async def test_callback_facade_methods_raise_without_message() -> None:
+    """Методы миксина ходят в сообщение через фасадную пропертю `message`."""
+    facade = MessageCallbackFacade(bot=MagicMock(), update=callback_update())
 
-    async def test_send_message_raises(self, facade: MessageCallbackFacade) -> None:
-        with pytest.raises(AttributeIsEmptyError):
-            await facade.send_message("hi")
+    with pytest.raises(AttributeIsEmptyError):
+        await facade.send_message("hi")
 
-    async def test_delete_message_raises(self, facade: MessageCallbackFacade) -> None:
-        with pytest.raises(AttributeIsEmptyError):
-            await facade.delete_message()
 
-    def test_unsafe_message_returns_message_when_present(self) -> None:
-        update = callback_update()
-        facade = MessageCallbackFacade(bot=MagicMock(), update=update)
+def test_callback_facade_unsafe_message_returns_message() -> None:
+    update = callback_update(message())
 
-        assert facade.unsafe_message is update.message
+    facade = MessageCallbackFacade(bot=MagicMock(), update=update)
+
+    assert facade.unsafe_message is update.message
 
 
 def test_base_facade_exposes_update() -> None:

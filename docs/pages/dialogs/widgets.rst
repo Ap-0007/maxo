@@ -4,6 +4,13 @@
 
 Виджеты - компоненты, из которых строится содержимое окна (``Window``). Все виджеты делятся на текстовые, клавиатурные, медиа-виджеты и поля ввода.
 
+.. note::
+
+    В обработчиках ``on_click`` ``callback.message`` может быть ``None``, если
+    исходное сообщение удалили до того, как бот получил колбэк - тогда
+    ``unsafe_message`` бросит ``AttributeIsEmptyError``.
+    Подробнее в :ref:`разделе про unsafe_* <message-callback-none>`.
+
 Текстовые виджеты
 =================
 
@@ -246,22 +253,6 @@ ConfirmButton
         on_confirm=on_confirm,
         on_cancel=None,    # при отмене просто возвращается primary
     )
-
-.. note::
-
-    ``MessageCallback.message`` может быть ``None``, если исходное сообщение
-    с клавиатурой удалили до того, как бот получил колбэк. Поэтому
-    ``unsafe_message`` (как и ``send_message``, ``reply``, ``edit_message``,
-    ``delete_message``, ``chat_id``) бросает ``AttributeIsEmptyError``.
-    Если сообщения может не быть, проверяйте его явно или отвечайте через
-    ``callback.callback_answer(notification=...)``:
-
-    .. code-block:: python
-
-        if callback.message is not None:
-            await callback.message.answer("Действие подтверждено!")
-        else:
-            await callback.callback_answer(notification="Действие подтверждено!")
 
 Параметры
 ^^^^^^^^^

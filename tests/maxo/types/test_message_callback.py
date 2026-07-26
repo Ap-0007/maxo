@@ -94,9 +94,9 @@ class TestMessageCallbackWithMessage:
     def callback_with_message(self, bot: MagicMock) -> MessageCallback:
         update = MessageCallback(
             callback=make_callback(),
-            # Личка с отправителем, чтобы проверять и chat_id, и user_id.
+            # Личка: chat_id берётся из recipient, user_id - из sender.
             message=make_message(
-                recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
+                recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10),
                 sender=make_user(),
             ),
             timestamp=NOW,

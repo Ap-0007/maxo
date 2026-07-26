@@ -197,6 +197,8 @@ Omitted в объектах ответа
 ``User`` (``last_name``, ``name``), ``VideoAttachment`` (``duration``, ``width``, ``height``)
 и многие другие.
 
+.. _message-callback-none:
+
 ``unsafe_*`` есть и у полей, которые API возвращает как ``null``.
 Главный пример - ``MessageCallback.message``: MAX присылает ``null``, если
 исходное сообщение с клавиатурой удалили до того, как бот получил колбэк.
