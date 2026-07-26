@@ -43,6 +43,19 @@
     middleware = dispatcher.message_created.middleware.register(TransactionMiddleware())
     dispatcher.message_created.middleware.unregister(middleware)
 
+Вызов без аргументов возвращает декоратор - как в ``aiogram``. Декорировать нужно
+готовый объект мидлвари или функцию с той же сигнатурой, а не класс.
+
+.. code-block:: python
+
+    @dispatcher.message_created.outer_middleware()
+    async def logging_middleware(
+        update: MessageCreated,
+        ctx: Ctx,
+        next: NextMiddleware[MessageCreated],
+    ) -> Any:
+        return await next(ctx)
+
 Написание своей мидлвари
 ------------------------
 
