@@ -6,7 +6,7 @@ from .command import Command, CommandObject, CommandStart
 from .deeplink import DeeplinkFilter
 from .exception import ExceptionMessageFilter, ExceptionTypeFilter
 from .logic import AndFilter, InvertFilter, OrFilter, and_f, invert_f, or_f
-from .payload import Payload
+from .payload import CallbackData, Payload
 from .state import StateFilter
 from .sync import SyncFilter
 
@@ -15,6 +15,7 @@ __all__ = (
     "AlwaysTrueFilter",
     "AndFilter",
     "BaseFilter",
+    "CallbackData",
     "Command",
     "CommandObject",
     "CommandStart",

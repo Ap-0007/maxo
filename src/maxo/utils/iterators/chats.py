@@ -1,6 +1,6 @@
 from collections import deque
 from collections.abc import AsyncIterator
-from typing import Self, cast
+from typing import Self
 
 from maxo.bot.bot import Bot
 from maxo.omit import Omittable, Omitted
@@ -31,16 +31,19 @@ class ChatsIterator(AsyncIterator[Chat]):
         if self._chats:
             return self._chats.popleft()
 
-        while True:
-            result = await self._bot.get_chats(
-                count=self._count,
-                marker=cast(int | Omitted, self._marker),
-            )
+        # `marker is None` - предыдущая страница была последней
+        # Отдать такой маркер обратно нельзя:
+        # для апи `marker: null` - это запрос первой страницы,
+        # и итерация пойдёт по кругу
+        if self._marker is None:
+            raise StopAsyncIteration
 
-            if not result.chats:
-                raise StopAsyncIteration
+        result = await self._bot.get_chats(count=self._count, marker=self._marker)
 
-            self._chats.extend(result.chats)
-            self._marker = result.marker
+        if not result.chats:
+            raise StopAsyncIteration
 
-            return self._chats.popleft()
+        self._chats.extend(result.chats)
+        self._marker = result.marker
+
+        return self._chats.popleft()

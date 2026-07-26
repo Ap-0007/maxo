@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "maxo"
 description = "Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и DI"
-version = "0.7.0"
+version = "0.8.0"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = [
