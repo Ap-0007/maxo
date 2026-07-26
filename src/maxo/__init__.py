@@ -9,8 +9,7 @@ from maxo.utils.text_decorations import (
     markdown_decoration as md,
 )
 
-# Только после `Bot`: `maxo.routing` и `maxo.bot` делают `from maxo import Bot`
-from maxo import enums, methods, types  # isort: skip
+from . import enums, methods, types
 
 __all__ = (
     "BaseMiddleware",
