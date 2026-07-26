@@ -20,6 +20,31 @@ Middleware - внутренний (inner), вешается на обсёрве�
 По умолчанию middleware отвечает пустым ответом **после** хендлера. Ответ
 отправляется даже если хендлер бросил исключение.
 
+Настройка через флаги
+---------------------
+
+Дефолты из конструктора переопределяются для конкретного хендлера флагом
+``callback_answer`` (подробнее про флаги - :doc:`../event-handling/flags`):
+
+.. code-block:: python
+
+    from maxo import flags
+
+
+    @dp.message_callback()
+    @flags.callback_answer(notification="Готово!")
+    async def handler(update: MessageCallback) -> None: ...
+
+
+    @dp.message_callback()
+    @flags.callback_answer(disabled=True)  # отвечаем на колбэк сами
+    async def manual_handler(update: MessageCallback) -> None: ...
+
+Словарь во флаге понимает ключи ``disabled``, ``before`` и ``notification``.
+Голый ``@flags.callback_answer`` включает авто-ответ, а
+``@flags.callback_answer(False)`` выключает - это удобно, если мидлварь
+подключена с ``disabled=True`` и авто-ответ нужен точечно.
+
 Управление из хендлера
 ----------------------
 

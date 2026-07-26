@@ -25,10 +25,12 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR TH
 OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+from collections.abc import Mapping
 from typing import Any
 
 from maxo.errors import MaxoError
 from maxo.routing.ctx import Ctx
+from maxo.routing.flags import get_flag
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.types import MessageCallback
 
@@ -114,9 +116,9 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
     """
     Inner-middleware: автоматически отвечает на колбэк.
 
-    Дефолты задаются в конструкторе. Хендлер может переопределить поведение,
-    мутируя `CallbackAnswer` из ctx. Аналог aiogram CallbackAnswerMiddleware,
-    но без механизма flags - конфиг через мутабельный объект в ctx.
+    Дефолты задаются в конструкторе, конкретный хендлер переопределяет их
+    флагом `callback_answer`, а во время работы хендлер может домутировать
+    `CallbackAnswer` из ctx.
     """
 
     __slots__ = ("_before", "_disabled", "_notification")
@@ -137,11 +139,7 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
         ctx: Ctx,
         next: NextMiddleware[MessageCallback],
     ) -> Any:
-        answer = CallbackAnswer(
-            disabled=self._disabled,
-            before=self._before,
-            notification=self._notification,
-        )
+        answer = self.construct_callback_answer(get_flag(ctx, CALLBACK_ANSWER_KEY))
         ctx[CALLBACK_ANSWER_KEY] = answer
 
         if answer.before and not answer.disabled:
@@ -152,6 +150,38 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
         finally:
             if not answer.disabled and not answer.answered:
                 await self._answer(update, answer)
+
+    def construct_callback_answer(self, properties: Any) -> CallbackAnswer:
+        """
+        Собирает `CallbackAnswer` из дефолтов мидлвари и значения флага.
+
+        Args:
+            properties: значение флага `callback_answer`. Словарь переопределяет
+                дефолты по ключам `disabled`, `before` и `notification`,
+                `bool` включает или выключает авто-ответ, `None` ничего не меняет.
+
+        Returns:
+            Настроенный `CallbackAnswer`.
+
+        """
+        disabled, before, notification = (
+            self._disabled,
+            self._before,
+            self._notification,
+        )
+
+        if isinstance(properties, Mapping):
+            disabled = properties.get("disabled", disabled)
+            before = properties.get("before", before)
+            notification = properties.get("notification", notification)
+        elif isinstance(properties, bool):
+            disabled = not properties
+
+        return CallbackAnswer(
+            disabled=disabled,
+            before=before,
+            notification=notification,
+        )
 
     async def _answer(self, update: MessageCallback, answer: CallbackAnswer) -> None:
         if answer.notification is not None:

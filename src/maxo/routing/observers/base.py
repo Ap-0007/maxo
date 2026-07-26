@@ -1,9 +1,10 @@
 from abc import ABC
-from collections.abc import Callable, Coroutine, MutableSequence, Sequence
+from collections.abc import Callable, Coroutine, Mapping, MutableSequence, Sequence
 from typing import Any, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.logic import combine_filters
+from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.interfaces import Filter, Handler, Observer
 from maxo.routing.interfaces.observer import ObserverState
 from maxo.routing.middlewares.manager import MiddlewareManager, MiddlewareManagerFacade
@@ -65,9 +66,10 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
     def __call__(
         self,
         *filters: Filter[_UpdateT],
+        flags: Mapping[str, Any] | None = None,
     ) -> Callable[[_HandlerFnT], _HandlerFnT]:
         def wrapper(handler_fn: _HandlerFnT) -> _HandlerFnT:
-            return self.handler(handler_fn, *filters)
+            return self.handler(handler_fn, *filters, flags=flags)
 
         return wrapper
 
@@ -81,12 +83,17 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     async def handler_lookup(self, ctx: Ctx) -> Any:
         for handler in self._handlers:
+            # Кладём хендлер в ctx до фильтров, чтобы фильтры и inner-мидлвари
+            # могли читать его флаги через `get_flag`/`extract_flags`
+            ctx[HANDLER_KEY] = handler
             if await handler.execute_filter(ctx):
                 try:
                     return await self.execute_handler(ctx, handler)
                 except SkipHandler:
                     continue
 
+        # Иначе флаги «протекут» в дочерние роутеры, которым отдаётся апдейт
+        ctx.pop(HANDLER_KEY, None)
         return UNHANDLED
 
     async def execute_handler(

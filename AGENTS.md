@@ -116,6 +116,8 @@ Long polling / webhook
 - `message`, `callback_query`, `edited_message` - алиасы для совместимости с
   привычками из aiogram.
 - Facade и update-модели умеют отвечать через mixins после привязки бота.
+- Флаги-маркеры хендлеров живут в `maxo.routing.flags`, инстанс `flags`
+  экспортируется из top-level `maxo`.
 - Для webhook используй `collect_used_updates(dispatcher)`, чтобы подписывать
   только реально используемые update types.
 - Long polling находится в `maxo.transport.long_polling`.
