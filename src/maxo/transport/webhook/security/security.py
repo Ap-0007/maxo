@@ -1,19 +1,12 @@
-from typing import Any
-
-from maxo import Bot
-from maxo.omit import Omittable, Omitted
-from maxo.transport.webhook.adapters.base_adapter import BoundRequest
-from maxo.transport.webhook.security.base_check import SecurityCheck
+from maxo.transport.webhook.engines.target import Target
+from maxo.transport.webhook.route.params import RouteParams
+from maxo.transport.webhook.security.checks.check import SecurityCheck
+from maxo.transport.webhook.security.errors import SecretTokenError, SecurityCheckError
 from maxo.transport.webhook.security.secret_token import SecretToken
+from maxo.transport.webhook.web.base import WebRequest
 
 
 class Security:
-    """
-    Security management for webhook requests.
-
-    Provides methods to verify requests and manage secret tokens.
-    """
-
     def __init__(
         self,
         *checks: SecurityCheck,
@@ -22,29 +15,44 @@ class Security:
         self._secret_token = secret_token
         self._checks: tuple[SecurityCheck, ...] = checks
 
-    async def verify(self, bot: Bot, bound_request: BoundRequest[Any]) -> bool:
-        """
-        Verify the security of a webhook request.
-
-        :return: True if the request passes security checks, False otherwise.
-        """
+    async def verify(
+        self,
+        *,
+        target: Target,
+        request: WebRequest,
+        route_params: RouteParams,
+    ) -> None:
         if self._secret_token is not None:
-            ok = await self._secret_token.verify(bot=bot, bound_request=bound_request)
+            ok = await self._secret_token.verify(
+                target=target,
+                request=request,
+                route_params=route_params,
+            )
             if not ok:
-                return False
+                raise SecretTokenError(target_bot_id=target.bot_id)
 
-        for checker in self._checks:
-            if not await checker.verify(bot=bot, bound_request=bound_request):
-                return False
+        for check in self._checks:
+            ok = await check.verify(
+                target=target,
+                request=request,
+                route_params=route_params,
+            )
+            if not ok:
+                raise SecurityCheckError(
+                    security_check=check.__class__.__name__,
+                    client_ip=str(request.client_ip)
+                    if request.client_ip is not None
+                    else None,
+                )
 
-        return True
-
-    async def get_secret_token(self, *, bot: Bot) -> Omittable[str]:
+    async def secret_token(self, target: Target) -> str | None:
         """
-        Get the secret token for the given bot, if configured.
+        Get the secret token for a specific bot target.
 
-        :return: The secret token as a string.
+        :param target: The target bot to get the token for.
+        :return: The secret token string, or None if no token is configured.
         """
         if self._secret_token is None:
-            return Omitted()
-        return self._secret_token.secret_token(bot=bot)
+            return None
+
+        return await self._secret_token.secret_token(target=target)
