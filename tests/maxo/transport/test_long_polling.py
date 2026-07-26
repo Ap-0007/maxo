@@ -349,15 +349,55 @@ async def test_consume_updates_does_not_start_when_already_stopped(
 async def test_signal_handler_sets_stop_event(long_polling: LongPolling) -> None:
     stop_event = asyncio.Event()
 
-    remove_signal_handlers = long_polling._add_signal_handlers(stop_event)
-    try:
+    with long_polling._signal_handlers(stop_event):
         signal.raise_signal(signal.SIGTERM)
         # Сигнал доезжает до loop через self-pipe, одного тика цикла мало.
         await asyncio.wait_for(stop_event.wait(), timeout=1)
 
         assert stop_event.is_set()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="loop.add_signal_handler не поддерживается на Windows",
+)
+async def test_signal_handlers_restore_previous(long_polling: LongPolling) -> None:
+    """Чужой обработчик сигнала не должен теряться после поллинга."""
+
+    def previous_handler(_signum: int, _frame: object) -> None:  # pragma: no cover
+        pass
+
+    signal.signal(signal.SIGTERM, previous_handler)
+    try:
+        with long_polling._signal_handlers(asyncio.Event()):
+            assert signal.getsignal(signal.SIGTERM) is not previous_handler
+
+        assert signal.getsignal(signal.SIGTERM) is previous_handler
     finally:
-        remove_signal_handlers()
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
+
+async def test_signal_handlers_survive_unsupported_platform(
+    long_polling: LongPolling,
+) -> None:
+    """Вне главного потока и на Windows поллинг не должен падать."""
+    loop = asyncio.get_running_loop()
+
+    with (
+        patch.object(
+            loop,
+            "add_signal_handler",
+            side_effect=[
+                NotImplementedError(),
+                RuntimeError("set_wakeup_fd only works in main thread"),
+            ],
+        ),
+        patch.object(loop, "remove_signal_handler") as remove_signal_handler,
+        long_polling._signal_handlers(asyncio.Event()),
+    ):
+        pass
+
+    remove_signal_handler.assert_not_called()
 
 
 async def test_signal_handlers_not_installed_when_disabled(
@@ -368,9 +408,11 @@ async def test_signal_handlers_not_installed_when_disabled(
         return
         yield  # pragma: no cover
 
+    loop = asyncio.get_running_loop()
+
     with (
         patch.object(long_polling, "_get_updates", side_effect=empty_updates),
-        patch.object(long_polling, "_add_signal_handlers") as add_signal_handlers,
+        patch.object(loop, "add_signal_handler") as add_signal_handler,
     ):
         await long_polling.start(
             mock_bot,
@@ -378,7 +420,45 @@ async def test_signal_handlers_not_installed_when_disabled(
             handle_signals=False,
         )
 
-    add_signal_handlers.assert_not_called()
+    add_signal_handler.assert_not_called()
+
+
+async def test_consume_updates_cancels_pending_get_updates(
+    mock_dispatcher: Dispatcher,
+    mock_bot: Bot,
+) -> None:
+    """При отмене поллинга висящий `get_updates` не остается жить дальше."""
+    long_polling = LongPolling(dispatcher=mock_dispatcher)
+    polling_started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
+        polling_started.set()
+        try:
+            await asyncio.sleep(3600)
+        except CancelledError:
+            cancelled.set()
+            raise
+        yield MaxoUpdate(  # pragma: no cover
+            update=cast(Updates, MockUpdate(timestamp=1)),
+            marker=1,
+        )
+
+    consumer = asyncio.create_task(
+        long_polling._consume_updates(
+            bot=mock_bot,
+            updates_poller=updates(),
+            stop_event=asyncio.Event(),
+        ),
+    )
+
+    await polling_started.wait()
+    consumer.cancel()
+    await asyncio.gather(consumer, return_exceptions=True)
+
+    assert cancelled.is_set()
+    # Отмена не должна проглатываться внутри `finally`.
+    assert consumer.cancelled()
 
 
 async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:

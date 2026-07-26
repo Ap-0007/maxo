@@ -88,7 +88,6 @@ dependencies = [
 ```python
 from maxo import Bot, Dispatcher
 from maxo.routing.updates import MessageCreated
-from maxo.transport.long_polling import LongPolling
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -98,7 +97,7 @@ async def echo_handler(message: MessageCreated) -> None:
     text = message.text or "Текста нет"
     await message.answer(text)
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Команды
@@ -107,7 +106,6 @@ LongPolling(dp).run(bot)
 from maxo import Bot, Dispatcher
 from maxo.routing.filters import Command, DeeplinkFilter
 from maxo.routing.updates import BotStarted, MessageCreated
-from maxo.transport.long_polling import LongPolling
 
 bot = Bot("TOKEN")
 dp = Dispatcher()
@@ -124,7 +122,7 @@ async def start_handler(bot_started: BotStarted) -> None:
 async def help_handler(message: MessageCreated) -> None:
     await message.send_message("За помощью обращайтесь в t.me/maxo_py")
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Клавиатуры
@@ -136,7 +134,6 @@ from maxo import Bot, Dispatcher
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
 from maxo.routing.updates import MessageCallback, MessageCreated
-from maxo.transport.long_polling import LongPolling
 from maxo.utils.builders import KeyboardBuilder
 
 bot = Bot("TOKEN")
@@ -161,7 +158,7 @@ async def start_handler(message: MessageCreated) -> None:
 async def button_handler(callback: MessageCallback) -> None:
     await callback.callback_answer("Вы нажали на кнопку!")
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Вебхук

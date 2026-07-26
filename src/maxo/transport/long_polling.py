@@ -2,7 +2,8 @@ import asyncio
 import contextlib
 import signal
 import time
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Iterator, Sequence
+from types import FrameType
 from typing import Any
 
 from adaptix.load_error import LoadError
@@ -23,6 +24,11 @@ _DEFAULT_BACKOFF_CONFIG = BackoffConfig(
     factor=1.3,
     jitter=0.1,
 )
+
+_STOP_SIGNALS = (signal.SIGINT, signal.SIGTERM)
+
+# То же, что приватный `signal._HANDLER`.
+_SignalHandler = Callable[[int, FrameType | None], Any] | int | None
 
 
 class LongPolling:
@@ -102,20 +108,16 @@ class LongPolling:
                 )
 
                 stop_event = asyncio.Event()
-                remove_signal_handlers = (
-                    self._add_signal_handlers(stop_event) if handle_signals else None
-                )
 
-                try:
-                    with contextlib.suppress(KeyboardInterrupt):
-                        await self._consume_updates(
-                            bot=bot,
-                            updates_poller=updates_poller,
-                            stop_event=stop_event,
-                        )
-                finally:
-                    if remove_signal_handlers is not None:
-                        remove_signal_handlers()
+                with (
+                    self._signal_handlers(stop_event, enabled=handle_signals),
+                    contextlib.suppress(KeyboardInterrupt),
+                ):
+                    await self._consume_updates(
+                        bot=bot,
+                        updates_poller=updates_poller,
+                        stop_event=stop_event,
+                    )
 
                 await dispatcher.feed_signal(BeforeShutdown(), bot)
 
@@ -136,65 +138,108 @@ class LongPolling:
         """
         Раздает апдейты хендлерам, пока не попросят остановиться.
 
-        Ожидание апдейта гонится с `stop_event`: по сигналу поллинг перестает
-        забирать новые апдейты, а выход из `TaskGroup` дожидается запущенных.
+        По сигналу остановки новые апдейты больше не забираются, а выход из
+        `TaskGroup` дожидается уже запущенных хендлеров.
         """
         dispatcher = self._dispatcher
+
+        async with asyncio.TaskGroup() as tg:
+            async for update in self._iter_until_stop(updates_poller, stop_event):
+                # Задача отслеживается TaskGroup, ссылка не нужна.
+                tg.create_task(  # type: ignore[unused-awaitable]
+                    dispatcher.feed_max_update(update, bot),
+                )
+
+    async def _iter_until_stop(
+        self,
+        updates_poller: AsyncIterator[MaxoUpdate[Any]],
+        stop_event: asyncio.Event,
+    ) -> AsyncIterator[MaxoUpdate[Any]]:
+        """
+        Отдает апдейты, пока не выставлен `stop_event`.
+
+        Ожидание апдейта гонится с событием остановки, чтобы не висеть в
+        `get_updates` до конца его таймаута.
+        """
         stop_waiter = asyncio.ensure_future(stop_event.wait())
+        update_waiter: asyncio.Future[MaxoUpdate[Any]] | None = None
 
         try:
-            async with asyncio.TaskGroup() as tg:
-                while not stop_event.is_set():
-                    update_waiter = asyncio.ensure_future(anext(updates_poller))
-                    done, _ = await asyncio.wait(
-                        (update_waiter, stop_waiter),
-                        return_when=asyncio.FIRST_COMPLETED,
+            while not stop_event.is_set():
+                update_waiter = asyncio.ensure_future(anext(updates_poller))
+                done, _ = await asyncio.wait(
+                    (update_waiter, stop_waiter),
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                if update_waiter not in done:
+                    loggers.dispatcher.info(
+                        "Получен сигнал остановки, "
+                        "новые апдейты больше не забираются",
                     )
+                    break
 
-                    if update_waiter not in done:
-                        update_waiter.cancel()
-                        loggers.dispatcher.info(
-                            "Получен сигнал остановки, "
-                            "новые апдейты больше не забираются",
-                        )
-                        break
+                try:
+                    update = update_waiter.result()
+                except StopAsyncIteration:
+                    break
+                finally:
+                    update_waiter = None
 
-                    try:
-                        update = update_waiter.result()
-                    except StopAsyncIteration:
-                        break
-
-                    # Задача отслеживается TaskGroup, ссылка не нужна.
-                    tg.create_task(  # type: ignore[unused-awaitable]
-                        dispatcher.feed_max_update(update, bot),
-                    )
+                yield update
         finally:
             stop_waiter.cancel()
+            # Незавершенный `get_updates` надо погасить здесь: `asyncio.wait`
+            # не отменяет ожидаемое, а сессия бота закроется сразу после нас.
+            if update_waiter is not None:
+                update_waiter.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await update_waiter
 
-    def _add_signal_handlers(self, stop_event: asyncio.Event) -> Callable[[], None]:
-        """Ставит обработчики SIGINT и SIGTERM. Возвращает функцию их снятия."""
+    @contextlib.contextmanager
+    def _signal_handlers(
+        self,
+        stop_event: asyncio.Event,
+        *,
+        enabled: bool = True,
+    ) -> Iterator[None]:
+        """
+        Перехватывает SIGINT и SIGTERM, пока идет поллинг.
+
+        На выходе возвращает прежние обработчики: `remove_signal_handler`
+        сбрасывает сигнал в дефолт и затер бы чужой обработчик, в том числе
+        тот, которым `asyncio.run` гасит главную задачу по Ctrl+C.
+        """
+        if not enabled:
+            yield
+            return
+
         loop = asyncio.get_running_loop()
-        installed: list[signal.Signals] = []
+        previous: list[tuple[signal.Signals, _SignalHandler]] = []
 
-        for sig in (signal.SIGINT, signal.SIGTERM):
+        for sig in _STOP_SIGNALS:
+            handler = signal.getsignal(sig)
             try:
                 loop.add_signal_handler(sig, stop_event.set)
-            except NotImplementedError:
-                # Windows не умеет loop.add_signal_handler
+            except (NotImplementedError, RuntimeError) as error:
+                # NotImplementedError - Windows не умеет add_signal_handler,
+                # RuntimeError - set_wakeup_fd работает только в главном потоке.
                 loggers.dispatcher.warning(
-                    "Сигнал %s не перехватывается: платформа не поддерживает "
-                    "loop.add_signal_handler",
+                    "Сигнал %s не перехватывается: %s",
                     sig.name,
+                    error,
                 )
                 continue
 
-            installed.append(sig)
+            previous.append((sig, handler))
 
-        def remove_signal_handlers() -> None:
-            for sig in installed:
+        try:
+            yield
+        finally:
+            for sig, handler in previous:
                 loop.remove_signal_handler(sig)
-
-        return remove_signal_handlers
+                if handler is not None:
+                    signal.signal(sig, handler)
 
     async def _get_updates(
         self,
