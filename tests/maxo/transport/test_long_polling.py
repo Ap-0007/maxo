@@ -29,7 +29,9 @@ class MockUpdate(MaxoType):
 
 @pytest.fixture
 def mock_api_client() -> AsyncMock:
-    return AsyncMock(spec=MaxApiClient)
+    client = AsyncMock(spec=MaxApiClient)
+    client.transport = AsyncMock()
+    return client
 
 
 @pytest.fixture
@@ -82,7 +84,7 @@ async def test_handles_load_error_and_skips_update(
     mock_api_client: AsyncMock,
 ) -> None:
     initial_marker = 10
-    mock_api_client.call_method.side_effect = [
+    mock_api_client.transport.call_method.side_effect = [
         LoadError("Test LoadError"),
         UpdateList(
             updates=cast(list[Updates], [MockUpdate(timestamp=100)]),
@@ -110,8 +112,8 @@ async def test_handles_load_error_and_skips_update(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
-        mock_api_client.call_method.assert_has_calls(
+        assert mock_api_client.transport.call_method.call_count == 2
+        mock_api_client.transport.call_method.assert_has_calls(
             [
                 call(
                     GetUpdates(
@@ -149,7 +151,7 @@ async def test_handles_load_error_with_no_marker(
     mock_bot: Bot,
     mock_api_client: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = [
+    mock_api_client.transport.call_method.side_effect = [
         LoadError("Test LoadError"),
         CancelledError,
     ]
@@ -171,7 +173,7 @@ async def test_handles_load_error_with_no_marker(
             "Ошибка загрузки апдейта в модель. "
             "Сообщите об этой ошибке в https://github.com/K1rL3s/maxo/issues",
         )
-        assert mock_api_client.call_method.call_count == 2
+        assert mock_api_client.transport.call_method.call_count == 2
         mock_backoff_next.assert_called_once()
         mock_backoff_sleep.assert_called_once()
 
@@ -182,7 +184,7 @@ async def test_handles_general_exception(
     mock_api_client: AsyncMock,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    mock_api_client.call_method.side_effect = ValueError(
+    mock_api_client.transport.call_method.side_effect = ValueError(
         "Test ValueError",
     )
 
@@ -196,7 +198,7 @@ async def test_handles_general_exception(
             "ValueError",
             ANY,
         )
-        mock_api_client.call_method.assert_called_once()
+        mock_api_client.transport.call_method.assert_called_once()
         mock_feed_max_update.assert_not_called()
 
 
