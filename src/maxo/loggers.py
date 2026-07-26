@@ -2,6 +2,7 @@ import logging
 
 dispatcher = logging.getLogger("maxo.dispatcher")
 long_polling = logging.getLogger("maxo.long_polling")
+webhook_tasks = logging.getLogger("maxo.webhook.tasks")
 update_context = logging.getLogger("maxo.routing.update_context")
 utils = logging.getLogger("maxo.utils")
 bot = logging.getLogger("maxo.bot")
