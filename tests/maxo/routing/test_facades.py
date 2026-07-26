@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from maxo.enums import ChatType
+from maxo.errors import AttributeIsEmptyError
 from maxo.routing.facades import (
     BotAddedToChatFacade,
     BotRemovedFromChatFacade,
@@ -63,10 +64,10 @@ def message() -> Message:
     )
 
 
-def callback_update() -> MessageCallback:
+def callback_update(with_message: bool = True) -> MessageCallback:
     return MessageCallback(
         timestamp=NOW,
-        message=message(),
+        message=message() if with_message else None,
         callback=Callback(
             callback_id="cb",
             user=user(),
@@ -170,6 +171,42 @@ def test_facade_delegates_properties(
 
     for name in properties:
         assert getattr(facade, name) == getattr(update, name), name
+
+
+class TestMessageCallbackFacadeWithoutMessage:
+    """Колбэк по удалённому сообщению: `message` - `None`, `unsafe_message` - ошибка."""
+
+    @pytest.fixture
+    def facade(self) -> MessageCallbackFacade:
+        return MessageCallbackFacade(
+            bot=MagicMock(),
+            update=callback_update(with_message=False),
+        )
+
+    def test_message_is_none(self, facade: MessageCallbackFacade) -> None:
+        assert facade.message is None
+
+    def test_unsafe_message_raises(self, facade: MessageCallbackFacade) -> None:
+        with pytest.raises(AttributeIsEmptyError):
+            _ = facade.unsafe_message
+
+    def test_chat_id_raises(self, facade: MessageCallbackFacade) -> None:
+        with pytest.raises(AttributeIsEmptyError):
+            _ = facade.chat_id
+
+    async def test_send_message_raises(self, facade: MessageCallbackFacade) -> None:
+        with pytest.raises(AttributeIsEmptyError):
+            await facade.send_message("hi")
+
+    async def test_delete_message_raises(self, facade: MessageCallbackFacade) -> None:
+        with pytest.raises(AttributeIsEmptyError):
+            await facade.delete_message()
+
+    def test_unsafe_message_returns_message_when_present(self) -> None:
+        update = callback_update()
+        facade = MessageCallbackFacade(bot=MagicMock(), update=update)
+
+        assert facade.unsafe_message is update.message
 
 
 def test_base_facade_exposes_update() -> None:

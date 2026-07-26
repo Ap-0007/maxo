@@ -14,7 +14,7 @@ from maxo.types import (
 )
 from tests.constants import NOW
 
-from .conftest import make_callback, make_message
+from .conftest import make_callback, make_message, make_user
 
 
 @pytest.fixture
@@ -94,7 +94,11 @@ class TestMessageCallbackWithMessage:
     def callback_with_message(self, bot: MagicMock) -> MessageCallback:
         update = MessageCallback(
             callback=make_callback(),
-            message=make_message(),
+            # Личка с отправителем, чтобы проверять и chat_id, и user_id.
+            message=make_message(
+                recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
+                sender=make_user(),
+            ),
             timestamp=NOW,
         )
         update.as_(bot)
@@ -106,7 +110,7 @@ class TestMessageCallbackWithMessage:
     ) -> None:
         assert callback_with_message.chat_id == 10
 
-    async def test_send_message_passes_chat_id(
+    async def test_send_message_passes_chat_id_and_user_id(
         self,
         callback_with_message: MessageCallback,
         bot: MagicMock,
@@ -114,6 +118,7 @@ class TestMessageCallbackWithMessage:
         await callback_with_message.send_message("hello")
 
         assert bot.send_message.await_args.kwargs["chat_id"] == 10
+        assert bot.send_message.await_args.kwargs["user_id"] == 1
 
     async def test_delete_message_uses_mid(
         self,
