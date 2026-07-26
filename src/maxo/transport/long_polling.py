@@ -108,11 +108,13 @@ class LongPolling:
                 )
 
                 stop_event = asyncio.Event()
+                signal_handlers = (
+                    self._signal_handlers(stop_event)
+                    if handle_signals
+                    else contextlib.nullcontext()
+                )
 
-                with (
-                    self._signal_handlers(stop_event, enabled=handle_signals),
-                    contextlib.suppress(KeyboardInterrupt),
-                ):
+                with signal_handlers, contextlib.suppress(KeyboardInterrupt):
                     await self._consume_updates(
                         bot=bot,
                         updates_poller=updates_poller,
@@ -141,13 +143,11 @@ class LongPolling:
         По сигналу остановки новые апдейты больше не забираются, а выход из
         `TaskGroup` дожидается уже запущенных хендлеров.
         """
-        dispatcher = self._dispatcher
-
         async with asyncio.TaskGroup() as tg:
             async for update in self._iter_until_stop(updates_poller, stop_event):
                 # Задача отслеживается TaskGroup, ссылка не нужна.
                 tg.create_task(  # type: ignore[unused-awaitable]
-                    dispatcher.feed_max_update(update, bot),
+                    self._dispatcher.feed_max_update(update, bot),
                 )
 
     async def _iter_until_stop(
@@ -183,26 +183,19 @@ class LongPolling:
                     update = update_waiter.result()
                 except StopAsyncIteration:
                     break
-                finally:
-                    update_waiter = None
 
                 yield update
         finally:
             stop_waiter.cancel()
             # Незавершенный `get_updates` надо погасить здесь: `asyncio.wait`
             # не отменяет ожидаемое, а сессия бота закроется сразу после нас.
-            if update_waiter is not None:
+            if update_waiter is not None and not update_waiter.done():
                 update_waiter.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await update_waiter
 
     @contextlib.contextmanager
-    def _signal_handlers(
-        self,
-        stop_event: asyncio.Event,
-        *,
-        enabled: bool = True,
-    ) -> Iterator[None]:
+    def _signal_handlers(self, stop_event: asyncio.Event) -> Iterator[None]:
         """
         Перехватывает SIGINT и SIGTERM, пока идет поллинг.
 
@@ -210,10 +203,6 @@ class LongPolling:
         сбрасывает сигнал в дефолт и затер бы чужой обработчик, в том числе
         тот, которым `asyncio.run` гасит главную задачу по Ctrl+C.
         """
-        if not enabled:
-            yield
-            return
-
         loop = asyncio.get_running_loop()
         previous: list[tuple[signal.Signals, _SignalHandler]] = []
 

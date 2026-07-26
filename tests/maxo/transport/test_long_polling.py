@@ -78,6 +78,20 @@ async def run_generator_once(generator: AsyncIterator[Any]) -> None:
     await asyncio.gather(task, return_exceptions=True)
 
 
+async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+    """Поллер, который не отдает ни одного апдейта."""
+    nothing: tuple[Any, ...] = ()
+    for update in nothing:
+        yield update
+
+
+def make_update(number: int) -> MaxoUpdate[Any]:
+    return MaxoUpdate(
+        update=cast(Updates, MockUpdate(timestamp=number)),
+        marker=number,
+    )
+
+
 async def test_handles_load_error_and_skips_update(
     long_polling: LongPolling,
     mock_bot: Bot,
@@ -220,10 +234,6 @@ async def test_start_collects_used_updates_when_types_not_given(
 
     long_polling = LongPolling(dispatcher=dispatcher)
 
-    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-        return
-        yield  # pragma: no cover
-
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(mock_bot, types=types, auto_close_bot=False)
 
@@ -238,10 +248,6 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
 
     long_polling = LongPolling(dispatcher=dispatcher)
 
-    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-        return
-        yield  # pragma: no cover
-
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(
             mock_bot,
@@ -253,11 +259,11 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
 
 
 async def test_consume_updates_waits_for_running_handlers_on_stop(
+    long_polling: LongPolling,
     mock_dispatcher: Dispatcher,
     mock_bot: Bot,
 ) -> None:
     """Остановка graceful: уже запущенный хендлер добегает до конца."""
-    long_polling = LongPolling(dispatcher=mock_dispatcher)
     stop_event = asyncio.Event()
     handled: list[Any] = []
     handler_started = asyncio.Event()
@@ -270,13 +276,10 @@ async def test_consume_updates_waits_for_running_handlers_on_stop(
     mock_dispatcher.feed_max_update = slow_feed  # type: ignore[method-assign]
 
     async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
+        yield make_update(1)
         # Имитируем висящий долгий поллинг: новых апдейтов нет.
         await asyncio.sleep(3600)
-        yield MaxoUpdate(  # pragma: no cover
-            update=cast(Updates, MockUpdate(timestamp=2)),
-            marker=2,
-        )
+        yield make_update(2)  # pragma: no cover
 
     consumer = asyncio.create_task(
         long_polling._consume_updates(
@@ -294,14 +297,12 @@ async def test_consume_updates_waits_for_running_handlers_on_stop(
 
 
 async def test_consume_updates_stops_on_exhausted_poller(
-    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
     mock_bot: Bot,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    long_polling = LongPolling(dispatcher=mock_dispatcher)
-
     async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
+        yield make_update(1)
 
     await asyncio.wait_for(
         long_polling._consume_updates(
@@ -316,19 +317,15 @@ async def test_consume_updates_stops_on_exhausted_poller(
 
 
 async def test_consume_updates_does_not_start_when_already_stopped(
-    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
     mock_bot: Bot,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    long_polling = LongPolling(dispatcher=mock_dispatcher)
     stop_event = asyncio.Event()
     stop_event.set()
 
     async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield MaxoUpdate(  # pragma: no cover
-            update=cast(Updates, MockUpdate(timestamp=1)),
-            marker=1,
-        )
+        yield make_update(1)  # pragma: no cover
 
     await asyncio.wait_for(
         long_polling._consume_updates(
@@ -404,10 +401,6 @@ async def test_signal_handlers_not_installed_when_disabled(
     long_polling: LongPolling,
     mock_bot: Bot,
 ) -> None:
-    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-        return
-        yield  # pragma: no cover
-
     loop = asyncio.get_running_loop()
 
     with (
@@ -424,11 +417,10 @@ async def test_signal_handlers_not_installed_when_disabled(
 
 
 async def test_consume_updates_cancels_pending_get_updates(
-    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
     mock_bot: Bot,
 ) -> None:
     """При отмене поллинга висящий `get_updates` не остается жить дальше."""
-    long_polling = LongPolling(dispatcher=mock_dispatcher)
     polling_started = asyncio.Event()
     cancelled = asyncio.Event()
 
@@ -439,10 +431,7 @@ async def test_consume_updates_cancels_pending_get_updates(
         except CancelledError:
             cancelled.set()
             raise
-        yield MaxoUpdate(  # pragma: no cover
-            update=cast(Updates, MockUpdate(timestamp=1)),
-            marker=1,
-        )
+        yield make_update(1)  # pragma: no cover
 
     consumer = asyncio.create_task(
         long_polling._consume_updates(
