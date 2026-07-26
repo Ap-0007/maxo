@@ -122,8 +122,8 @@ Long polling / webhook
   запускай его через `Dispatcher.run_polling` (свой event loop) или
   `Dispatcher.start_polling` (уже в асинхронном контексте). Класс `LongPolling`
   показывай только там, где нужен свой `backoff_config`.
-- Поллинг не перехватывает `SIGINT` и `SIGTERM` и не глушит `KeyboardInterrupt`
-  с `SystemExit`: остановкой процесса управляет приложение, а не фреймворк.
+- Поллинг не перехватывает `SIGINT` и `SIGTERM`, но глушит `KeyboardInterrupt`:
+  остановкой процесса управляет приложение, а не фреймворк.
   Не добавляй такой перехват без отдельного решения мейнтейнера.
 - Webhook находится в `maxo.transport.webhook`: engines, adapters, routing,
   security и per-bot config.

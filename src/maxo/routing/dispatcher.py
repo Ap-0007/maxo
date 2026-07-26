@@ -80,8 +80,6 @@ class Dispatcher(Router):
         drop_pending_updates: bool = False,
         **workflow_data: Any,
     ) -> None:
-        """Запустить лонг-поллинг в текущем event loop."""
-        # Отложенный импорт: long_polling импортирует Dispatcher
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
 
         await LongPolling(self).start(
@@ -106,7 +104,6 @@ class Dispatcher(Router):
         drop_pending_updates: bool = False,
         **workflow_data: Any,
     ) -> None:
-        """Запустить лонг-поллинг, подняв свой event loop."""
         asyncio.run(
             self.start_polling(
                 bot,

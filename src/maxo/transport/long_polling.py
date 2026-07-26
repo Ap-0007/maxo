@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
@@ -96,11 +97,12 @@ class LongPolling:
                     drop_pending_updates=drop_pending_updates,
                 )
 
-                async with asyncio.TaskGroup() as tg:
-                    async for update in updates_poller:
-                        tg.create_task(  # type: ignore[unused-awaitable]
-                            dispatcher.feed_max_update(update, bot),
-                        )
+                with contextlib.suppress(KeyboardInterrupt):
+                    async with asyncio.TaskGroup() as tg:
+                        async for update in updates_poller:
+                            tg.create_task(  # type: ignore[unused-awaitable]
+                                dispatcher.feed_max_update(update, bot),
+                            )
 
                 await dispatcher.feed_signal(BeforeShutdown(), bot)
 

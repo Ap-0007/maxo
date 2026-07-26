@@ -77,7 +77,6 @@ async def run_generator_once(generator: AsyncIterator[Any]) -> None:
 
 
 async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-    """Поллер, который не отдает ни одного апдейта."""
     nothing: tuple[Any, ...] = ()
     for update in nothing:
         yield update
