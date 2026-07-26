@@ -1,3 +1,5 @@
+from unihttp.http import HTTPResponse
+
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import Body, Path
 from maxo.types.modify_members_result import ModifyMembersResult
@@ -37,3 +39,7 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
     """ID группового чата"""
 
     user_ids: Body[list[int]]
+
+    def validate_response(self, response: HTTPResponse) -> None:
+        # AddMembers возвращает частичный результат при success=false.
+        pass
