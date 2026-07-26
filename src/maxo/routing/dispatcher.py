@@ -78,7 +78,6 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
-        handle_signals: bool = True,
         **workflow_data: Any,
     ) -> None:
         """Запустить лонг-поллинг в текущем event loop."""
@@ -93,7 +92,6 @@ class Dispatcher(Router):
             types=types,
             auto_close_bot=auto_close_bot,
             drop_pending_updates=drop_pending_updates,
-            handle_signals=handle_signals,
             **workflow_data,
         )
 
@@ -106,7 +104,6 @@ class Dispatcher(Router):
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
-        handle_signals: bool = True,
         **workflow_data: Any,
     ) -> None:
         """Запустить лонг-поллинг, подняв свой event loop."""
@@ -119,7 +116,6 @@ class Dispatcher(Router):
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
-                handle_signals=handle_signals,
                 **workflow_data,
             ),
         )

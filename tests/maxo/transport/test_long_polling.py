@@ -1,6 +1,4 @@
 import asyncio
-import signal
-import sys
 from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -83,13 +81,6 @@ async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
     nothing: tuple[Any, ...] = ()
     for update in nothing:
         yield update
-
-
-def make_update(number: int) -> MaxoUpdate[Any]:
-    return MaxoUpdate(
-        update=cast(Updates, MockUpdate(timestamp=number)),
-        marker=number,
-    )
 
 
 async def test_handles_load_error_and_skips_update(
@@ -258,196 +249,20 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
     assert spy.call_args.kwargs["types"] == ["bot_started"]
 
 
-async def test_consume_updates_waits_for_running_handlers_on_stop(
-    long_polling: LongPolling,
-    mock_dispatcher: Dispatcher,
-    mock_bot: Bot,
-) -> None:
-    """Остановка graceful: уже запущенный хендлер добегает до конца."""
-    stop_event = asyncio.Event()
-    handled: list[Any] = []
-    handler_started = asyncio.Event()
-
-    async def slow_feed(update: MaxoUpdate[Any], bot: Bot | None = None) -> Any:
-        handler_started.set()
-        await asyncio.sleep(0.05)
-        handled.append(update)
-
-    mock_dispatcher.feed_max_update = slow_feed  # type: ignore[method-assign]
-
-    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield make_update(1)
-        # Имитируем висящий долгий поллинг: новых апдейтов нет.
-        await asyncio.sleep(3600)
-        yield make_update(2)  # pragma: no cover
-
-    consumer = asyncio.create_task(
-        long_polling._consume_updates(
-            bot=mock_bot,
-            updates_poller=updates(),
-            stop_event=stop_event,
-        ),
-    )
-
-    await handler_started.wait()
-    stop_event.set()
-    await asyncio.wait_for(consumer, timeout=1)
-
-    assert len(handled) == 1
-
-
-async def test_consume_updates_stops_on_exhausted_poller(
+async def test_start_feeds_updates_to_dispatcher(
     long_polling: LongPolling,
     mock_bot: Bot,
     mock_feed_max_update: AsyncMock,
 ) -> None:
-    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield make_update(1)
+    update = MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
 
-    await asyncio.wait_for(
-        long_polling._consume_updates(
-            bot=mock_bot,
-            updates_poller=updates(),
-            stop_event=asyncio.Event(),
-        ),
-        timeout=1,
-    )
+    async def single_update(**_kwargs: Any) -> AsyncIterator[MaxoUpdate[Any]]:
+        yield update
 
-    mock_feed_max_update.assert_awaited_once()
+    with patch.object(long_polling, "_get_updates", side_effect=single_update):
+        await long_polling.start(mock_bot, auto_close_bot=False)
 
-
-async def test_consume_updates_does_not_start_when_already_stopped(
-    long_polling: LongPolling,
-    mock_bot: Bot,
-    mock_feed_max_update: AsyncMock,
-) -> None:
-    stop_event = asyncio.Event()
-    stop_event.set()
-
-    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        yield make_update(1)  # pragma: no cover
-
-    await asyncio.wait_for(
-        long_polling._consume_updates(
-            bot=mock_bot,
-            updates_poller=updates(),
-            stop_event=stop_event,
-        ),
-        timeout=1,
-    )
-
-    mock_feed_max_update.assert_not_awaited()
-
-
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="loop.add_signal_handler не поддерживается на Windows",
-)
-async def test_signal_handler_sets_stop_event(long_polling: LongPolling) -> None:
-    stop_event = asyncio.Event()
-
-    with long_polling._signal_handlers(stop_event):
-        signal.raise_signal(signal.SIGTERM)
-        # Сигнал доезжает до loop через self-pipe, одного тика цикла мало.
-        await asyncio.wait_for(stop_event.wait(), timeout=1)
-
-        assert stop_event.is_set()
-
-
-@pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="loop.add_signal_handler не поддерживается на Windows",
-)
-async def test_signal_handlers_restore_previous(long_polling: LongPolling) -> None:
-    """Чужой обработчик сигнала не должен теряться после поллинга."""
-
-    def previous_handler(_signum: int, _frame: object) -> None:  # pragma: no cover
-        pass
-
-    signal.signal(signal.SIGTERM, previous_handler)
-    try:
-        with long_polling._signal_handlers(asyncio.Event()):
-            assert signal.getsignal(signal.SIGTERM) is not previous_handler
-
-        assert signal.getsignal(signal.SIGTERM) is previous_handler
-    finally:
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
-
-
-async def test_signal_handlers_survive_unsupported_platform(
-    long_polling: LongPolling,
-) -> None:
-    """Вне главного потока и на Windows поллинг не должен падать."""
-    loop = asyncio.get_running_loop()
-
-    with (
-        patch.object(
-            loop,
-            "add_signal_handler",
-            side_effect=[
-                NotImplementedError(),
-                RuntimeError("set_wakeup_fd only works in main thread"),
-            ],
-        ),
-        patch.object(loop, "remove_signal_handler") as remove_signal_handler,
-        long_polling._signal_handlers(asyncio.Event()),
-    ):
-        pass
-
-    remove_signal_handler.assert_not_called()
-
-
-async def test_signal_handlers_not_installed_when_disabled(
-    long_polling: LongPolling,
-    mock_bot: Bot,
-) -> None:
-    loop = asyncio.get_running_loop()
-
-    with (
-        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
-        patch.object(loop, "add_signal_handler") as add_signal_handler,
-    ):
-        await long_polling.start(
-            mock_bot,
-            auto_close_bot=False,
-            handle_signals=False,
-        )
-
-    add_signal_handler.assert_not_called()
-
-
-async def test_consume_updates_cancels_pending_get_updates(
-    long_polling: LongPolling,
-    mock_bot: Bot,
-) -> None:
-    """При отмене поллинга висящий `get_updates` не остается жить дальше."""
-    polling_started = asyncio.Event()
-    cancelled = asyncio.Event()
-
-    async def updates() -> AsyncIterator[MaxoUpdate[Any]]:
-        polling_started.set()
-        try:
-            await asyncio.sleep(3600)
-        except CancelledError:
-            cancelled.set()
-            raise
-        yield make_update(1)  # pragma: no cover
-
-    consumer = asyncio.create_task(
-        long_polling._consume_updates(
-            bot=mock_bot,
-            updates_poller=updates(),
-            stop_event=asyncio.Event(),
-        ),
-    )
-
-    await polling_started.wait()
-    consumer.cancel()
-    await asyncio.gather(consumer, return_exceptions=True)
-
-    assert cancelled.is_set()
-    # Отмена не должна проглатываться внутри `finally`.
-    assert consumer.cancelled()
+    mock_feed_max_update.assert_awaited_once_with(update, mock_bot)
 
 
 async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
@@ -461,7 +276,6 @@ async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
             types=["message_created"],
             auto_close_bot=False,
             drop_pending_updates=True,
-            handle_signals=False,
             extra="context",
         )
 
@@ -473,7 +287,6 @@ async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
         types=["message_created"],
         auto_close_bot=False,
         drop_pending_updates=True,
-        handle_signals=False,
         extra="context",
     )
 
@@ -492,9 +305,9 @@ def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
     dispatcher = Dispatcher()
 
     with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
-        dispatcher.run_polling(mock_bot, timeout=7, handle_signals=False)
+        dispatcher.run_polling(mock_bot, timeout=7, auto_close_bot=False)
 
     start.assert_awaited_once()
     assert start.await_args is not None
     assert start.await_args.kwargs["timeout"] == 7
-    assert start.await_args.kwargs["handle_signals"] is False
+    assert start.await_args.kwargs["auto_close_bot"] is False
