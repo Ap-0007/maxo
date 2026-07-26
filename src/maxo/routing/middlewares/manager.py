@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable, MutableSequence
-from typing import Any, Generic, TypeVar, cast, overload
+from typing import Any, Generic, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
@@ -11,6 +11,8 @@ from maxo.types.base import BaseUpdate
 
 _ReturnT = TypeVar("_ReturnT")
 _UpdateT = TypeVar("_UpdateT", bound=BaseUpdate)
+
+_MiddlewareDecorator = Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]]
 
 
 def _partial_middleware(
@@ -33,24 +35,14 @@ class MiddlewareManager(Generic[_UpdateT]):
         self.middlewares = []
         self.state = EmptyMiddlewareManagerState()
 
-    @overload
-    def __call__(
-        self,
-    ) -> Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]]: ...
-
-    @overload
-    def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None: ...
-
-    # Подражание aiogram: вызов без аргументов возвращает декоратор,
-    # чтобы работал привычный `@router.message_created.outer_middleware()`
+    # Подражание aiogram: возвращаем декоратор, чтобы работал привычный
+    # `@router.message_created.outer_middleware()`
     def __call__(
         self,
         *middlewares: BaseMiddleware[_UpdateT],
-    ) -> Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]] | None:
-        if not middlewares:
-            return self.register
+    ) -> _MiddlewareDecorator[_UpdateT]:
         self.add(*middlewares)
-        return None
+        return self.register
 
     def add(self, *middlewares: BaseMiddleware[_UpdateT]) -> None:
         self.state.ensure_add_middleware()
@@ -102,18 +94,10 @@ class MiddlewareManagerFacade(Generic[_UpdateT]):
     # Подражание aiogram,
     # чтобы по `router.message_created.middleware(MyMiddleware())`
     # он добавлялся в inner-мидлвари
-    @overload
-    def __call__(
-        self,
-    ) -> Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]]: ...
-
-    @overload
-    def __call__(self, *middlewares: BaseMiddleware[_UpdateT]) -> None: ...
-
     def __call__(
         self,
         *middlewares: BaseMiddleware[_UpdateT],
-    ) -> Callable[[BaseMiddleware[_UpdateT]], BaseMiddleware[_UpdateT]] | None:
+    ) -> _MiddlewareDecorator[_UpdateT]:
         return self.inner(*middlewares)
 
     def register(

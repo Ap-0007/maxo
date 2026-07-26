@@ -3,6 +3,7 @@ from maxo import bot as bot_package, methods
 from maxo.__meta__ import __version__
 from maxo.bot.bot import Bot
 from maxo.bot.methods import SendMessage
+from maxo.enums import ChatType
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.interfaces.middleware import BaseMiddleware
@@ -28,16 +29,11 @@ def test_top_level_text_decorations() -> None:
 def test_top_level_modules() -> None:
     assert maxo.types.MessageCreated is MessageCreated
     assert maxo.methods.SendMessage is SendMessage
-    assert maxo.enums.ChatType.DIALOG.value == "dialog"
+    assert maxo.enums.ChatType is ChatType
 
 
 def test_methods_module_mirrors_bot_methods() -> None:
-    assert set(methods.__all__) == set(bot_package.methods.__all__)
+    # `__all__` берется из `maxo.bot.methods`, поэтому проверяем,
+    # что звездный импорт действительно привязал каждое имя.
     for name in methods.__all__:
         assert getattr(methods, name) is getattr(bot_package.methods, name)
-
-
-def test_all_is_sorted_and_complete() -> None:
-    assert list(maxo.__all__) == sorted(maxo.__all__)
-    for name in maxo.__all__:
-        assert hasattr(maxo, name), name

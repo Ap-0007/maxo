@@ -6,7 +6,7 @@ from maxo.errors.state import StateError
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.routing.middlewares.state import StartedMiddlewareManagerState
+from maxo.routing.signals import BeforeStartup
 
 
 class NoopMiddleware(BaseMiddleware[Any]):
@@ -86,12 +86,17 @@ def test_call_without_arguments_returns_outer_decorator() -> None:
     assert list(dp.message_created.middleware.outer.middlewares) == [middleware]
 
 
-def test_unregister_after_startup_reports_removal() -> None:
+async def test_unregister_after_startup_reports_removal() -> None:
     dp = Dispatcher()
-    middleware = NoopMiddleware()
-    dp.message_created.middleware.register(middleware)
+    inner = NoopMiddleware()
+    outer = NoopMiddleware()
+    dp.message_created.middleware.register(inner)
+    dp.message_created.outer_middleware.register(outer)
 
-    dp.message_created.middleware.inner.state = StartedMiddlewareManagerState()
+    await dp.feed_signal(BeforeStartup())
 
     with pytest.raises(StateError, match="Can't remove middleware after startup"):
-        dp.message_created.middleware.unregister(middleware)
+        dp.message_created.middleware.unregister(inner)
+
+    with pytest.raises(StateError, match="Can't remove middleware after startup"):
+        dp.message_created.outer_middleware.unregister(outer)

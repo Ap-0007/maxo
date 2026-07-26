@@ -468,9 +468,13 @@ TAG_PROVIDERS = concat_provider(
 ## Публичный API
 
 - Top-level `maxo` экспортирует только самые частые объекты:
-  `Bot`, `Dispatcher`, `Router`, `Ctx`, `BaseMiddleware`.
+  `Bot`, `Dispatcher`, `Router`, `Ctx`, `BaseMiddleware`, `__version__`,
+  хелперы разметки `html` и `md`, а также модули `enums`, `methods`, `types`.
+  Набор повторяет корень `aiogram`, чтобы упростить портирование ботов.
 - Не расширяй top-level `maxo` без причины. Менее частые объекты должны
   импортироваться из своих публичных модулей.
+- `maxo.methods` - тонкий реэкспорт `maxo.bot.methods` через звездный импорт.
+  Список имен ведется только в `maxo.bot.methods.__all__`.
 - Документация и примеры должны импортировать из публичных модулей, а не из
   `maxo._internal`.
 - При добавлении публичного символа обновляй ближайший `__init__.py` и
