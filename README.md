@@ -64,16 +64,6 @@ dependencies = [
 ]
 ```
 
-## Особенности
-
-- Асинхронность на базе `aiohttp` и [`unihttp`](https://github.com/goduni/unihttp) ([asyncio](https://docs.python.org/3/library/asyncio.html), [PEP 492](https://peps.python.org/pep-0492/))
-- 100% покрытие типами, [`adaptix`](https://github.com/reagento/adaptix) для валидации данных
-- Роутеры, фильтры, милдвари
-- Встроенная машина состояний (FSM) и диалоги поверх них
-- Поддержка лонг-поллинга и вебхуков через `aiohttp` и `fastapi`
-- Интеграции с `dishka` и `magic_filter`
-- Автогенерация методов, типов и апдейтов по [официальной документации](https://dev.max.ru/docs-api)
-
 ## Для чего подходит maxo
 
 - Разработка ботов MAX на Python
@@ -121,7 +111,7 @@ async def deeplink_handler(bot_started: BotStarted, deeplink: str) -> None:
 async def start_handler(bot_started: BotStarted) -> None:
     await bot_started.send_message(f"Привет! Я бот. А ты {bot_started.user.fullname}")
 
-@dp.message(Command("help"))
+@dp.message_created(Command("help"))
 async def help_handler(message: MessageCreated) -> None:
     await message.send_message("За помощью обращайтесь в t.me/maxo_py")
 
@@ -136,7 +126,6 @@ from magic_filter import F
 from maxo import Bot, Dispatcher
 from maxo.integrations.magic_filter import MagicFilter
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 from maxo.utils.builders import KeyboardBuilder
 
@@ -179,7 +168,6 @@ from maxo.dialogs.widgets.text import Const
 from maxo.fsm import State, StatesGroup
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.routing.filters import CommandStart
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCallback, MessageCreated
 
 bot = Bot("TOKEN")
@@ -214,7 +202,7 @@ async def start_handler(
 dp.include(dialog)
 setup_dialogs(dp)
 
-LongPolling(dp).run(bot)
+dp.run_polling(bot)
 ```
 
 ### Вебхук
@@ -331,4 +319,3 @@ FSM встроена в `maxo` - есть `MemoryStorage` из коробки и
 
 ## Связь
 Если у вас есть вопросы, вы можете задать их в Телеграме [\@maxo_py](https://t.me/maxo_py) или [Максе](https://max.ru/join/rwJmWA4B5AipBiJdWRkORGjxFmqnJPUhJbQxxmscrnc)
-

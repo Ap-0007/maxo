@@ -118,7 +118,13 @@ Long polling / webhook
 - Facade и update-модели умеют отвечать через mixins после привязки бота.
 - Для webhook используй `collect_used_updates(dispatcher)`, чтобы подписывать
   только реально используемые update types.
-- Long polling находится в `maxo.transport.long_polling`.
+- Long polling находится в `maxo.transport.long_polling`. В docs и examples
+  запускай его через `Dispatcher.run_polling` (свой event loop) или
+  `Dispatcher.start_polling` (уже в асинхронном контексте). Класс `LongPolling`
+  показывай только там, где нужен свой `backoff_config`.
+- Поллинг не перехватывает `SIGINT` и `SIGTERM` и не глушит `KeyboardInterrupt`
+  с `SystemExit`: остановкой процесса управляет приложение, а не фреймворк.
+  Не добавляй такой перехват без отдельного решения мейнтейнера.
 - Webhook находится в `maxo.transport.webhook`: engines, adapters, routing,
   security и per-bot config.
 
