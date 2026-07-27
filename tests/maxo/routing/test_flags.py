@@ -56,12 +56,14 @@ class TestFlagDecorator:
         assert new_decorator.flag.name == "test"
         assert new_decorator.flag.value == "value"
 
+    @pytest.mark.parametrize("value", [True, False, 0])
     def test_value_and_kwargs_together_is_error(
         self,
+        value: Any,
         flag_decorator: FlagDecorator,
     ) -> None:
         with pytest.raises(ValueError, match="вместе"):
-            flag_decorator(True, test=True)  # type: ignore[call-overload]
+            flag_decorator(value, test=True)  # type: ignore[call-overload]
 
     def test_call_with_function(self, flag_decorator: FlagDecorator) -> None:
         async def func(update: MessageCreated) -> None:

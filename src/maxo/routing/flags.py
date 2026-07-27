@@ -104,7 +104,7 @@ class FlagDecorator:
         value: Any | None = None,
         **kwargs: Any,
     ) -> "Callable[..., Any] | FlagDecorator":
-        if value and kwargs:
+        if value is not None and kwargs:
             raise ValueError(
                 "Аргументы `value` и `**kwargs` нельзя использовать вместе",
             )
@@ -247,7 +247,10 @@ def resolve_handler_flags(
         if update_handler_flags is not None:
             update_handler_flags(resolved)
 
+    # Флаги ищутся и на обёртке, и под ней: декоратор флага мог оказаться как
+    # выше, так и ниже декоратора, оборачивающего хендлер
     resolved.update(extract_flags_from_object(inspect.unwrap(handler_fn)))
+    resolved.update(extract_flags_from_object(handler_fn))
     return resolved
 
 

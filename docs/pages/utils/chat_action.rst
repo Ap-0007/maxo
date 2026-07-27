@@ -89,6 +89,14 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
     @flags.chat_action(action="sending_file", interval=3, initial_sleep=1)
     async def my_handler(update: MessageCreated) -> None: ...
 
+Выключить отправку для конкретного хендлера:
+
+.. code-block:: python
+
+    @dp.message_created(Command("fast"))
+    @flags.chat_action(False)
+    async def my_handler(update: MessageCreated) -> None: ...
+
 Мидлварь определяет чат по ``update_context`` из ``ctx``, а если его нет - по
 самому апдейту. Если ID чата определить не удалось, мидлварь просто пропускает
 апдейт дальше, ничего не отправляя.

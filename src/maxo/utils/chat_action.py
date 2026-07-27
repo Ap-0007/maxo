@@ -39,7 +39,7 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.flags import get_flag
 from maxo.routing.interfaces.middleware import BaseMiddleware, NextMiddleware
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.types import MessageCallback, MessageCreated, MessageEdited
+from maxo.types import MessageCallback, MessageCreated, MessageEdited, UpdateContext
 from maxo.types.base import BaseUpdate
 
 DEFAULT_INTERVAL: Final = 5.0
@@ -131,7 +131,18 @@ class ChatActionSender:
                     self.chat_id,
                     counter,
                 )
-                await self.bot.send_action(chat_id=self.chat_id, action=self.action)
+                try:
+                    await self.bot.send_action(chat_id=self.chat_id, action=self.action)
+                except Exception:  # noqa: BLE001
+                    # Иначе исключение остаётся в брошенной задаче и всплывает
+                    # как "Task exception was never retrieved"
+                    loggers.utils.warning(
+                        "Не удалось отправить действие %r в chat_id=%s",
+                        self.action,
+                        self.chat_id,
+                        exc_info=True,
+                    )
+                    break
                 counter += 1
 
                 await self._wait(self.interval - (time.monotonic() - start))
@@ -155,10 +166,16 @@ class ChatActionSender:
         async with self._lock:
             if not self.running:
                 return
-            if not self._close_event.is_set():  # pragma: no branch
-                self._close_event.set()
-                await self._closed_event.wait()
-            self._task = None
+            try:
+                if not self._close_event.is_set():  # pragma: no branch
+                    self._close_event.set()
+                    await self._closed_event.wait()
+            finally:
+                # Ожидание могут отменить (например при остановке бота),
+                # иначе задача останется слать действия в чат навсегда
+                task, self._task = self._task, None
+                if task is not None and not task.done():
+                    task.cancel()
 
     async def __aenter__(self) -> Self:
         await self._run()
@@ -304,7 +321,8 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
 
     По умолчанию шлёт `typing_on`. Поведение конкретного хендлера настраивается
     флагом `chat_action`: строкой/`SenderAction` меняется только тип действия,
-    именованными аргументами - вся конфигурация отправщика.
+    именованными аргументами - вся конфигурация отправщика, а `False` или `None`
+    полностью выключают отправку для этого хендлера.
     """
 
     __slots__ = ()
@@ -315,19 +333,22 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
         ctx: Ctx,
         next: NextMiddleware[BaseUpdate],
     ) -> Any:
+        kwargs = self._resolve_sender_kwargs(ctx)
+        if kwargs is None:
+            return await next(ctx)
+
         chat_id = self._resolve_chat_id(update, ctx)
         bot = ctx.get("bot")
         if chat_id is None or bot is None:
             return await next(ctx)
 
-        kwargs = self._resolve_sender_kwargs(ctx)
         async with ChatActionSender(bot=bot, chat_id=chat_id, **kwargs):
             return await next(ctx)
 
     def _resolve_chat_id(self, update: BaseUpdate, ctx: Ctx) -> int | None:
-        update_context = ctx.get(UPDATE_CONTEXT_KEY)
+        update_context: UpdateContext | None = ctx.get(UPDATE_CONTEXT_KEY)
         if update_context is not None and update_context.chat_id is not None:
-            return int(update_context.chat_id)
+            return update_context.chat_id
 
         if isinstance(update, (MessageCreated, MessageEdited)):
             return update.message.recipient.chat_id
@@ -335,10 +356,13 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
             return update.message.recipient.chat_id
         return None
 
-    def _resolve_sender_kwargs(self, ctx: Ctx) -> dict[str, Any]:
-        chat_action = get_flag(ctx, CHAT_ACTION_KEY) or SenderAction.TYPING_ON
+    def _resolve_sender_kwargs(self, ctx: Ctx) -> dict[str, Any] | None:
+        """Собирает аргументы отправщика или `None`, если действие выключено."""
+        chat_action = get_flag(ctx, CHAT_ACTION_KEY, default=True)
 
-        if isinstance(chat_action, bool):
+        if chat_action is None or chat_action is False:
+            return None
+        if chat_action is True:
             return {"action": SenderAction.TYPING_ON}
         if not isinstance(chat_action, Mapping):
             return {"action": SenderAction(chat_action)}

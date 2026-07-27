@@ -241,6 +241,23 @@ class TestChatActionMiddleware:
             action=SenderAction.TYPING_ON,
         )
 
+    @pytest.mark.parametrize("flag_value", [False, None])
+    async def test_falsy_flag_disables_sender(
+        self,
+        flag_value: Any,
+        bot: AsyncMock,
+    ) -> None:
+        update = make_update()
+        ctx = make_ctx_with_flags(update, bot, chat_action=flag_value)
+        middleware = ChatActionMiddleware()
+
+        async def next_fn(ctx: Ctx) -> str:
+            await asyncio.sleep(0.05)
+            return "OK"
+
+        assert await middleware(update, ctx, next_fn) == "OK"
+        bot.send_action.assert_not_awaited()
+
     async def test_dict_flag_configures_sender(self, bot: AsyncMock) -> None:
         @flags.chat_action(action="sending_file", interval=0.01, initial_sleep=0)
         async def stub(update: MessageCreated) -> None:
@@ -319,6 +336,19 @@ class TestChatActionMiddleware:
 
         assert await middleware(update, ctx, next_fn) == "OK"
         bot.send_action.assert_not_awaited()
+
+    async def test_sender_survives_send_action_error(self, bot: AsyncMock) -> None:
+        bot.send_action.side_effect = RuntimeError("api is down")
+        update = make_update()
+        ctx = make_ctx_with_flags(update, bot)
+        middleware = ChatActionMiddleware()
+
+        async def next_fn(ctx: Ctx) -> str:
+            await asyncio.sleep(0.05)
+            return "OK"
+
+        assert await middleware(update, ctx, next_fn) == "OK"
+        bot.send_action.assert_awaited()
 
     async def test_stops_after_handler_error(self, bot: AsyncMock) -> None:
         update = make_update()

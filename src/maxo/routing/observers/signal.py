@@ -34,12 +34,14 @@ class SignalObserver(
         return handler_fn
 
     async def handler_lookup(self, ctx: Ctx) -> Any:
-        for handler in self._handlers:
-            ctx[HANDLER_KEY] = handler
-            if await handler.execute_filter(ctx):
-                await self.execute_handler(ctx, handler)
+        try:
+            for handler in self._handlers:
+                ctx[HANDLER_KEY] = handler
+                if await handler.execute_filter(ctx):
+                    await self.execute_handler(ctx, handler)
+        finally:
+            ctx.pop(HANDLER_KEY, None)
 
-        ctx.pop(HANDLER_KEY, None)
         # Возврат UNHANDLED для того, чтобы сигнал прошёлся по дочерним роутерам
         return UNHANDLED
 

@@ -1,3 +1,4 @@
+import functools
 from typing import Any
 
 import pytest
@@ -97,6 +98,26 @@ class TestRegistration:
 
         assert router.message_created.handlers[0].flags == {"rate_limit": 5}
 
+    def test_flags_above_wrapping_decorator(self) -> None:
+        router = Router()
+
+        def wrap(fn: Any) -> Any:
+            @functools.wraps(fn)
+            async def wrapper(update: MessageCreated) -> Any:
+                return await fn(update)
+
+            return wrapper
+
+        @router.message_created()
+        @flags.chat_action("sending_photo")
+        @wrap
+        async def marked(update: MessageCreated) -> None:
+            pass
+
+        assert router.message_created.handlers[0].flags == {
+            "chat_action": "sending_photo",
+        }
+
     def test_signal_observer_supports_flags(self) -> None:
         router = Router()
 
@@ -139,6 +160,19 @@ class TestFiltersUpdateFlags:
         router.message_created.handler(handler, command)
 
         assert router.message_created.handlers[0].flags == {"commands": [command]}
+
+    def test_filters_do_not_mutate_shared_flags(self) -> None:
+        router = Router()
+        shared: dict[str, Any] = {"commands": []}
+        start = Command("start")
+        help_ = Command("help")
+
+        router.message_created.handler(handler, start, flags=shared)
+        router.message_created.handler(handler, help_, flags=shared)
+
+        assert shared == {"commands": []}
+        assert router.message_created.handlers[0].flags == {"commands": [start]}
+        assert router.message_created.handlers[1].flags == {"commands": [help_]}
 
     def test_several_command_filters_accumulate(self) -> None:
         router = Router()

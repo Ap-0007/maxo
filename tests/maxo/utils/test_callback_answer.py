@@ -148,7 +148,11 @@ async def test_flag_can_disable_answer() -> None:
     update = AsyncMock()
     mw = CallbackAnswerMiddleware()
 
-    await mw(cast(MessageCallback, update), _ctx_with_flag({"disabled": True}), _next_ok)
+    await mw(
+        cast(MessageCallback, update),
+        _ctx_with_flag({"disabled": True}),
+        _next_ok,
+    )
 
     update.answer.assert_not_awaited()
 

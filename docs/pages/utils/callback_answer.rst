@@ -41,9 +41,9 @@ Middleware - внутренний (inner), вешается на обсёрве�
     async def manual_handler(update: MessageCallback) -> None: ...
 
 Словарь во флаге понимает ключи ``disabled``, ``before`` и ``notification``.
-Голый ``@flags.callback_answer`` включает авто-ответ, а
-``@flags.callback_answer(False)`` выключает - это удобно, если мидлварь
-подключена с ``disabled=True`` и авто-ответ нужен точечно.
+Голый ``@flags.callback_answer`` включает авто-ответ - это удобно, если мидлварь
+подключена с ``disabled=True`` и авто-ответ нужен точечно. Обратный случай -
+``@flags.callback_answer(False)``: он выключает авто-ответ для одного хендлера.
 
 Управление из хендлера
 ----------------------
