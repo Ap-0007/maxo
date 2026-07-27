@@ -116,11 +116,17 @@ def bind_handler(ctx: Ctx, handler: Handler[Any, Any]) -> Iterator[None]:
 
     Фильтры и inner-мидлвари читают флаги хендлера через `get_flag` и
     `extract_flags`, то есть по ключу `handler` в ctx. За пределами этого окна
-    ключ убирается, иначе флаги «протекут» в дочерние роутеры, которым дальше
-    отдаётся апдейт.
+    восстанавливается предыдущее значение ключа, а если его не было - ключ
+    убирается, чтобы флаги не «протекли» в дочерние роутеры.
     """
+    had_handler = HANDLER_KEY in ctx
+    previous_handler = ctx.get(HANDLER_KEY)
+
     ctx[HANDLER_KEY] = handler
     try:
         yield
     finally:
-        ctx.pop(HANDLER_KEY, None)
+        if had_handler:
+            ctx[HANDLER_KEY] = previous_handler
+        else:
+            ctx.pop(HANDLER_KEY, None)

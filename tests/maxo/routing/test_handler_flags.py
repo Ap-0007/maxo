@@ -9,10 +9,12 @@ from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.filters import BaseFilter, Command
 from maxo.routing.flags import HANDLER_KEY, extract_flags, flags, get_flag
 from maxo.routing.interfaces.middleware import NextMiddleware
+from maxo.routing.observers.base import bind_handler
 from maxo.routing.routers.simple import Router
 from maxo.routing.signals import BeforeStartup
 from maxo.types import Message, MessageBody, MessageCreated, Recipient, User
 from tests.constants import NOW
+from tests.factories import make_flagged_handler
 
 
 @pytest.fixture
@@ -187,6 +189,20 @@ class TestFiltersUpdateFlags:
 
 
 class TestFlagsInRuntime:
+    def test_nested_bind_restores_previous_handler(self) -> None:
+        previous = make_flagged_handler(previous=True)
+        outer = make_flagged_handler(outer=True)
+        inner = make_flagged_handler(inner=True)
+        ctx = Ctx({HANDLER_KEY: previous})
+
+        with bind_handler(ctx, outer):
+            with bind_handler(ctx, inner):
+                assert ctx[HANDLER_KEY] is inner
+
+            assert ctx[HANDLER_KEY] is outer
+
+        assert ctx[HANDLER_KEY] is previous
+
     async def test_handler_is_available_in_ctx(self, ctx: Ctx) -> None:
         dp = Dispatcher()
         seen: list[Any] = []

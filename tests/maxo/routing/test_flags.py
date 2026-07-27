@@ -74,6 +74,16 @@ class TestFlagDecorator:
         assert new_decorator is not flag_decorator
         assert new_decorator.flag.value == "hello"
 
+    def test_call_with_none(self, flag_decorator: FlagDecorator) -> None:
+        new_decorator = flag_decorator(None)
+
+        assert new_decorator.flag.value is None
+
+    def test_call_without_args(self, flag_decorator: FlagDecorator) -> None:
+        new_decorator = flag_decorator()
+
+        assert new_decorator.flag.value == {}
+
     def test_call_with_kwargs(self, flag_decorator: FlagDecorator) -> None:
         new_decorator = flag_decorator(spam=True)
 

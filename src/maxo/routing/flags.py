@@ -30,6 +30,7 @@ from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, cast, overload
 
+from maxo.omit import Omitted, is_omitted
 from maxo.routing.interfaces.filter import Filter
 
 if TYPE_CHECKING:
@@ -97,15 +98,16 @@ class FlagDecorator:
 
     def __call__(
         self,
-        value: Any = None,
+        value: Any = Omitted(),
         **kwargs: Any,
     ) -> "Callable[..., Any] | FlagDecorator":
-        if value is not None and kwargs:
+        value_is_omitted = is_omitted(value)
+        if not value_is_omitted and kwargs:
             raise ValueError(
                 "Аргументы `value` и `**kwargs` нельзя использовать вместе",
             )
 
-        if value is not None and callable(value):
+        if not value_is_omitted and callable(value):
             setattr(
                 value,
                 FLAG_ATTR_NAME,
@@ -116,7 +118,7 @@ class FlagDecorator:
             )
             return cast(Callable[..., Any], value)
 
-        return self._with_value(AttrDict(kwargs) if value is None else value)
+        return self._with_value(AttrDict(kwargs) if value_is_omitted else value)
 
 
 class FlagGenerator:
