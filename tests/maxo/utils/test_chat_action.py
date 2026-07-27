@@ -28,6 +28,7 @@ from maxo.utils.chat_action import (
     ChatActionSender,
 )
 from tests.constants import NOW
+from tests.factories import make_flagged_handler
 
 CHAT_ID = 42
 
@@ -80,19 +81,18 @@ def make_ctx(update: Any, bot: Any, **extra: Any) -> Ctx:
     return Ctx({"update": update, "bot": bot, **extra})
 
 
-def make_ctx_with_flags(
-    update: Any,
-    bot: Any,
-    **handler_flags: Any,
-) -> Ctx:
-    async def stub(update: MessageCreated) -> None:
-        pass
+def make_ctx_with_flags(update: Any, bot: Any, **handler_flags: Any) -> Ctx:
+    return make_ctx(update, bot, **{HANDLER_KEY: make_flagged_handler(**handler_flags)})
 
-    return make_ctx(
-        update,
-        bot,
-        **{HANDLER_KEY: UpdateHandler(stub, flags=handler_flags)},
-    )
+
+async def _next_slow(ctx: Ctx) -> str:
+    """`next`, который работает достаточно долго, чтобы действие успело уйти."""
+    await asyncio.sleep(0.05)
+    return "OK"
+
+
+async def _next_ok(ctx: Ctx) -> str:
+    return "OK"
 
 
 @pytest.fixture
@@ -191,11 +191,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        assert await middleware(update, ctx, next_fn) == "OK"
+        assert await middleware(update, ctx, _next_slow) == "OK"
         bot.send_action.assert_awaited_with(
             chat_id=CHAT_ID,
             action=SenderAction.TYPING_ON,
@@ -214,11 +210,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot, chat_action=flag_value)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        await middleware(update, ctx, next_fn)
+        await middleware(update, ctx, _next_slow)
 
         bot.send_action.assert_awaited_with(
             chat_id=CHAT_ID,
@@ -230,11 +222,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot, chat_action=True)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        await middleware(update, ctx, next_fn)
+        await middleware(update, ctx, _next_slow)
 
         bot.send_action.assert_awaited_with(
             chat_id=CHAT_ID,
@@ -251,11 +239,42 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot, chat_action=flag_value)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
+        assert await middleware(update, ctx, _next_slow) == "OK"
+        bot.send_action.assert_not_awaited()
 
-        assert await middleware(update, ctx, next_fn) == "OK"
+    async def test_middleware_defaults_used_without_flag(self, bot: AsyncMock) -> None:
+        update = make_update()
+        ctx = make_ctx_with_flags(update, bot)
+        middleware = ChatActionMiddleware(action=SenderAction.SENDING_FILE)
+
+        await middleware(update, ctx, _next_slow)
+
+        bot.send_action.assert_awaited_with(
+            chat_id=CHAT_ID,
+            action=SenderAction.SENDING_FILE,
+        )
+
+    async def test_flag_overrides_middleware_defaults(self, bot: AsyncMock) -> None:
+        update = make_update()
+        ctx = make_ctx_with_flags(update, bot, chat_action="sending_photo")
+        middleware = ChatActionMiddleware(action=SenderAction.SENDING_FILE)
+
+        await middleware(update, ctx, _next_slow)
+
+        bot.send_action.assert_awaited_with(
+            chat_id=CHAT_ID,
+            action=SenderAction.SENDING_PHOTO,
+        )
+
+    async def test_middleware_initial_sleep_skips_short_handlers(
+        self,
+        bot: AsyncMock,
+    ) -> None:
+        update = make_update()
+        ctx = make_ctx_with_flags(update, bot)
+        middleware = ChatActionMiddleware(initial_sleep=5)
+
+        assert await middleware(update, ctx, _next_slow) == "OK"
         bot.send_action.assert_not_awaited()
 
     async def test_dict_flag_configures_sender(self, bot: AsyncMock) -> None:
@@ -267,11 +286,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx(update, bot, **{HANDLER_KEY: UpdateHandler(stub)})
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        await middleware(update, ctx, next_fn)
+        await middleware(update, ctx, _next_slow)
 
         assert bot.send_action.await_count > 1
         bot.send_action.assert_awaited_with(
@@ -284,10 +299,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            return "OK"
-
-        assert await middleware(update, ctx, next_fn) == "OK"
+        assert await middleware(update, ctx, _next_ok) == "OK"
         bot.send_action.assert_not_awaited()
 
     async def test_chat_id_from_update_context(self, bot: AsyncMock) -> None:
@@ -296,11 +308,7 @@ class TestChatActionMiddleware:
         ctx[UPDATE_CONTEXT_KEY] = UpdateContext(chat_id=CHAT_ID, user_id=1)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        await middleware(update, ctx, next_fn)
+        await middleware(update, ctx, _next_slow)
 
         bot.send_action.assert_awaited_with(
             chat_id=CHAT_ID,
@@ -312,11 +320,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        await middleware(update, ctx, next_fn)
+        await middleware(update, ctx, _next_slow)
 
         bot.send_action.assert_awaited_with(
             chat_id=CHAT_ID,
@@ -331,10 +335,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            return "OK"
-
-        assert await middleware(update, ctx, next_fn) == "OK"
+        assert await middleware(update, ctx, _next_ok) == "OK"
         bot.send_action.assert_not_awaited()
 
     async def test_sender_survives_send_action_error(self, bot: AsyncMock) -> None:
@@ -343,11 +344,7 @@ class TestChatActionMiddleware:
         ctx = make_ctx_with_flags(update, bot)
         middleware = ChatActionMiddleware()
 
-        async def next_fn(ctx: Ctx) -> str:
-            await asyncio.sleep(0.05)
-            return "OK"
-
-        assert await middleware(update, ctx, next_fn) == "OK"
+        assert await middleware(update, ctx, _next_slow) == "OK"
         bot.send_action.assert_awaited()
 
     async def test_stops_after_handler_error(self, bot: AsyncMock) -> None:

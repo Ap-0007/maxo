@@ -1,5 +1,13 @@
 from abc import ABC
-from collections.abc import Callable, Coroutine, Mapping, MutableSequence, Sequence
+from collections.abc import (
+    Callable,
+    Coroutine,
+    Iterator,
+    Mapping,
+    MutableSequence,
+    Sequence,
+)
+from contextlib import contextmanager
 from typing import Any, TypeVar, cast
 
 from maxo.routing.ctx import Ctx
@@ -83,17 +91,13 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
     async def handler_lookup(self, ctx: Ctx) -> Any:
         for handler in self._handlers:
-            # Кладём хендлер в ctx до фильтров, чтобы фильтры и inner-мидлвари
-            # могли читать его флаги через `get_flag`/`extract_flags`
-            ctx[HANDLER_KEY] = handler
-            if await handler.execute_filter(ctx):
-                try:
-                    return await self.execute_handler(ctx, handler)
-                except SkipHandler:
-                    continue
+            with bind_handler(ctx, handler):
+                if await handler.execute_filter(ctx):
+                    try:
+                        return await self.execute_handler(ctx, handler)
+                    except SkipHandler:
+                        continue
 
-        # Иначе флаги «протекут» в дочерние роутеры, которым отдаётся апдейт
-        ctx.pop(HANDLER_KEY, None)
         return UNHANDLED
 
     async def execute_handler(
@@ -103,3 +107,20 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
     ) -> _ReturnT_co:
         chain_middlewares = self.middleware.inner.wrap_middlewares(handler)
         return cast(_ReturnT_co, await chain_middlewares(ctx))
+
+
+@contextmanager
+def bind_handler(ctx: Ctx, handler: Handler[Any, Any]) -> Iterator[None]:
+    """
+    Привязывает хендлер к ctx на время его фильтрации и обработки.
+
+    Фильтры и inner-мидлвари читают флаги хендлера через `get_flag` и
+    `extract_flags`, то есть по ключу `handler` в ctx. За пределами этого окна
+    ключ убирается, иначе флаги «протекут» в дочерние роутеры, которым дальше
+    отдаётся апдейт.
+    """
+    ctx[HANDLER_KEY] = handler
+    try:
+        yield
+    finally:
+        ctx.pop(HANDLER_KEY, None)

@@ -24,9 +24,7 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 
     @dp.message_created(Command("report"))
     async def report_handler(update: MessageCreated, bot: Bot) -> None:
-        chat_id = update.message.recipient.unsafe_chat_id
-
-        async with ChatActionSender.typing_on(bot=bot, chat_id=chat_id):
+        async with ChatActionSender.typing_on(bot=bot, chat_id=update.chat_id):
             result = await build_long_report()
 
         await update.answer(text=result)
@@ -63,6 +61,14 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 
 После этого все хендлеры, которые работают дольше ``initial_sleep``, будут
 показывать ``typing_on``.
+
+Дефолты отправщика задаются в конструкторе мидлвари. Ненулевой ``initial_sleep``
+стоит поставить сразу: иначе каждый быстрый хендлер тратит лишний запрос к API
+на действие, которое никто не успеет увидеть.
+
+.. code-block:: python
+
+    dp.message_created.middleware(ChatActionMiddleware(initial_sleep=1))
 
 Настройка через флаги
 ---------------------

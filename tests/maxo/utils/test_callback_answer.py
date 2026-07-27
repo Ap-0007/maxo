@@ -1,11 +1,9 @@
-from typing import Any, cast
+from typing import cast
 from unittest.mock import AsyncMock
 
 import pytest
 
 from maxo.routing.ctx import Ctx
-from maxo.routing.flags import HANDLER_KEY
-from maxo.routing.handlers.update import UpdateHandler
 from maxo.types import MessageCallback
 from maxo.utils.callback_answer import (
     CALLBACK_ANSWER_KEY,
@@ -13,17 +11,11 @@ from maxo.utils.callback_answer import (
     CallbackAnswerException,
     CallbackAnswerMiddleware,
 )
+from tests.factories import make_flagged_ctx
 
 
 async def _next_ok(ctx: Ctx) -> str:
     return "OK"
-
-
-def _ctx_with_flag(value: Any) -> Ctx:
-    async def stub(update: MessageCallback) -> None:
-        pass
-
-    return Ctx({HANDLER_KEY: UpdateHandler(stub, flags={"callback_answer": value})})
 
 
 async def test_answers_after_handler_by_default() -> None:
@@ -150,7 +142,7 @@ async def test_flag_can_disable_answer() -> None:
 
     await mw(
         cast(MessageCallback, update),
-        _ctx_with_flag({"disabled": True}),
+        make_flagged_ctx(callback_answer={"disabled": True}),
         _next_ok,
     )
 
@@ -163,7 +155,7 @@ async def test_flag_can_set_notification() -> None:
 
     await mw(
         cast(MessageCallback, update),
-        _ctx_with_flag({"notification": "Готово"}),
+        make_flagged_ctx(callback_answer={"notification": "Готово"}),
         _next_ok,
     )
 
@@ -180,7 +172,11 @@ async def test_flag_can_set_before() -> None:
         return "OK"
 
     mw = CallbackAnswerMiddleware()
-    await mw(cast(MessageCallback, update), _ctx_with_flag({"before": True}), next_fn)
+    await mw(
+        cast(MessageCallback, update),
+        make_flagged_ctx(callback_answer={"before": True}),
+        next_fn,
+    )
 
     assert order == ["answer", "handler"]
 
@@ -189,7 +185,11 @@ async def test_false_flag_disables_answer() -> None:
     update = AsyncMock()
     mw = CallbackAnswerMiddleware()
 
-    await mw(cast(MessageCallback, update), _ctx_with_flag(False), _next_ok)
+    await mw(
+        cast(MessageCallback, update),
+        make_flagged_ctx(callback_answer=False),
+        _next_ok,
+    )
 
     update.answer.assert_not_awaited()
 
@@ -198,7 +198,11 @@ async def test_true_flag_enables_disabled_middleware() -> None:
     update = AsyncMock()
     mw = CallbackAnswerMiddleware(disabled=True)
 
-    await mw(cast(MessageCallback, update), _ctx_with_flag(True), _next_ok)
+    await mw(
+        cast(MessageCallback, update),
+        make_flagged_ctx(callback_answer=True),
+        _next_ok,
+    )
 
     update.answer.assert_awaited_once_with()
 

@@ -7,6 +7,7 @@ import maxo
 from maxo.routing.ctx import Ctx
 from maxo.routing.flags import (
     FLAG_ATTR_NAME,
+    HANDLER_KEY,
     AttrDict,
     Flag,
     FlagDecorator,
@@ -19,10 +20,7 @@ from maxo.routing.flags import (
 )
 from maxo.routing.handlers.update import UpdateHandler
 from maxo.types import MessageCreated
-
-
-async def stub_handler(update: MessageCreated) -> None:
-    pass
+from tests.factories import make_flagged_handler
 
 
 @pytest.fixture
@@ -33,10 +31,6 @@ def flag() -> Flag:
 @pytest.fixture
 def flag_decorator(flag: Flag) -> FlagDecorator:
     return FlagDecorator(flag)
-
-
-def make_handler(**handler_flags: Any) -> UpdateHandler[MessageCreated, None]:
-    return UpdateHandler(stub_handler, flags=handler_flags)
 
 
 class TestExports:
@@ -148,12 +142,12 @@ class TestExtractFlags:
         assert extract_flags(source) == expected
 
     def test_from_handler(self) -> None:
-        handler = make_handler(test=True)
+        handler = make_flagged_handler(test=True)
 
         assert extract_flags(handler) == {"test": True}
 
     def test_from_ctx(self) -> None:
-        ctx = Ctx({"handler": make_handler(test=True)})
+        ctx = Ctx({HANDLER_KEY: make_flagged_handler(test=True)})
 
         assert extract_flags(ctx) == {"test": True}
 
@@ -180,12 +174,12 @@ class TestGetFlag:
         assert get_flag(source, name, default=default) == expected
 
     def test_existing_flag(self) -> None:
-        ctx = Ctx({"handler": make_handler(test=True)})
+        ctx = Ctx({HANDLER_KEY: make_flagged_handler(test=True)})
 
         assert get_flag(ctx, "test") is True
 
     def test_missing_flag_with_default(self) -> None:
-        ctx = Ctx({"handler": make_handler(test=True)})
+        ctx = Ctx({HANDLER_KEY: make_flagged_handler(test=True)})
 
         assert get_flag(ctx, "spam") is None
         assert get_flag(ctx, "spam", default=42) == 42
@@ -207,7 +201,7 @@ class TestCheckFlags:
         magic: Any,
         expected: Any,
     ) -> None:
-        ctx = Ctx({"handler": make_handler(**handler_flags)})
+        ctx = Ctx({HANDLER_KEY: make_flagged_handler(**handler_flags)})
 
         assert check_flags(ctx, magic) == expected
 
@@ -216,6 +210,6 @@ class TestCheckFlags:
         async def func(update: MessageCreated) -> None:
             pass
 
-        ctx = Ctx({"handler": UpdateHandler(func)})
+        ctx = Ctx({HANDLER_KEY: UpdateHandler(func)})
 
         assert check_flags(ctx, F.chat_action.action) == "typing_on"

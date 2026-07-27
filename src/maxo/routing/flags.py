@@ -83,12 +83,8 @@ class FlagDecorator:
 
     flag: Flag
 
-    @classmethod
-    def _with_flag(cls, flag: Flag) -> "FlagDecorator":
-        return cls(flag)
-
     def _with_value(self, value: Any) -> "FlagDecorator":
-        return self._with_flag(Flag(self.flag.name, value))
+        return FlagDecorator(Flag(self.flag.name, value))
 
     @overload
     def __call__(self, value: Callable[..., Any], /) -> Callable[..., Any]: ...
@@ -101,7 +97,7 @@ class FlagDecorator:
 
     def __call__(
         self,
-        value: Any | None = None,
+        value: Any = None,
         **kwargs: Any,
     ) -> "Callable[..., Any] | FlagDecorator":
         if value is not None and kwargs:
@@ -121,55 +117,6 @@ class FlagDecorator:
             return cast(Callable[..., Any], value)
 
         return self._with_value(AttrDict(kwargs) if value is None else value)
-
-
-if TYPE_CHECKING:
-
-    class _ChatActionFlagProtocol(FlagDecorator):
-        @overload
-        def __call__(self, value: Callable[..., Any], /) -> Callable[..., Any]: ...
-
-        @overload
-        def __call__(self, value: Any, /) -> FlagDecorator: ...
-
-        @overload
-        def __call__(
-            self,
-            *,
-            action: str = ...,
-            interval: float = ...,
-            initial_sleep: float = ...,
-            **kwargs: Any,
-        ) -> FlagDecorator: ...
-
-        def __call__(
-            self,
-            value: Any | None = None,
-            **kwargs: Any,
-        ) -> "Callable[..., Any] | FlagDecorator": ...
-
-    class _CallbackAnswerFlagProtocol(FlagDecorator):
-        @overload
-        def __call__(self, value: Callable[..., Any], /) -> Callable[..., Any]: ...
-
-        @overload
-        def __call__(self, value: Any, /) -> FlagDecorator: ...
-
-        @overload
-        def __call__(
-            self,
-            *,
-            disabled: bool = ...,
-            before: bool = ...,
-            notification: str | None = ...,
-            **kwargs: Any,
-        ) -> FlagDecorator: ...
-
-        def __call__(
-            self,
-            value: Any | None = None,
-            **kwargs: Any,
-        ) -> "Callable[..., Any] | FlagDecorator": ...
 
 
 class FlagGenerator:
@@ -193,10 +140,6 @@ class FlagGenerator:
         if name.startswith("_"):
             raise AttributeError("Имя флага не должно начинаться с подчёркивания")
         return FlagDecorator(Flag(name=name, value=True))
-
-    if TYPE_CHECKING:
-        chat_action: _ChatActionFlagProtocol
-        callback_answer: _CallbackAnswerFlagProtocol
 
 
 flags = FlagGenerator()
@@ -265,7 +208,7 @@ def extract_flags(source: "FlagsSource") -> dict[str, Any]:
         Словарь всех флагов хендлера, пустой если флагов нет.
 
     """
-    if isinstance(source, MutableMapping) and HANDLER_KEY in source:
+    if isinstance(source, (dict, MutableMapping)) and HANDLER_KEY in source:
         source = source[HANDLER_KEY]
 
     source_flags = getattr(source, "flags", None)

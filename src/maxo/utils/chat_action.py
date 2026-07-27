@@ -319,13 +319,33 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
     dp.message_created.middleware(ChatActionMiddleware())
     ```
 
-    По умолчанию шлёт `typing_on`. Поведение конкретного хендлера настраивается
-    флагом `chat_action`: строкой/`SenderAction` меняется только тип действия,
+    Дефолты задаются в конструкторе, конкретный хендлер переопределяет их флагом
+    `chat_action`: строкой/`SenderAction` меняется только тип действия,
     именованными аргументами - вся конфигурация отправщика, а `False` или `None`
     полностью выключают отправку для этого хендлера.
     """
 
-    __slots__ = ()
+    __slots__ = ("_action", "_initial_sleep", "_interval")
+
+    def __init__(
+        self,
+        action: SenderAction | str = SenderAction.TYPING_ON,
+        interval: float = DEFAULT_INTERVAL,
+        initial_sleep: float = DEFAULT_INITIAL_SLEEP,
+    ) -> None:
+        """
+        Создаёт мидлварь с дефолтами отправщика.
+
+        Args:
+            action: тип действия по умолчанию.
+            interval: интервал между отправками в секундах.
+            initial_sleep: задержка перед первой отправкой в секундах. Ненулевое
+                значение избавляет короткие хендлеры от лишнего запроса к API.
+
+        """
+        self._action = SenderAction(action)
+        self._interval = interval
+        self._initial_sleep = initial_sleep
 
     async def __call__(
         self,
@@ -362,12 +382,18 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
 
         if chat_action is None or chat_action is False:
             return None
-        if chat_action is True:
-            return {"action": SenderAction.TYPING_ON}
-        if not isinstance(chat_action, Mapping):
-            return {"action": SenderAction(chat_action)}
 
-        kwargs: dict[str, Any] = {}
+        kwargs: dict[str, Any] = {
+            "action": self._action,
+            "interval": self._interval,
+            "initial_sleep": self._initial_sleep,
+        }
+        if chat_action is True:
+            return kwargs
+        if not isinstance(chat_action, Mapping):
+            kwargs["action"] = SenderAction(chat_action)
+            return kwargs
+
         for key in ("action", "interval", "initial_sleep"):
             value = chat_action.get(key)
             if value is not None:

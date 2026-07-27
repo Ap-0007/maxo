@@ -170,6 +170,13 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
             self._notification,
         )
 
+        if properties is None:  # хендлер не помечен флагом - только дефолты
+            return CallbackAnswer(
+                disabled=disabled,
+                before=before,
+                notification=notification,
+            )
+
         if isinstance(properties, Mapping):
             disabled = properties.get("disabled", disabled)
             before = properties.get("before", before)
