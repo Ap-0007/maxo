@@ -3,6 +3,7 @@ from collections.abc import MutableMapping, Sequence
 from typing import Any
 
 from maxo import Bot, loggers
+from maxo.backoff import BackoffConfig
 from maxo.fsm.key_builder import BaseKeyBuilder, DefaultKeyBuilder
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
@@ -72,6 +73,7 @@ class Dispatcher(Router):
     async def start_polling(
         self,
         bot: Bot,
+        backoff_config: BackoffConfig | None = None,
         timeout: Omittable[int] = 30,
         limit: Omittable[int] = 100,
         marker: Omittable[int | None] = Omitted(),
@@ -82,7 +84,12 @@ class Dispatcher(Router):
     ) -> None:
         from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
 
-        await LongPolling(self).start(
+        polling = (
+            LongPolling(self, backoff_config=backoff_config)
+            if backoff_config is not None
+            else LongPolling(self)
+        )
+        await polling.start(
             bot=bot,
             timeout=timeout,
             limit=limit,
@@ -96,6 +103,7 @@ class Dispatcher(Router):
     def run_polling(
         self,
         bot: Bot,
+        backoff_config: BackoffConfig | None = None,
         timeout: Omittable[int] = 30,
         limit: Omittable[int] = 100,
         marker: Omittable[int | None] = Omitted(),
@@ -107,6 +115,7 @@ class Dispatcher(Router):
         asyncio.run(
             self.start_polling(
                 bot,
+                backoff_config=backoff_config,
                 timeout=timeout,
                 limit=limit,
                 marker=marker,
