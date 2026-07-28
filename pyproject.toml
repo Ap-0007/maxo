@@ -267,6 +267,7 @@ ignore = [
     "PLR", # complexity
     "FBT003",
     "SLF001",
+    "S105", # hardcoded password strings
 ]
 "examples/**/*.py" = ["T201", "D", "TID252"]
 "src/maxo/types/*.py" = ["E501", "D", "W291", "W293"]

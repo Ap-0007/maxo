@@ -9,6 +9,7 @@ from unihttp.middlewares.base import AsyncHandler, AsyncMiddleware
 
 from maxo import Bot
 from maxo.backoff import Backoff, BackoffConfig
+from maxo.bot.api_client import default_transport
 from maxo.errors import MaxBotNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -86,13 +87,13 @@ class RetryMiddleware(AsyncMiddleware):
 
 
 async def main() -> None:
-    bot = Bot(
-        token=os.environ["TOKEN"],
+    transport = default_transport(
         middleware=[
             LoggingMiddleware(),
             RetryMiddleware(exceptions=[MaxBotNotFoundError]),
         ],
     )
+    bot = Bot(token=os.environ["TOKEN"], transport=transport)
     async with bot.context():
         await bot.send_message(chat_id=-1)
 

@@ -83,7 +83,7 @@ from maxo.types import (
 )
 from tests.constants import NOW
 
-TOKEN = "attachment-token"  # noqa: S105
+TOKEN = "attachment-token"
 PHOTO_ID = "photo-token"
 PHOTO_ATTACHMENT_ID = "photo-attachment"
 SHARE_ID = "share-token"
@@ -788,7 +788,7 @@ def test_small_generated_accessors() -> None:
 
 
 def test_upload_media_result_last_token() -> None:
-    photo_token = "photo-upload-token"  # noqa: S105
+    photo_token = "photo-upload-token"
 
     assert UploadMediaResult(token=TOKEN).last_token == TOKEN
     assert (

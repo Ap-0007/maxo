@@ -1,4 +1,4 @@
-# ruff: noqa: S106, S105
+# ruff: noqa: S106
 
 from decimal import Decimal
 

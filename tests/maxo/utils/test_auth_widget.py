@@ -2,7 +2,7 @@ import pytest
 
 from maxo.utils.auth_widget import check_integrity, check_signature
 
-TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"  # noqa: S105
+TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
 HASH = "c303db2b5a06fe41d23a9b14f7c545cfc11dcc7473c07c9c5034ae60062461ce"
 
 
