@@ -21,6 +21,7 @@ from maxo.bot.middlewares import (
     NetworkErrorMiddleware,
 )
 from maxo.bot.upload import UploadConfig, resumable_upload
+from maxo.serialization import create_retort
 from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
@@ -31,8 +32,8 @@ BASE_URL = "https://platform-api2.max.ru/"
 
 def default_transport(
     *,
-    request_dumper: RequestDumper,
-    response_loader: ResponseLoader,
+    request_dumper: RequestDumper | None = None,
+    response_loader: ResponseLoader | None = None,
     base_url: str = BASE_URL,
     middleware: list[AsyncMiddleware] | None = None,
     ssl_context: ssl.SSLContext | None = None,
@@ -42,6 +43,11 @@ def default_transport(
     timeout: ClientTimeout | None = None,
     session: ClientSession | None = None,
 ) -> AiohttpAsyncClient:
+    if request_dumper is None:
+        request_dumper = create_retort()
+    if response_loader is None:
+        response_loader = request_dumper
+
     if session is None:
         if ssl_context is None:
             ssl_context = ssl.create_default_context()
