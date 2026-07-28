@@ -189,6 +189,32 @@ class TestFiltersUpdateFlags:
 
 
 class TestFlagsInRuntime:
+    async def test_flag_above_registration_is_visible_in_middleware(
+        self,
+        ctx: Ctx,
+    ) -> None:
+        dp = Dispatcher()
+        seen: list[Any] = []
+
+        @flags.chat_action
+        @dp.message_created()
+        async def marked(update: MessageCreated) -> str:
+            return "OK"
+
+        async def middleware(
+            update: MessageCreated,
+            ctx: Ctx,
+            next: NextMiddleware[MessageCreated],
+        ) -> Any:
+            seen.append(get_flag(ctx, "chat_action"))
+            return await next(ctx)
+
+        dp.message_created.middleware(middleware)
+
+        await dp.feed_signal(BeforeStartup())
+        assert await dp.trigger(ctx) == "OK"
+        assert seen == [True]
+
     def test_nested_bind_restores_previous_handler(self) -> None:
         previous = make_flagged_handler(previous=True)
         outer = make_flagged_handler(outer=True)
