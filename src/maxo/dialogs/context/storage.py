@@ -128,7 +128,7 @@ class StorageProxy:
 
     def _context_key(self, intent_id: str) -> StorageKey:
         return StorageKey(
-            bot_id=self.bot.state.info.user_id,
+            bot_id=self.bot.info.user_id,
             chat_id=self.chat_id,
             user_id=self.chat_id,  # Неожиданно, но это нужно для работы в группах
             destiny=f"aiogd:context:{intent_id}",
@@ -144,7 +144,7 @@ class StorageProxy:
     def _stack_key(self, stack_id: str) -> StorageKey:
         stack_id = self._fixed_stack_id(stack_id)
         return StorageKey(
-            bot_id=self.bot.state.info.user_id,
+            bot_id=self.bot.info.user_id,
             chat_id=self.chat_id,
             user_id=self.chat_id,  # Неожиданно, но это нужно для работы в группах
             destiny=f"aiogd:stack:{stack_id}",

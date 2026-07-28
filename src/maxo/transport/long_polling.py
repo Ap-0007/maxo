@@ -80,10 +80,11 @@ class LongPolling:
             await dispatcher.feed_signal(BeforeStartup(), bot)
 
             async with bot.context(auto_close=auto_close_bot):
+                await bot.start()
                 loggers.dispatcher.info(
                     "Polling started for @%s id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
+                    bot.info.username,
+                    bot.info.user_id,
                 )
 
                 await dispatcher.feed_signal(AfterStartup(), bot)
@@ -109,8 +110,8 @@ class LongPolling:
 
                 loggers.dispatcher.info(
                     "Polling stop for @%s bot id=%s",
-                    bot.state.info.username,
-                    bot.state.info.user_id,
+                    bot.info.username,
+                    bot.info.user_id,
                 )
 
         await dispatcher.feed_signal(AfterShutdown())
@@ -126,8 +127,8 @@ class LongPolling:
     ) -> AsyncIterator[MaxoUpdate[Any]]:
         start_time = time.time()
         backoff = Backoff(self._backoff_config)
-        bot_id = bot.state.info.user_id
-        bot_username = bot.state.info.username
+        bot_id = bot.info.user_id
+        bot_username = bot.info.username
 
         failed = False
         while True:
