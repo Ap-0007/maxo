@@ -12,7 +12,6 @@ from adaptix.load_error import LoadError
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
 from maxo.bot.methods import GetUpdates
-from maxo.bot.state import RunningBotState
 from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
@@ -37,16 +36,14 @@ def mock_api_client() -> AsyncMock:
 @pytest.fixture
 def mock_bot(mock_api_client: AsyncMock) -> Bot:
     bot = make_bot()
-    bot._state = RunningBotState(
-        info=BotInfo(
-            user_id=123,
-            first_name="test_bot",
-            username="test_bot",
-            is_bot=True,
-            last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
-        ),
-        api_client=mock_api_client,
+    bot._info = BotInfo(
+        user_id=123,
+        first_name="test_bot",
+        username="test_bot",
+        is_bot=True,
+        last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
     )
+    bot._api_client = mock_api_client
     return bot
 
 
