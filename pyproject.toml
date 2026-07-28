@@ -2,6 +2,9 @@
 requires = ["uv_build==0.11.23"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+source-exclude = ["graphify-out"]
+
 [project]
 name = "maxo"
 description = "Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и DI"

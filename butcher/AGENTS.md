@@ -11,7 +11,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 ## Команды
 
 ```bash
-just butcher       # генерация в src/maxo
+just butcher       # полная генерация в src/maxo, только по правилу ниже
 just butcher-test  # тесты butcher (45 шт.)
 just butcher-init  # git submodule update --init, если каталог генератора пуст
 ```
@@ -19,6 +19,12 @@ just butcher-init  # git submodule update --init, если каталог ген
 `just butcher` принимает аргументы CLI, например
 `just butcher --output-dir /tmp/maxo-gen` - удобно, чтобы посмотреть вывод, не
 трогая рабочее дерево, или `--spec <путь или URL>` для другой спеки.
+
+**Не начинай обновление контракта с `just butcher` без `--output-dir`.**
+Генератор перезаписывает файлы целиком и стирает ручной слой. Прямой вывод в
+`src/maxo` допустим только для полной перегенерации после изменения самого
+butcher, на чистом дереве и с последующим восстановлением каждого ручного
+фрагмента.
 
 ## Как это устроено
 
@@ -132,8 +138,96 @@ Butcher не создаёт и при генерации затрёт, если 
   восстанавливай их вместе с остальным ручным кодом. (`MessageButton.text`
   теперь генерируется через `MODEL_FIELD_OVERRIDES`.)
 
-Рабочий процесс: `just butcher` пишет прямо в `src/maxo`, дальше результат
-ревьюится через `git diff` и ручные куски восстанавливаются точечно.
+### Безопасное обновление контракта
+
+Обычное обновление переносит дельту между двумя генерациями:
+
+1. Убедись, что `git status --porcelain -- src/maxo` пуст.
+2. Возьми старую спецификацию через `git show HEAD:max-swagger.json`, сгенерируй
+   её в `.butcher/before`.
+3. Обнови `max-swagger.json`. Для нового апдейта добавь запись в
+   `overrides.CLASS_MIXINS` **до** генерации следующего снимка.
+4. Сгенерируй новую спецификацию в `.butcher/after` и получи дельту через
+   `diff -ru .butcher/before .butcher/after`.
+5. Перенеси только эту дельту в `src/maxo`, не удаляя ручной слой. Новый файл
+   можно скопировать целиком, изменённый файл правится по ханкам, исчезнувший
+   файл удаляется.
+6. Снова сгенерируй результат в `.butcher/check` и сравни его с тремя
+   сгенерированными каталогами в `src/maxo`. Учитывай все строки `diff -rq`,
+   включая `Only in`; набор расхождений должен отличаться от исходного только
+   новым осознанным ручным слоем.
+
+Если `CLASS_MIXINS` добавлен после создания `.butcher/after`, повтори генерацию
+этого снимка и заново перенеси затронутый тип. Иначе класс в `src/maxo`
+останется без фасад-миксина.
+
+### Новый тип апдейта: ручная регистрация
+
+Генерация даёт только `maxo/types/<name>.py` и запись в union `Updates`. Всё
+остальное - руками, и большая часть пропусков падает молча:
+
+- `serialization.py` - `has_tag_provider(X, "update_type", UpdateType.X)`.
+  Забыл - `LoadError` в рантайме.
+- `routing/routers/simple.py` - `UpdateObserver[X]()` и запись в `_observers`.
+  Забыл - хендлер некуда зарегистрировать.
+- `routing/facades/<name>.py`, его `__init__.py` и `_FACADES_MAP` в
+  `routing/facades/middleware.py`. `_FACADES_MAP` - единственный путь к
+  `ctx["facade"]`.
+- `routing/middlewares/update_context.py` - ветка `isinstance`, заполняющая
+  `chat_id`/`user`/`user_id`. Забыл - тихо ломаются ключи FSM, диалоги и фильтры.
+- `overrides.CLASS_MIXINS` - миксин-фасад по полям апдейта: есть `message` ->
+  `MessageMethodsFacade`, есть `callback` -> `CallbackMethodsFacade`, иначе
+  есть `chat_id` -> `ChatMethodsFacade`.
+- `bot/warming_up.py` - тип в списке типов.
+- `docs/pages/botapi/updates.rst` (ручной список `autoclass`),
+  `docs/pages/event-handling/routers.rst` (таблица событий),
+  `examples/all_updates.py`.
+
+`collect_used_updates` правок не требует - он обходит `observers` динамически.
+
+Депрекейтед-слои ведут себя по-разному, и это не забывается заново:
+
+- **`maxo.routing.updates` пополняется.** Новый апдейт добавляется и в
+  `__init__.py` шима, и отдельным deep-модулем `routing/updates/<name>.py`, а
+  сам модуль дописывается в `parametrize` в
+  `tests/maxo/routing/updates/test_deprecation.py`.
+- **`maxo.utils.facades` не пополняется.** Этот шим заморожен: новый фасад
+  живёт только в `maxo.routing.facades`.
+
+### Новый полиморфный тип: `TAG_PROVIDERS`
+
+Union-алиас (`Attachments`, `InlineButtons`, `MarkupElements`, `Updates`)
+собирается генератором из `discriminator.mapping` сам, а вот регистрация в
+retort - ручная. Без неё подтип есть в аннотациях, но adaptix не умеет его ни
+загрузить, ни выгрузить: `LoadError` в рантайме, тесты этого не ловят.
+
+Новый подтип дописывается в `TAG_PROVIDERS` в `src/maxo/serialization.py`, в
+свою секцию (они помечены комментариями `# ---> ... <---`):
+
+| Семейство            | База                | Свойство на проводе | Enum                    |
+|----------------------|---------------------|---------------------|-------------------------|
+| Апдейты              | `Update`            | `"update_type"`     | `UpdateType`            |
+| Вложения             | `Attachment`        | `"type"`            | `AttachmentType`        |
+| Вложения в запросе   | `AttachmentRequest` | `"type"`            | `AttachmentRequestType` |
+| Элементы разметки    | `MarkupElement`     | `"type"`            | `MarkupElementType`     |
+| Кнопки               | `Button`            | `"type"`            | `ButtonType`            |
+
+```python
+has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
+```
+
+Свойство берётся из `discriminator.propertyName` базы в `max-swagger.json`, а
+не по аналогии: у апдейтов на проводе `update_type`, хотя в классе поле
+называется `type` (`ClassVar` в `MaxUpdate`). Появится новая дискриминированная
+база - свойство смотри в спеке.
+
+Дальше по тому же подтипу:
+
+- `bot/warming_up.py` - тип в кортеж `_types`.
+- Для нового вложения ещё ручной хвост: `factory()` и `to_request()` у самого
+  типа и его пары `*Request`, свойство-хелпер и ветка `attachment_type` в
+  `MessageBody`, а если файл заливается через `UploadType` - запись в
+  `MEDIA_ATTACHMENT_FACTORIES` в `routing/mixins/attachments.py`.
 
 ## Правила разработки
 
@@ -156,8 +250,36 @@ Butcher не создаёт и при генерации затрёт, если 
 
 ## Проверка результата
 
-1. Прогон в сторону: `just butcher --output-dir /tmp/maxo-gen`, затем
-   `diff -ru src/maxo /tmp/maxo-gen`.
+1. Прогоны `before`, `after` и `check` по безопасной процедуре выше. Каталог
+   `.butcher` уже в `.gitignore`.
 2. `just butcher-test`.
-3. После генерации в `src/maxo`: `just lint`, `just mypy`, `just test` и
+3. После переноса дельты в `src/maxo`: `just lint`, `just mypy`, `just test` и
    `PYTHONPATH=src uv run python -c "import maxo"` (ловит циклы импортов).
+
+### Импорты в прогоне «в сторону»
+
+`emit.write` в конце гоняет по каталогу вывода `ruff check --select I,F401
+--fix` и `ruff format` (`postprocess.format_path` в сабмодуле). Конфиг проекта
+подхватывается по текущему каталогу, поэтому форматируется любой каталог
+вывода - и `.butcher/gen`, и путь вне репозитория, и gitignore этому не мешает.
+
+Одно исключение стоит знать, иначе оно съедает время на ровном месте. В
+`pyproject.toml` задан `src = ["src", "examples", "tests"]`, и isort считает
+модуль first-party, **только если он существует на диске**. Пока нового типа
+нет в `src/maxo/types/`, ruff относит его к third-party и кладёт импорт в
+отдельную группу:
+
+```python
+from typing import TypeAlias
+
+from maxo.types.message_pinned import MessagePinned   # ещё нет файла в src/maxo
+
+from maxo.types.bot_added_to_chat import BotAddedToChat
+```
+
+Это артефакт прогона в сторону, а не поломка генератора: ruff не сливает группы,
+разделённые пустой строкой, поэтому повторный запуск в том же каталоге ничего не
+изменит. Как только файл нового типа лёг в `src/maxo/types/`, генерация даёт
+правильную единую группу. Поэтому при переносе кусков из прогона в сторону не
+копируй блок импортов вслепую и в конце прогоняй `uv run ruff check --fix` по
+затронутым файлам; последнее слово - за `uv run ruff check --no-fix .`.
