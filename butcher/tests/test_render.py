@@ -3,7 +3,7 @@
 import re
 
 from butcher.profile import Enum, Field, MaxoDocument, Method, Model
-from butcher.render import docs, enums, fields, methods, types, unions
+from butcher.render import docs, enums, fields, inits, methods, types, unions
 
 
 def _model(document: MaxoDocument, name: str) -> Model:
@@ -91,6 +91,10 @@ def test_updates_alias_is_annotated(document: MaxoDocument) -> None:
     source = unions.render(updates)
     assert "from typing import TypeAlias" in source
     assert "Updates: TypeAlias = MessageCreated" in source
+
+
+def test_init_renders_empty_all_as_tuple() -> None:
+    assert inits.render([]) == "\n\n__all__ = ()\n"
 
 
 def test_links_become_absolute() -> None:

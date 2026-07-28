@@ -13,7 +13,8 @@ def render(exports: list[tuple[str, tuple[str, ...]]]) -> str:
     )
     all_names = sorted({name for _, names in exports for name in names})
     rendered = ", ".join(f'"{name}"' for name in all_names)
-    return "\n".join(lines) + f"\n\n__all__ = ({rendered},)\n"
+    comma = "," if rendered else ""
+    return "\n".join(lines) + f"\n\n__all__ = ({rendered}{comma})\n"
 
 
 def types(document: MaxoDocument, extra: tuple[ExtraExport, ...]) -> str:
