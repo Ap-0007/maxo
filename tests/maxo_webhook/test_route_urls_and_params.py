@@ -22,25 +22,25 @@ from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebReques
     ids=["origin", "base-path", "base-path-trailing-slash"],
 )
 async def test_route_builds_static_webhook_url_under_base_path(
-    target,
+    bot,
     base_path,
     expected_path,
 ):
     route = Route(base_url=f"https://example.com{base_path}", path="/webhook")
 
-    assert await route.build_url(target=target) == f"https://example.com{expected_path}"
+    assert await route.build_url(bot=bot) == f"https://example.com{expected_path}"
 
 
 @pytest.mark.asyncio
-async def test_route_path_is_optional(target):
+async def test_route_path_is_optional(bot):
     route = Route(base_url="https://example.com")
 
     assert route.path == "/"
-    assert await route.build_url(target=target) == "https://example.com"
+    assert await route.build_url(bot=bot) == "https://example.com"
 
 
 @pytest.mark.asyncio
-async def test_route_builds_webhook_url_with_encoded_path_param(target):
+async def test_route_builds_webhook_url_with_encoded_path_param(bot):
     base_url = "https://example.com:8080/api/v2/telegram"
     route = Route(
         base_url=base_url,
@@ -48,11 +48,11 @@ async def test_route_builds_webhook_url_with_encoded_path_param(target):
         params={"bot_token": BotTokenParam()},
     )
 
-    assert await route.build_url(target=target) == f"{base_url}/webhook/42%3ATEST"
+    assert await route.build_url(bot=bot) == f"{base_url}/webhook/42%3ATEST"
 
 
 @pytest.mark.asyncio
-async def test_route_builds_webhook_url_with_query_params(target):
+async def test_route_builds_webhook_url_with_query_params(bot):
     route = Route(
         base_url="https://example.com/api",
         path="/webhook/{bot_token}",
@@ -61,7 +61,7 @@ async def test_route_builds_webhook_url_with_query_params(target):
     )
 
     assert (
-        await route.build_url(target=target)
+        await route.build_url(bot=bot)
         == "https://example.com/api/webhook/42%3ATEST?token=42:TEST&kind=telegram&kind=webhook"
     )
 

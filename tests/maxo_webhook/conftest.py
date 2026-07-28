@@ -1,7 +1,6 @@
 import pytest
 
 from maxo import Bot
-from maxo.transport.webhook.engines.target import Target
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
 from tests.maxo_webhook.fixtures.webhook_engine import CapturingAdapter, DummyDispatcher
 
@@ -19,11 +18,6 @@ def bot_token(bot_id: int) -> str:
 @pytest.fixture
 def bot(bot_token: str) -> Bot:
     return Bot(bot_token, warming_up=False)
-
-
-@pytest.fixture
-def target(bot_id: int, bot_token: str) -> Target:
-    return Target(bot_id=bot_id, bot_token=bot_token)
 
 
 @pytest.fixture

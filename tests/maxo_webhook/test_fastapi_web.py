@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from maxo.transport.webhook.engines.base import BaseWebhookEngine
-from maxo.transport.webhook.engines.target import Target
 from maxo.transport.webhook.route import Route
 from maxo.transport.webhook.tasks import TaskTracker
 from maxo.transport.webhook.web.fastapi import FastAPIAdapter
@@ -62,7 +61,7 @@ def test_fastapi_adapter_passes_bound_request_to_registered_post_handler():
     assert seen["json"] == {"update_id": 1}
 
 
-def test_fastapi_adapter_registers_lifecycle_callbacks_via_router(bot, bot_id):
+def test_fastapi_adapter_registers_lifecycle_callbacks_via_router(bot):
     events = []
     adapter = FastAPIAdapter()
 
@@ -75,10 +74,7 @@ def test_fastapi_adapter_registers_lifecycle_callbacks_via_router(bot, bot_id):
         async def _on_shutdown(self, app, *args, **kwargs) -> None:
             events.append(("engine_shutdown", app))
 
-        async def _resolve_target(self, request, route_params) -> Target:
-            return Target(bot_id=bot_id, bot_token=bot.token)
-
-        async def _resolve_bot(self, target) -> Any:
+        async def _resolve_bot(self, route_params) -> Any:
             return bot
 
         def _get_task_tracker(self, bot) -> TaskTracker:

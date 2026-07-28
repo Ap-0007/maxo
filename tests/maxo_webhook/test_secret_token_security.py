@@ -16,7 +16,6 @@ from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebReques
     ids=["match", "mismatch", "none"],
 )
 async def test_secret_token_check_verifies_telegram_header(
-    target,
     request_token,
     expected,
 ):
@@ -24,10 +23,7 @@ async def test_secret_token_check_verifies_telegram_header(
     headers = {SECRET_TOKEN_HEADER: request_token} if request_token is not None else {}
     req = DummyWebRequest(DummyRequest(headers=headers))
 
-    assert (
-        await secret_token.verify(target=target, request=req, route_params={})
-        is expected
-    )
+    assert await secret_token.verify(request=req, route_params={}) is expected
 
 
 @pytest.mark.parametrize("secret_token", ["", "has space", "x" * 257])
@@ -46,9 +42,9 @@ def test_secret_token_check_rejects_telegram_incompatible_values(secret_token):
     ids=["with-secret", "without-secret"],
 )
 async def test_security_resolves_secret_token_from_static_value_or_callable(
-    target,
+    bot,
     secret_token,
     expected,
 ):
     sec = Security(secret_token=secret_token)
-    assert await sec.secret_token(target=target) == expected
+    assert await sec.secret_token(bot=bot) == expected
