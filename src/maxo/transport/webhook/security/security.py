@@ -1,4 +1,4 @@
-from maxo.transport.webhook.engines.target import Target
+from maxo import Bot
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security.checks.check import SecurityCheck
 from maxo.transport.webhook.security.errors import SecretTokenError, SecurityCheckError
@@ -18,22 +18,19 @@ class Security:
     async def verify(
         self,
         *,
-        target: Target,
         request: WebRequest,
         route_params: RouteParams,
     ) -> None:
         if self._secret_token is not None:
             ok = await self._secret_token.verify(
-                target=target,
                 request=request,
                 route_params=route_params,
             )
             if not ok:
-                raise SecretTokenError(target_bot_id=target.bot_id)
+                raise SecretTokenError
 
         for check in self._checks:
             ok = await check.verify(
-                target=target,
                 request=request,
                 route_params=route_params,
             )
@@ -45,14 +42,14 @@ class Security:
                     else None,
                 )
 
-    async def secret_token(self, target: Target) -> str | None:
+    async def secret_token(self, bot: Bot) -> str | None:
         """
-        Get the secret token for a specific bot target.
+        Get the secret token for a specific bot.
 
-        :param target: The target bot to get the token for.
+        :param bot: The resolved bot to get the token for.
         :return: The secret token string, or None if no token is configured.
         """
         if self._secret_token is None:
             return None
 
-        return await self._secret_token.secret_token(target=target)
+        return await self._secret_token.secret_token(bot_token=bot.token)

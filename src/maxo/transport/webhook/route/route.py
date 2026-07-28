@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 from yarl import URL
 
-from maxo.transport.webhook.engines.target import Target
+from maxo import Bot
 from maxo.transport.webhook.route.config import validate_route_config
 from maxo.transport.webhook.route.errors import (
     InvalidPathParamError,
@@ -75,12 +75,12 @@ class Route:
         """
         return self._path_template.value
 
-    async def build_url(self, target: Target) -> str:
+    async def build_url(self, bot: Bot) -> str:
         if self._path_params:
             route_params = {}
             for binding in self._path_params:
                 route_params[binding.name] = await binding.param.build(
-                    target=target,
+                    bot=bot,
                     params=route_params,
                 )
 

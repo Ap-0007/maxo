@@ -2,13 +2,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeAlias
 
-from maxo.transport.webhook.engines.target import Target
+from maxo import Bot
 
 RouteParams: TypeAlias = Mapping[str, Any]
 
 
 class RouteParam(Protocol):
-    async def build(self, target: Target, params: RouteParams) -> str:
+    async def build(self, bot: Bot, params: RouteParams) -> str:
         """
         Build raw path param value for an outgoing URL.
 
@@ -26,20 +26,16 @@ class RouteParamBinding:
 
 
 class BotIdParam(RouteParam):
-    async def build(self, target: Target, params: RouteParams) -> str:
-        if target.bot_id is None:
-            raise ValueError(
-                "Cannot build bot_id route param: target.bot_id is not resolved yet.",
-            )
-        return str(target.bot_id)
+    async def build(self, bot: Bot, params: RouteParams) -> str:
+        return str(bot.info.id)
 
     async def parse(self, value: str, params: RouteParams) -> int:
         return int(value)
 
 
 class BotTokenParam(RouteParam):
-    async def build(self, target: Target, params: RouteParams) -> str:
-        return target.bot_token
+    async def build(self, bot: Bot, params: RouteParams) -> str:
+        return bot.token
 
     async def parse(self, value: str, params: RouteParams) -> str:
         return value

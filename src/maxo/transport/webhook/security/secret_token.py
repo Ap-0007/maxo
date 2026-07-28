@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from hmac import compare_digest
 from typing import Final
 
-from maxo.transport.webhook.engines.target import Target
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.web.base import WebRequest
 
@@ -16,14 +15,12 @@ class SecretToken(ABC):
 
     async def verify(
         self,
-        target: Target,
         request: WebRequest,
         route_params: RouteParams,
     ) -> bool:
         """
         Verify the incoming secret token from the request.
 
-        :param target: The target bot information.
         :param request: The webhook request object.
         :param route_params: Route parameters mapping.
         :return: True if the token is valid, False otherwise.
@@ -31,17 +28,21 @@ class SecretToken(ABC):
         incoming_secret_token = request.headers.get(SECRET_TOKEN_HEADER)
         if incoming_secret_token is None:
             return False
+        bot_token = route_params.get("bot_token")
         return compare_digest(
             incoming_secret_token,
-            await self.secret_token(target=target),
+            await self.secret_token(
+                bot_token=bot_token if isinstance(bot_token, str) else None,
+            ),
         )
 
     @abstractmethod
-    async def secret_token(self, target: Target) -> str:
+    async def secret_token(self, bot_token: str | None) -> str:
         """
         Return the webhook secret token associated with the given bot token.
 
-        :param target: The target bot information.
+        :param bot_token: The bot token identifying the target bot, or None if
+            the route does not expose one (e.g. not yet resolved, or single-bot route).
         :return: The secret token string for this bot.
         """
         raise NotImplementedError
@@ -63,11 +64,11 @@ class StaticSecretToken(SecretToken):
             )
         self.__secret_token = secret_token
 
-    async def secret_token(self, target: Target) -> str:
+    async def secret_token(self, bot_token: str | None) -> str:
         """
         Return the static secret token.
 
-        :param target: The target bot information (unused for static tokens).
+        :param bot_token: Unused for static tokens.
         :return: The configured secret token.
         """
         return self.__secret_token

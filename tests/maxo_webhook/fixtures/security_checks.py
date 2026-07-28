@@ -1,4 +1,3 @@
-from maxo.transport.webhook.engines.target import Target
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security.checks.check import SecurityCheck
 from maxo.transport.webhook.web.base import WebRequest
@@ -12,7 +11,6 @@ class RecordingCheck(SecurityCheck):
 
     async def verify(
         self,
-        target: Target,
         request: WebRequest,
         route_params: RouteParams,
     ) -> bool:
