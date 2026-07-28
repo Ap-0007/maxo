@@ -1,3 +1,4 @@
+import asyncio
 import pathlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -8,7 +9,6 @@ from adaptix import Retort
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
 from unihttp.method import BaseMethod, ResponseType
-from unihttp.middlewares import AsyncMiddleware
 
 from maxo import loggers
 from maxo.bot.api_client import MaxApiClient, default_transport
@@ -49,17 +49,11 @@ from maxo.bot.methods import (
     UploadMedia,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.state import (
-    BotState,
-    ClosedBotState,
-    ConnectingBotState,
-    EmptyBotState,
-    RunningBotState,
-)
 from maxo.bot.upload import UploadConfig
 from maxo.errors import MaxBotApiError
+from maxo.errors.state import StateError
 from maxo.serialization import create_retort_with_bot
-from maxo.types import AttachmentPayload, MaxoType
+from maxo.types import AttachmentPayload, BotInfo, MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
@@ -74,13 +68,11 @@ class Bot:
         defaults: BotDefaults | None = None,
         upload_config: UploadConfig | None = None,
         warming_up: bool = True,
-        middleware: list[AsyncMiddleware] | None = None,
         transport: BaseAsyncClient | None = None,
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
         self._warming_up = warming_up
-        self._middleware = middleware
         self._transport = transport
         self._upload_config = (
             upload_config if upload_config is not None else UploadConfig()
@@ -92,11 +84,29 @@ class Bot:
             warming_up=warming_up,
         )
 
-        self._state: BotState = EmptyBotState()
+        self._api_client: MaxApiClient | None = None
+        self._info: BotInfo | None = None
+        self._lock = asyncio.Lock()
 
     @property
-    def state(self) -> BotState:
-        return self._state
+    def api_client(self) -> MaxApiClient:
+        if self._api_client is None:
+            raise StateError("Not started bot")
+        return self._api_client
+
+    @property
+    def info(self) -> BotInfo:
+        if self._info is None:
+            raise StateError("Bot info is not resolved yet")
+        return self._info
+
+    @property
+    def started(self) -> bool:
+        return self._api_client is not None
+
+    @property
+    def closed(self) -> bool:
+        return self._api_client is not None and self._api_client.closed
 
     @property
     def retort(self) -> Retort:
@@ -117,44 +127,51 @@ class Bot:
     @asynccontextmanager
     async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
         try:
-            await self.start()
             yield self
         finally:
             if auto_close:
                 await self.close()
 
+    def _build_api_client_if_needed(self) -> None:
+        if self._api_client is None:
+            transport = self._transport or default_transport(
+                request_dumper=self._retort,
+                response_loader=self._retort,
+            )
+            self._api_client = MaxApiClient(
+                token=self._token,
+                transport=transport,
+                upload_config=self._upload_config,
+            )
+
     async def start(self) -> None:
-        if self.state.started:
-            return
+        if self._info is None:
+            async with self._lock:
+                if self._info is None:
+                    self._build_api_client_if_needed()
+                    await self.get_my_info()
 
-        transport = self._transport or default_transport(
-            request_dumper=self._retort,
-            response_loader=self._retort,
-        )
-        transport.middleware.extend(self._middleware or [])
-        api_client = MaxApiClient(
-            token=self._token,
-            transport=transport,
-            upload_config=self._upload_config,
-        )
+    async def get_my_info(self) -> BotInfo:
+        if not self.started:
+            async with self._lock:
+                self._build_api_client_if_needed()
 
-        self._state = ConnectingBotState(api_client=api_client)
-
-        info = await self.get_my_info()
-        self._state = RunningBotState(info=info, api_client=api_client)
+        info = await self.call_method(GetMyInfo())
+        self._info = info
+        return info
 
     async def close(self) -> None:
-        if self.state.closed or not self.state.started:
+        if self._api_client is None or self._api_client.closed:
             return
 
-        await self.state.api_client.close()
-        self._state = ClosedBotState()
+        await self._api_client.close()
 
     async def call_method(  # for unihttp bind_method
         self,
         method: BaseMethod[ResponseType],
     ) -> ResponseType:
-        return await self.state.api_client.transport.call_method(method)
+        await self.start()
+        return await self.api_client.transport.call_method(method)
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
         try:
@@ -164,7 +181,6 @@ class Bot:
             loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
 
     async def __aenter__(self) -> Self:
-        await self.start()
         return self
 
     async def __aexit__(
@@ -182,7 +198,8 @@ class Bot:
         chunk_size: int = 65536,
         seek: bool = True,
     ) -> BinaryIO | None:
-        return await self.state.api_client.download(
+        await self.start()
+        return await self.api_client.download(
             url=url,
             destination=destination,
             chunk_size=chunk_size,
@@ -200,11 +217,11 @@ class Bot:
 
         `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
         """
-        return await self.state.api_client.upload_resumable(upload_url, file, size)
+        await self.start()
+        return await self.api_client.upload_resumable(upload_url, file, size)
 
     # Bots
     edit_bot_info = bind_method(EditBotInfo)
-    get_my_info = bind_method(GetMyInfo)
     edit_my_commands = bind_method(EditMyCommands)
 
     # Chats

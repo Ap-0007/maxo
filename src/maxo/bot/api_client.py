@@ -7,7 +7,6 @@ from typing import Any, BinaryIO
 
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from anyio import open_file
-from unihttp.bind_method import bind_method
 from unihttp.clients.aiohttp import AiohttpAsyncClient
 from unihttp.clients.base import BaseAsyncClient
 from unihttp.http.stream import AsyncChunkStream
@@ -26,35 +25,38 @@ from maxo.types import AttachmentPayload
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
-_CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
+BASE_URL = "https://platform-api2.max.ru/"
 
 
 def default_transport(
     *,
     request_dumper: RequestDumper,
     response_loader: ResponseLoader,
-    base_url: str = "https://platform-api2.max.ru/",
+    base_url: str = BASE_URL,
     middleware: list[AsyncMiddleware] | None = None,
     ssl_context: ssl.SSLContext | None = None,
     json_dumps: Callable[[Any], str] = json.dumps,
     json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
     limit: int | None = None,
     timeout: ClientTimeout | None = None,
+    session: ClientSession | None = None,
 ) -> AiohttpAsyncClient:
-    if ssl_context is None:
-        ssl_context = ssl.create_default_context()
-        ssl_context.load_verify_locations(cafile=_CA_CERT_PATH)
+    if session is None:
+        if ssl_context is None:
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_verify_locations(cafile=CA_CERT_PATH)
 
-    connector = (
-        TCPConnector(ssl=ssl_context)
-        if limit is None
-        else TCPConnector(ssl=ssl_context, limit=limit)
-    )
-    session = (
-        ClientSession(connector=connector)
-        if timeout is None
-        else ClientSession(connector=connector, timeout=timeout)
-    )
+        connector = (
+            TCPConnector(ssl=ssl_context)
+            if limit is None
+            else TCPConnector(ssl=ssl_context, limit=limit)
+        )
+        session = (
+            ClientSession(connector=connector)
+            if timeout is None
+            else ClientSession(connector=connector, timeout=timeout)
+        )
     return AiohttpAsyncClient(
         base_url=base_url,
         request_dumper=request_dumper,
@@ -87,14 +89,17 @@ class MaxApiClient:
             [AuthMiddleware(self._token), not_ready_retry, NetworkErrorMiddleware()],
         )
         self.transport = transport
+        self._closed = False
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
 
     async def call_method_stream(  # for unihttp bind_method
         self,
         method: StreamMethod,
     ) -> AsyncChunkStream:
         return await self.transport.call_method_stream(method)
-
-    _download_stream = bind_method(Download)
 
     async def upload_resumable(
         self,
@@ -117,6 +122,7 @@ class MaxApiClient:
 
     async def close(self) -> None:
         await self.transport.close()
+        self._closed = True
 
     async def download(
         self,
@@ -129,9 +135,11 @@ class MaxApiClient:
         if isinstance(url, AttachmentPayload):
             url = url.url
 
-        async with await self._download_stream(
-            url=url,
-            __chunk_size__=chunk_size,
+        async with await self.call_method_stream(
+            Download(
+                url=url,
+                __chunk_size__=chunk_size,
+            ),
         ) as stream:
             if isinstance(destination, (str, pathlib.Path)):
                 async with await open_file(destination, "wb") as f:
