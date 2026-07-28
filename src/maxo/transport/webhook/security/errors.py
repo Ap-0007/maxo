@@ -16,15 +16,8 @@ class SecretTokenError(SecurityError):
     public_detail = "Forbidden"
     log_level = logging.ERROR
 
-    target_bot_id: int | None = None
-
     def __str__(self) -> str:
-        message = "Webhook security verification failed: invalid Telegram secret token."
-
-        if self.target_bot_id is not None:
-            message += f" Target bot id: {self.target_bot_id}."
-
-        return message
+        return "Webhook security verification failed: invalid Telegram secret token."
 
 
 class SecurityCheckError(SecurityError):
