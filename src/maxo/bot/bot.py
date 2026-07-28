@@ -156,7 +156,7 @@ class Bot:
             async with self._lock:
                 self._build_api_client_if_needed()
 
-        info = await self.call_method(GetMyInfo())
+        info = await self.api_client.transport.call_method(GetMyInfo())
         self._info = info
         return info
 
