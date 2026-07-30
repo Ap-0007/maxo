@@ -109,15 +109,15 @@ async def test_save_load_stack_with_all_attachments() -> None:
     assert isinstance(loaded_stack.last_attachments[7], ShareAttachment)
     assert isinstance(loaded_stack.last_attachments[8], LocationAttachment)
 
-    assert loaded_stack.last_attachments[0].payload.token == "photo_token"
-    assert loaded_stack.last_attachments[1].payload.token == "video_token"
-    assert loaded_stack.last_attachments[2].payload.token == "audio_token"
-    assert loaded_stack.last_attachments[3].payload.token == "file_token"
+    assert loaded_stack.last_attachments[0].payload.token == "photo_token"  # noqa: S105
+    assert loaded_stack.last_attachments[1].payload.token == "video_token"  # noqa: S105
+    assert loaded_stack.last_attachments[2].payload.token == "audio_token"  # noqa: S105
+    assert loaded_stack.last_attachments[3].payload.token == "file_token"  # noqa: S105
     assert loaded_stack.last_attachments[4].payload.code == "sticker_code"
     button = loaded_stack.last_attachments[6].payload.buttons[0][0]
     assert isinstance(button, CallbackButton)
     assert button.payload == "test_payload"
-    assert loaded_stack.last_attachments[7].payload.token == "share_token"
+    assert loaded_stack.last_attachments[7].payload.token == "share_token"  # noqa: S105
     assert loaded_stack.last_attachments[8].latitude == 55.7558
 
 

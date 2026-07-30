@@ -91,7 +91,7 @@ async def test_sends_chunks_with_correct_content_range() -> None:
     result = await _run(session, b"abcdefghij", 4)
 
     assert isinstance(result, UploadMediaResult)
-    assert result.token == "tok"
+    assert result.token == "tok"  # noqa: S105
     ranges = [call["headers"]["Content-Range"] for call in session.calls]
     assert ranges == ["bytes 0-3/10", "bytes 4-7/10", "bytes 8-9/10"]
     assert [call["data"] for call in session.calls] == [b"abcd", b"efgh", b"ij"]
@@ -104,7 +104,7 @@ async def test_single_chunk_small_file() -> None:
     result = await _run(session, b"hello", 1024)
 
     assert result is not None
-    assert result.token == "tok"
+    assert result.token == "tok"  # noqa: S105
     assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
 
 
@@ -233,7 +233,7 @@ async def test_default_config_is_used() -> None:
     )
 
     assert result is not None
-    assert result.token == "tok"
+    assert result.token == "tok"  # noqa: S105
 
 
 async def test_client_error_status_raises_without_retry() -> None:
@@ -311,7 +311,7 @@ async def test_server_error_is_retried_then_succeeds() -> None:
         result = await _run(session, b"hello", 1024, chunk_retries=3)
 
     assert result is not None
-    assert result.token == "tok"
+    assert result.token == "tok"  # noqa: S105
     assert len(session.calls) == 2
 
 
@@ -347,7 +347,7 @@ async def test_timeout_is_retried_then_succeeds() -> None:
         result = await _run(session, b"hello", 1024, chunk_retries=3)
 
     assert result is not None
-    assert result.token == "tok"
+    assert result.token == "tok"  # noqa: S105
     assert len(session.calls) == 2
 
 

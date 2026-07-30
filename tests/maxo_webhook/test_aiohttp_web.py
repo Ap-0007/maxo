@@ -24,7 +24,7 @@ def test_aiohttp_adapter_exposes_framework_request_data():
     assert request.client_ip == "127.0.0.1"
     assert request.headers["X-Test"] == "yes"
     assert request.query_params.getall("tag") == ["first", "second"]
-    assert request.path_params["bot_token"] == "42:TEST"
+    assert request.path_params["bot_token"] == "42:TEST"  # noqa: S105
 
 
 def test_aiohttp_adapter_registers_post_route_and_lifecycle_callbacks():

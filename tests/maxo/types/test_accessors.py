@@ -1261,6 +1261,15 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = message.unsafe_url
 
 
+def make_callback() -> Callback:
+    return Callback(
+        callback_id="cb",
+        timestamp=NOW,
+        user=make_user(),
+        payload="payload",
+    )
+
+
 def test_bot_stopped_unsafe_user_locale() -> None:
     defined = BotStopped(
         chat_id=1,

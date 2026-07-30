@@ -158,7 +158,7 @@ async def test_route_reports_missing_required_query_param(
 
 @pytest.mark.asyncio
 async def test_route_reports_query_param_value_mismatch(bot_token):
-    wrong_token = "wrong"
+    wrong_token = "wrong"  # noqa: S105
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
