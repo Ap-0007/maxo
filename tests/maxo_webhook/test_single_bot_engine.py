@@ -156,7 +156,9 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
     if engine._task_tracker._tasks:
         await asyncio.wait_for(asyncio.gather(*engine._task_tracker._tasks), timeout=1)
 
-    assert transport.closed is True
+    # Транспорт создали снаружи - бот его не закрывает, даже при shutdown
+    assert transport.closed is False
+    assert bot.closed is True
     assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
     assert dispatcher.background_updates == []
     assert dispatcher.background_session_closed == []
@@ -168,7 +170,7 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
     update_request,
 ):
     transport = TrackableTransport(bot_id=42)
-    bot = Bot("42:TEST", transport=transport, warming_up=False)
+    bot = Bot("42:TEST", transport=transport)
     await bot.start()
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
@@ -183,7 +185,9 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
 
     response = await engine.handle_request(update_request)
 
-    assert transport.closed is True
+    # Транспорт создали снаружи - бот его не закрывает, даже при shutdown.
+    assert transport.closed is False
+    assert bot.closed is True
     assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
     assert dispatcher.foreground_updates == []
     assert dispatcher.foreground_session_closed == []

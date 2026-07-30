@@ -1,22 +1,23 @@
 import pytest
 from adaptix.load_error import LoadError
 
-from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.binding import bind_bot
+from maxo.bot.defaults import BotDefaults, apply_defaults
+from maxo.bot.methods import AnswerOnCallback, EditMessage, SendMessage
 from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
-from maxo.serialization import create_retort, create_retort_with_bot
+from maxo.serialization import create_retort
 from maxo.types import NewMessageBody, UpdateList
-from maxo.types.base import MaxoType
+from maxo.types.base import BotMixin, MaxoType
 from tests.factories import make_bot
 
 
-class Sub(MaxoType):
+class Sub(MaxoType, BotMixin):
     b: int
 
 
-class MyType(MaxoType):
+class MyType(MaxoType, BotMixin):
     a: str
     sub: Sub
 
@@ -27,25 +28,32 @@ class MyType(MaxoType):
 )
 def test_bot_default_text_format(default: Omittable[TextFormat | None]) -> None:
     defaults = BotDefaults(text_format=default)
-    retort = create_retort(defaults=defaults, warming_up=False)
+    retort = create_retort()
 
-    data = retort.dump(SendMessage())
+    data = retort.dump(apply_defaults(SendMessage(), defaults))
     if is_omitted(default):
         assert "format" not in data["body"]
     else:
         assert data["body"]["format"] == default
 
-    data = retort.dump(EditMessage(message_id="1"))
+    data = retort.dump(apply_defaults(EditMessage(message_id="1"), defaults))
     if is_omitted(default):
         assert "format" not in data["body"]
     else:
         assert data["body"]["format"] == default
 
-    data = retort.dump(NewMessageBody())
+    # `NewMessageBody` сверху не дампится - только внутри `AnswerOnCallback`,
+    # где `apply_defaults` спускается в него отдельно.
+    data = retort.dump(
+        apply_defaults(
+            AnswerOnCallback(callback_id="c", message=NewMessageBody()),
+            defaults,
+        ),
+    )
     if is_omitted(default):
-        assert "format" not in data
+        assert "format" not in data["body"]["message"]
     else:
-        assert data["format"] == default
+        assert data["body"]["message"]["format"] == default
 
 
 @pytest.mark.parametrize(
@@ -54,35 +62,22 @@ def test_bot_default_text_format(default: Omittable[TextFormat | None]) -> None:
 )
 def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
     defaults = BotDefaults(disable_link_preview=default)
-    retort = create_retort(defaults=defaults, warming_up=False)
+    retort = create_retort()
 
-    data = retort.dump(SendMessage())
+    data = retort.dump(apply_defaults(SendMessage(), defaults))
     if is_omitted(default):
         assert "disable_link_preview" not in data["query"]
     else:
         assert data["query"]["disable_link_preview"] == default
 
 
-def test_retort_from_bot_load_bot() -> None:
+def test_bind_binds_whole_tree() -> None:
     bot = make_bot(token="")
-    retort = bot.retort
+    retort = create_retort()
 
     data = {"a": "a", "sub": {"b": 1}}
+    my = bind_bot(retort.load(data, MyType), bot)
 
-    my = retort.load(data, MyType)
-    assert bot is my.bot is my.sub.bot
-
-    dump = retort.dump(my, MyType)
-    assert dump == data
-
-
-def test_retort_with_bot_load_bot() -> None:
-    bot = make_bot(token="")
-    retort = create_retort_with_bot(bot=bot, warming_up=False)
-
-    data = {"a": "a", "sub": {"b": 1}}
-
-    my = retort.load(data, MyType)
     assert bot is my.bot is my.sub.bot
 
     dump = retort.dump(my, MyType)
@@ -90,7 +85,7 @@ def test_retort_with_bot_load_bot() -> None:
 
 
 def test_retort_without_bot_no_load_bot() -> None:
-    retort = create_retort(warming_up=False)
+    retort = create_retort()
 
     data = {"a": "a", "sub": {"b": 1}}
 
@@ -107,7 +102,7 @@ def test_retort_without_bot_no_load_bot() -> None:
 
 
 def test_retort_empty_message() -> None:
-    retort = create_retort(warming_up=False)
+    retort = create_retort()
 
     data = {
         "marker": 1,
@@ -125,7 +120,7 @@ def test_retort_empty_message() -> None:
 
 
 def test_retort_full_message_created_loads_ok() -> None:
-    retort = create_retort(warming_up=False)
+    retort = create_retort()
 
     # Полный валидный message_created - убеждаемся, что регрессия не сломала happy path
     data = {

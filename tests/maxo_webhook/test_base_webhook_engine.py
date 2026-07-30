@@ -4,7 +4,9 @@ from typing import Any
 import pytest
 
 from maxo import Bot
+from maxo.bot.binding import bind_bot
 from maxo.routing.signals import MaxoUpdate
+from maxo.serialization import get_retort
 from maxo.transport.webhook.engines.base import BaseWebhookEngine
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.tasks import TaskTracker
@@ -99,7 +101,7 @@ async def test_engine_accepts_requests_again_after_startup(
 
     assert response == {"kind": "json", "status_code": 200, "data": {}, "headers": None}
     assert dispatcher.webhook_update == MaxoUpdate(
-        update=bot.retort.load(update_request.raw.json_data, Updates),
+        update=bind_bot(get_retort().load(update_request.raw.json_data, Updates), bot),
     )
 
 
