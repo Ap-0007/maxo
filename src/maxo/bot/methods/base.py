@@ -1,11 +1,23 @@
 from typing import Any
 
 from unihttp.http import HTTPResponse
-from unihttp.method import BaseMethod
+from unihttp.method import BaseMethod, StreamMethod
 
 from maxo import loggers
 from maxo.errors.api import raise_api_error
 from maxo.types.base import MaxoType
+
+
+class MaxoStreamMethod(StreamMethod, MaxoType):
+    """
+    Базовый метод для стриминговых методов Bot API Max.
+
+    Тело ответа не буферизуется, поэтому `raise_api_error` вызывается
+    только по `status_code` (без тела с `code`/`error`/`message`).
+    """
+
+    def on_error(self, response: HTTPResponse[Any]) -> None:
+        raise_api_error(response.status_code, None)
 
 
 class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
@@ -25,7 +37,7 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
         ):
             loggers.bot_session.warning(
                 "Patch the status code from %d to 400 due to an error on the MAX API",
-                response.status_code,
+                response,
             )
             response.status_code = 400
 
