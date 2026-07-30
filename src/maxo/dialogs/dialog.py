@@ -164,7 +164,6 @@ class Dialog(Router, DialogProtocol):
 
         with contextlib.suppress(AttributeIsEmptyError):
             bot = callback.bot
-            cleaned_callback.as_(bot)
             cleaned_event.as_(bot)
             if cleaned_event.message:
                 cleaned_event.message.as_(bot)

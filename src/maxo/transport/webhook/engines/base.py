@@ -1,4 +1,3 @@
-import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
@@ -6,8 +5,10 @@ from adaptix.load_error import LoadError
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo import Bot, Dispatcher
+from maxo.bot.binding import bind_bot
 from maxo.loggers import webhook
 from maxo.routing.signals import MaxoUpdate
+from maxo.serialization import get_retort
 from maxo.transport.webhook.configs.webhook import WebhookConfig
 from maxo.transport.webhook.engines.errors import (
     BotNotFoundError,
@@ -84,7 +85,9 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
                 raise InvalidJsonError(original_error=exc) from exc
 
             try:
-                update = MaxoUpdate(update=bot.retort.load(update, Updates))
+                update = MaxoUpdate(
+                    update=bind_bot(get_retort().load(update, Updates), bot),
+                )
             except LoadError as exc:
                 raise InvalidJsonError(original_error=exc) from exc
 

@@ -8,7 +8,7 @@ from maxo.bot.defaults import BotDefaults
 
 @dataclass(slots=True)
 class BotConfig:
-    transport: BaseAsyncClient
+    client: BaseAsyncClient
 
     defaults: BotDefaults | None = None
     upload_config: UploadConfig | None = None

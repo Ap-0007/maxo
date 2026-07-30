@@ -20,7 +20,7 @@ from maxo.routing.signals.base import BaseSignal
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.routing.utils._resolving_inner_middlewares import resolve_middlewares
 from maxo.routing.utils.validate_router_graph import validate_router_graph
-from maxo.types.base import BaseUpdate
+from maxo.types.base import BaseUpdate, BotMixin
 
 
 class Dispatcher(Router):
@@ -170,7 +170,8 @@ class Dispatcher(Router):
             ctx["bots"] = [bot]
             # Костыль для тестов (в них апдейты создаются без `.as_`)
             # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.bot = bot
+            if isinstance(update, BotMixin):
+                update.bot = bot
 
         return await self.trigger(ctx)
 
@@ -182,7 +183,10 @@ class Dispatcher(Router):
         if "bot" in ctx:
             # Костыль для тестов (в них апдейты создаются без `.as_`)
             # и неправильных вызовах `.feed_update`. Удачи отдебажить >:)
-            update.update.bot = update.bot = ctx["bot"]
+            if isinstance(update, BotMixin):
+                update.bot = ctx["bot"]
+            if isinstance(update.update, BotMixin):
+                update.update.bot = ctx["bot"]
 
         result = await self.trigger(ctx_copy)
         if result is UNHANDLED:

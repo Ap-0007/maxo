@@ -9,12 +9,13 @@ from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
 from maxo.errors.network import MaxBotNetworkError
+from maxo.serialization import get_retort
 from maxo.types import BaseMaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
 if TYPE_CHECKING:
-    from maxo.bot.api_client import MaxApiClient
+    from maxo.bot.bot import Bot
 
 _MIB = 1024 * 1024
 _OCTET_STREAM = "application/octet-stream"
@@ -101,17 +102,15 @@ async def resumable_upload(
     *,
     url: str,
     file: InputFile,
-    api_client: "MaxApiClient",
+    bot: "Bot",
     config: UploadConfig | None = None,
     size: int | None = None,
 ) -> UploadMediaResult | None:
     """
-    Загружает файл частями через `api_client`.
+    Загружает файл частями через `bot`.
 
     `size` - заранее известный размер файла в байтах
     """
-    response_loader = api_client.transport.response_loader
-
     if config is None:
         config = UploadConfig()
 
@@ -137,7 +136,7 @@ async def resumable_upload(
                 _CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
             }
             final_body = await _send_chunk(
-                api_client=api_client,
+                bot=bot,
                 url=url,
                 chunk=chunk,
                 headers=headers,
@@ -152,12 +151,12 @@ async def resumable_upload(
 
     if not isinstance(final_body, dict):
         return None
-    return response_loader.load(final_body, UploadMediaResult)
+    return get_retort().load(final_body, UploadMediaResult)
 
 
 async def _send_chunk(
     *,
-    api_client: "MaxApiClient",
+    bot: "Bot",
     url: str,
     chunk: bytes,
     headers: dict[str, str],
@@ -166,7 +165,10 @@ async def _send_chunk(
     backoff = Backoff(config.chunk_backoff)
     while True:
         try:
-            response = await api_client.transport.call_method(
+            # Через `bot.call_method`, а не мимо: иначе на этом пути не будет
+            # `NetworkErrorMiddleware`, и `except MaxBotNetworkError` ниже
+            # молча перестанет ловить - ретраи чанков умрут без единой ошибки.
+            response = await bot.call_method(
                 _ChunkUpload(url=url, chunk=chunk, headers=headers),
             )
         except MaxBotNetworkError:

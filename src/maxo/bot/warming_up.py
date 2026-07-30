@@ -1,8 +1,10 @@
-from enum import Enum
-from typing import Any, TypeVar, assert_never
+from collections.abc import Iterable
+from typing import Any
 
 from adaptix import Retort
+from unihttp.method import BaseMethod
 
+from maxo.bot.binding import warm as warm_binding
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
@@ -39,248 +41,9 @@ from maxo.bot.methods import (
     Unsubscribe,
     UploadMedia,
 )
-from maxo.types import (
-    Attachment,
-    AttachmentPayload,
-    AttachmentRequest,
-    Attachments,
-    AttachmentsRequests,
-    AudioAttachment,
-    AudioAttachmentRequest,
-    BaseMaxoType,
-    BaseUpdate,
-    BotAddedToChat,
-    BotCommand,
-    BotCommandsInfo,
-    BotInfo,
-    BotRemovedFromChat,
-    BotStarted,
-    BotStopped,
-    Button,
-    Callback,
-    CallbackButton,
-    Chat,
-    ChatAdmin,
-    ChatAdminsList,
-    ChatList,
-    ChatMember,
-    ChatMembersList,
-    ChatTitleChanged,
-    ClipboardButton,
-    ContactAttachment,
-    ContactAttachmentPayload,
-    ContactAttachmentRequest,
-    ContactAttachmentRequestPayload,
-    DialogCleared,
-    DialogMuted,
-    DialogRemoved,
-    DialogUnmuted,
-    EmphasizedMarkup,
-    FailedUserDetails,
-    FileAttachment,
-    FileAttachmentPayload,
-    FileAttachmentRequest,
-    GetPinnedMessageResult,
-    GetSubscriptionsResult,
-    HeadingMarkup,
-    HighlightedMarkup,
-    Image,
-    InlineButtons,
-    InlineKeyboardAttachment,
-    InlineKeyboardAttachmentRequest,
-    InlineKeyboardAttachmentRequestPayload,
-    Keyboard,
-    LinkButton,
-    LinkMarkup,
-    LinkedMessage,
-    LocationAttachment,
-    LocationAttachmentRequest,
-    MarkupElement,
-    MarkupElements,
-    MaxUpdate,
-    MaxoType,
-    MediaAttachmentPayload,
-    MediaAttachments,
-    MediaAttachmentsRequests,
-    Message,
-    MessageBody,
-    MessageButton,
-    MessageCallback,
-    MessageCreated,
-    MessageEdited,
-    MessageList,
-    MessageRemoved,
-    MessageStat,
-    ModifyMembersResult,
-    MonospacedMarkup,
-    NewMessageBody,
-    NewMessageLink,
-    OpenAppButton,
-    PhotoAttachment,
-    PhotoAttachmentPayload,
-    PhotoAttachmentRequest,
-    PhotoAttachmentRequestPayload,
-    PhotoToken,
-    QuoteMarkup,
-    Recipient,
-    RequestContactButton,
-    RequestGeoLocationButton,
-    SendMessageResult,
-    ShareAttachment,
-    ShareAttachmentPayload,
-    ShareAttachmentRequest,
-    SimpleQueryResult,
-    StickerAttachment,
-    StickerAttachmentPayload,
-    StickerAttachmentRequest,
-    StickerAttachmentRequestPayload,
-    StrikethroughMarkup,
-    StrongMarkup,
-    Subscription,
-    UnderlineMarkup,
-    UpdateContext,
-    UpdateList,
-    Updates,
-    UploadEndpoint,
-    UploadMediaResult,
-    UploadedInfo,
-    User,
-    UserAddedToChat,
-    UserMentionMarkup,
-    UserRemovedFromChat,
-    UserWithPhoto,
-    VideoAttachment,
-    VideoAttachmentDetails,
-    VideoAttachmentRequest,
-    VideoThumbnail,
-    VideoUrls,
-)
+from maxo.types import Updates
 
-
-class WarmingUpType(Enum):
-    METHOD = "method"
-    TYPES = "types"
-
-
-_types = (
-    Attachment,
-    AttachmentPayload,
-    AttachmentRequest,
-    Attachments,
-    AttachmentsRequests,
-    AudioAttachment,
-    AudioAttachmentRequest,
-    BaseMaxoType,
-    BaseUpdate,
-    BotAddedToChat,
-    BotCommand,
-    BotCommandsInfo,
-    BotInfo,
-    BotRemovedFromChat,
-    BotStarted,
-    BotStopped,
-    Button,
-    Callback,
-    CallbackButton,
-    Chat,
-    ChatAdmin,
-    ChatAdminsList,
-    ChatList,
-    ChatMember,
-    ChatMembersList,
-    ChatTitleChanged,
-    ClipboardButton,
-    ContactAttachment,
-    ContactAttachmentPayload,
-    ContactAttachmentRequest,
-    ContactAttachmentRequestPayload,
-    DialogCleared,
-    DialogMuted,
-    DialogRemoved,
-    DialogUnmuted,
-    EmphasizedMarkup,
-    FailedUserDetails,
-    FileAttachment,
-    FileAttachmentPayload,
-    FileAttachmentRequest,
-    GetPinnedMessageResult,
-    GetSubscriptionsResult,
-    HeadingMarkup,
-    HighlightedMarkup,
-    Image,
-    InlineButtons,
-    InlineKeyboardAttachment,
-    InlineKeyboardAttachmentRequest,
-    InlineKeyboardAttachmentRequestPayload,
-    Keyboard,
-    LinkButton,
-    LinkMarkup,
-    LinkedMessage,
-    LocationAttachment,
-    LocationAttachmentRequest,
-    MarkupElement,
-    MarkupElements,
-    MaxUpdate,
-    MaxoType,
-    MediaAttachmentPayload,
-    MediaAttachments,
-    MediaAttachmentsRequests,
-    Message,
-    MessageBody,
-    MessageButton,
-    MessageCallback,
-    MessageCreated,
-    MessageEdited,
-    MessageList,
-    MessageRemoved,
-    MessageStat,
-    ModifyMembersResult,
-    MonospacedMarkup,
-    NewMessageBody,
-    NewMessageLink,
-    OpenAppButton,
-    PhotoAttachment,
-    PhotoAttachmentPayload,
-    PhotoAttachmentRequest,
-    PhotoAttachmentRequestPayload,
-    PhotoToken,
-    QuoteMarkup,
-    Recipient,
-    RequestContactButton,
-    RequestGeoLocationButton,
-    SendMessageResult,
-    ShareAttachment,
-    ShareAttachmentPayload,
-    ShareAttachmentRequest,
-    SimpleQueryResult,
-    StickerAttachment,
-    StickerAttachmentPayload,
-    StickerAttachmentRequest,
-    StickerAttachmentRequestPayload,
-    StrikethroughMarkup,
-    StrongMarkup,
-    Subscription,
-    UnderlineMarkup,
-    UpdateContext,
-    UpdateList,
-    Updates,
-    UploadEndpoint,
-    UploadMediaResult,
-    UploadedInfo,
-    User,
-    UserAddedToChat,
-    UserMentionMarkup,
-    UserRemovedFromChat,
-    UserWithPhoto,
-    VideoAttachment,
-    VideoAttachmentDetails,
-    VideoAttachmentRequest,
-    VideoThumbnail,
-    VideoUrls,
-)
-
-
-_methods = (
+DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     AddMembers,
     AnswerOnCallback,
     DeleteAdmin,
@@ -317,27 +80,26 @@ _methods = (
     UploadMedia,
 )
 
-_RetortT = TypeVar("_RetortT", bound=Retort)
+LOADED_ROOTS: tuple[Any, ...] = (
+    Updates,
+    *dict.fromkeys(method.__returning__ for method in DUMPED_ROOTS),
+)
 
 
-def warming_up_retort(
-    retort: _RetortT,
-    warming_up: WarmingUpType | None = None,
-) -> _RetortT:
-    if warming_up is None:
-        return retort
+def warm_up(
+    *,
+    loaded: Iterable[type] | None = None,
+    dumped: Iterable[type] | None = None,
+    retort: Retort | None = None,
+) -> None:
+    from maxo.serialization import get_retort  # noqa: PLC0415 - avoids import cycle
 
-    types: tuple[Any, ...]
-    if warming_up is WarmingUpType.METHOD:
-        types = _methods
-        retort_method = retort.get_dumper
-    elif warming_up is WarmingUpType.TYPES:
-        types = _types
-        retort_method = retort.get_loader
-    else:
-        assert_never(warming_up)
+    target = get_retort() if retort is None else retort
 
-    for tp in types:
-        retort_method(tp)  # type: ignore[arg-type]
+    loaded_roots = LOADED_ROOTS if loaded is None else loaded
+    for type_ in loaded_roots:
+        target.get_loader(type_)
+    for type_ in DUMPED_ROOTS if dumped is None else dumped:
+        target.get_dumper(type_)
 
-    return retort
+    warm_binding(*loaded_roots)

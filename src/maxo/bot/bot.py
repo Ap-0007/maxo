@@ -1,18 +1,23 @@
 import asyncio
+import io
 import pathlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import BinaryIO, Self, TypeVar
 
-from adaptix import Retort
+from anyio import open_file
 from unihttp.bind_method import bind_method
 from unihttp.clients.base import BaseAsyncClient
-from unihttp.method import BaseMethod, ResponseType
+from unihttp.http.response import HTTPResponse
+from unihttp.http.stream import AsyncChunkStream
+from unihttp.method import BaseMethod, ResponseType, StreamMethod
+from unihttp.middlewares import AsyncMiddleware
 
 from maxo import loggers
-from maxo.bot.api_client import MaxApiClient, default_transport
-from maxo.bot.defaults import BotDefaults
+from maxo.bot.binding import bind_bot
+from maxo.bot.client import default_client
+from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
@@ -49,10 +54,16 @@ from maxo.bot.methods import (
     UploadMedia,
 )
 from maxo.bot.methods.base import MaxoMethod
-from maxo.bot.upload import UploadConfig
+from maxo.bot.methods.download import Download
+from maxo.bot.middlewares import (
+    AttachmentNotReadyRetryMiddleware,
+    AuthMiddleware,
+    NetworkErrorMiddleware,
+)
+from maxo.bot.upload import UploadConfig, resumable_upload
+from maxo.bot.warming_up import warm_up
 from maxo.errors import MaxBotApiError
 from maxo.errors.state import StateError
-from maxo.serialization import create_retort_with_bot
 from maxo.types import AttachmentPayload, BotInfo, MaxoType
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
@@ -68,31 +79,40 @@ class Bot:
         defaults: BotDefaults | None = None,
         upload_config: UploadConfig | None = None,
         warming_up: bool = True,
-        transport: BaseAsyncClient | None = None,
+        client: BaseAsyncClient | None = None,
+        middleware: Sequence[AsyncMiddleware] = (),
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
-        self._warming_up = warming_up
-        self._transport = transport
         self._upload_config = (
             upload_config if upload_config is not None else UploadConfig()
         )
 
-        self._retort = create_retort_with_bot(
-            bot=self,
-            defaults=self._defaults,
-            warming_up=warming_up,
-        )
+        self.middleware: list[AsyncMiddleware] = [
+            *middleware,
+            AuthMiddleware(self._token),
+            AttachmentNotReadyRetryMiddleware(
+                max_retries=self._upload_config.not_ready_max_retries,
+                backoff_config=self._upload_config.not_ready_backoff,
+            ),
+            NetworkErrorMiddleware(),
+        ]
+        self._client = client
 
-        self._api_client: MaxApiClient | None = None
+        self._owns_client = client is None
+        self._closed = False
+
+        if warming_up:
+            warm_up()
+
         self._info: BotInfo | None = None
         self._lock = asyncio.Lock()
 
     @property
-    def api_client(self) -> MaxApiClient:
-        if self._api_client is None:
-            raise StateError("Not started bot")
-        return self._api_client
+    def client(self) -> BaseAsyncClient:
+        if self._client is None:
+            self._client = default_client()
+        return self._client
 
     @property
     def info(self) -> BotInfo:
@@ -102,15 +122,11 @@ class Bot:
 
     @property
     def started(self) -> bool:
-        return self._api_client is not None
+        return self._info is not None
 
     @property
     def closed(self) -> bool:
-        return self._api_client is not None and self._api_client.closed
-
-    @property
-    def retort(self) -> Retort:
-        return self._retort
+        return self._closed
 
     @property
     def defaults(self) -> BotDefaults:
@@ -132,46 +148,42 @@ class Bot:
             if auto_close:
                 await self.close()
 
-    def _build_api_client_if_needed(self) -> None:
-        if self._api_client is None:
-            transport = self._transport or default_transport(
-                request_dumper=self._retort,
-                response_loader=self._retort,
-            )
-            self._api_client = MaxApiClient(
-                token=self._token,
-                transport=transport,
-                upload_config=self._upload_config,
-            )
-
     async def start(self) -> None:
         if self._info is None:
             async with self._lock:
                 if self._info is None:
-                    self._build_api_client_if_needed()
                     await self.get_my_info()
 
     async def get_my_info(self) -> BotInfo:
-        if not self.started:
-            async with self._lock:
-                self._build_api_client_if_needed()
-
-        info = await self.api_client.transport.call_method(GetMyInfo())
-        self._info = info
-        return info
+        info = await self.client.call_method(GetMyInfo(), middleware=self.middleware)
+        self._info = bind_bot(info, self)
+        return self._info
 
     async def close(self) -> None:
-        if self._api_client is None or self._api_client.closed:
+        if self._closed or self._client is None:
             return
+        self._closed = True
 
-        await self._api_client.close()
+        if self._owns_client:
+            await self._client.close()
 
     async def call_method(  # for unihttp bind_method
         self,
         method: BaseMethod[ResponseType],
     ) -> ResponseType:
         await self.start()
-        return await self.api_client.transport.call_method(method)
+        method = apply_defaults(method, self._defaults)
+        result = await self.client.call_method(method, middleware=self.middleware)
+        return bind_bot(result, self)
+
+    async def call_method_stream(  # for unihttp bind_method
+        self,
+        method: StreamMethod,
+    ) -> HTTPResponse[AsyncChunkStream]:
+        return await self.client.call_method_stream(
+            method,
+            middleware=self.middleware,
+        )
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
         try:
@@ -198,13 +210,26 @@ class Bot:
         chunk_size: int = 65536,
         seek: bool = True,
     ) -> BinaryIO | None:
-        await self.start()
-        return await self.api_client.download(
-            url=url,
-            destination=destination,
-            chunk_size=chunk_size,
-            seek=seek,
+        """Скачивает вложение чанками, без буферизации ответа в память."""
+        if isinstance(url, AttachmentPayload):
+            url = url.url
+
+        response = await self.call_method_stream(
+            Download(url=url, __chunk_size__=chunk_size),
         )
+        async with response.data as stream:
+            if isinstance(destination, (str, pathlib.Path)):
+                async with await open_file(destination, "wb") as file:
+                    async for chunk in stream:
+                        await file.write(chunk)
+                return None
+
+            binary_io = destination if destination is not None else io.BytesIO()
+            async for chunk in stream:
+                binary_io.write(chunk)
+            if seek:
+                binary_io.seek(0)
+            return binary_io
 
     async def upload_media_resumable(
         self,
@@ -217,8 +242,13 @@ class Bot:
 
         `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
         """
-        await self.start()
-        return await self.api_client.upload_resumable(upload_url, file, size)
+        return await resumable_upload(
+            url=upload_url,
+            file=file,
+            bot=self,
+            config=self._upload_config,
+            size=size,
+        )
 
     # Bots
     edit_bot_info = bind_method(EditBotInfo)
