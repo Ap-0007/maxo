@@ -71,7 +71,7 @@ from maxo.utils.upload_media import InputFile
 _MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 
 
-class Bot:
+class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
     def __init__(
         self,
         token: str,
@@ -170,19 +170,26 @@ class Bot:
     async def call_method(  # for unihttp bind_method
         self,
         method: BaseMethod[ResponseType],
+        *,
+        middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> ResponseType:
         await self.start()
         method = apply_defaults(method, self._defaults)
-        result = await self.client.call_method(method, middleware=self.middleware)
+        result = await self.client.call_method(
+            method,
+            middleware=[*self.middleware, *(middleware or ())],
+        )
         return bind_bot(result, self)
 
     async def call_method_stream(  # for unihttp bind_method
         self,
         method: StreamMethod,
+        *,
+        middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> HTTPResponse[AsyncChunkStream]:
         return await self.client.call_method_stream(
             method,
-            middleware=self.middleware,
+            middleware=[*self.middleware, *(middleware or ())],
         )
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:

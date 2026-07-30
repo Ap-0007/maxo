@@ -80,18 +80,18 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
                 raise BotNotFoundError(route_param_names=route_params.keys())
 
             try:
-                update = await request.json()
+                raw_update = await request.json()
             except ValueError as exc:
                 raise InvalidJsonError(original_error=exc) from exc
 
             try:
                 update = MaxoUpdate(
-                    update=bind_bot(get_retort().load(update, Updates), bot),
+                    update=bind_bot(get_retort().load(raw_update, Updates), bot),
                 )
             except LoadError as exc:
                 raise InvalidJsonError(original_error=exc) from exc
 
-            self._get_task_tracker(bot).spawn(
+            self._get_task_tracker(bot).spawn(  # type: ignore[unused-awaitable]
                 self.dispatcher.feed_update(bot=bot, update=update),
             )
             return self.web.json_response(status_code=200, data={})
@@ -151,7 +151,7 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
         base_config: WebhookConfig,
         override_config: WebhookConfig | None = None,
     ) -> dict[str, Any]:
-        kwargs = DEFAULT_RETORT.dump(base_config)
+        kwargs: dict[str, Any] = DEFAULT_RETORT.dump(base_config)
         if override_config is not None:
             kwargs.update(DEFAULT_RETORT.dump(override_config))
         if self.security is not None:

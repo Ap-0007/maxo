@@ -27,7 +27,7 @@ class TaskTracker:
         task.add_done_callback(self._on_task_done)
         return task
 
-    def _on_task_done(self, task: asyncio.Task) -> None:
+    def _on_task_done(self, task: asyncio.Task[Any]) -> None:
         """Remove the task from the set and log unhandled exceptions."""
         self._tasks.discard(task)
 

@@ -30,7 +30,7 @@ class BotNotFoundError(EngineError):
     public_detail = "Not found"
     log_level = logging.INFO
 
-    route_param_names: tuple[str, ...]
+    route_param_names: Iterable[str]
 
     def __post_init__(self) -> None:
         self.route_param_names = tuple(sorted(self.route_param_names))

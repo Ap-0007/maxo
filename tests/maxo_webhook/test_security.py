@@ -11,14 +11,14 @@ from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebReques
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_allows_request_without_checks_or_secret_token():
+async def test_security_verify_noop_without_checks_or_secret_token() -> None:
     security = Security()
 
     await security.verify(request=DummyWebRequest(), route_params={})
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_stops_at_first_failed_check():
+async def test_security_pipeline_stops_at_first_failed_check() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("first", result=True, calls=calls),
@@ -36,7 +36,9 @@ async def test_security_pipeline_stops_at_first_failed_check():
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_allows_request_when_secret_token_and_checks_pass():
+async def test_security_pipeline_allows_request_when_secret_token_and_checks_pass() -> (
+    None
+):
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=True, calls=calls),
@@ -50,7 +52,7 @@ async def test_security_pipeline_allows_request_when_secret_token_and_checks_pas
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_runs_checks_after_valid_secret_token():
+async def test_security_pipeline_runs_checks_after_valid_secret_token() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=False, calls=calls),
@@ -65,7 +67,7 @@ async def test_security_pipeline_runs_checks_after_valid_secret_token():
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_rejects_bad_secret_token_before_checks():
+async def test_security_pipeline_rejects_bad_secret_token_before_checks() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=True, calls=calls),

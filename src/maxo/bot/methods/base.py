@@ -1,3 +1,5 @@
+from typing import Any
+
 from unihttp.http import HTTPResponse
 from unihttp.method import BaseMethod
 
@@ -11,7 +13,7 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
     Базовый метод для методов Bot API Max.
     """
 
-    def validate_response(self, response: HTTPResponse) -> None:
+    def validate_response(self, response: HTTPResponse[Any]) -> None:
         """MAX иногда отвечает 200 с `success: false`/`error_code` в теле."""
         if (
             response.ok
@@ -27,5 +29,5 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
             )
             response.status_code = 400
 
-    def on_error(self, response: HTTPResponse) -> None:
+    def on_error(self, response: HTTPResponse[Any]) -> None:
         raise_api_error(response.status_code, response.data)

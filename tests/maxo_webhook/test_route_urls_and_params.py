@@ -1,6 +1,7 @@
 import pytest
 from multidict import MultiDict
 
+from maxo import Bot
 from maxo.transport.webhook.route import BotIdParam, BotTokenParam, Const, Ref, Route
 from maxo.transport.webhook.route.errors import (
     InvalidPathParamError,
@@ -22,17 +23,17 @@ from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebReques
     ids=["origin", "base-path", "base-path-trailing-slash"],
 )
 async def test_route_builds_static_webhook_url_under_base_path(
-    bot,
-    base_path,
-    expected_path,
-):
+    bot: Bot,
+    base_path: str,
+    expected_path: str,
+) -> None:
     route = Route(base_url=f"https://example.com{base_path}", path="/webhook")
 
     assert await route.build_url(bot=bot) == f"https://example.com{expected_path}"
 
 
 @pytest.mark.asyncio
-async def test_route_path_is_optional(bot):
+async def test_route_path_is_optional(bot: Bot) -> None:
     route = Route(base_url="https://example.com")
 
     assert route.path == "/"
@@ -40,7 +41,7 @@ async def test_route_path_is_optional(bot):
 
 
 @pytest.mark.asyncio
-async def test_route_builds_webhook_url_with_encoded_path_param(bot):
+async def test_route_builds_webhook_url_with_encoded_path_param(bot: Bot) -> None:
     base_url = "https://example.com:8080/api/v2/telegram"
     route = Route(
         base_url=base_url,
@@ -52,7 +53,7 @@ async def test_route_builds_webhook_url_with_encoded_path_param(bot):
 
 
 @pytest.mark.asyncio
-async def test_route_builds_webhook_url_with_query_params(bot):
+async def test_route_builds_webhook_url_with_query_params(bot: Bot) -> None:
     route = Route(
         base_url="https://example.com/api",
         path="/webhook/{bot_token}",
@@ -66,7 +67,7 @@ async def test_route_builds_webhook_url_with_query_params(bot):
     )
 
 
-def test_route_normalizes_path_without_leading_slash():
+def test_route_normalizes_path_without_leading_slash() -> None:
     route = Route(
         base_url="https://example.com",
         path="webhook/{bot_token}",
@@ -76,7 +77,7 @@ def test_route_normalizes_path_without_leading_slash():
 
 
 @pytest.mark.asyncio
-async def test_route_parses_declared_path_params(bot_token):
+async def test_route_parses_declared_path_params(bot_token: str) -> None:
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
@@ -89,7 +90,7 @@ async def test_route_parses_declared_path_params(bot_token):
 
 
 @pytest.mark.asyncio
-async def test_route_reports_invalid_path_param_value():
+async def test_route_reports_invalid_path_param_value() -> None:
     raw_bot_id = "not-int"
     route = Route(
         base_url="https://example.com",
@@ -106,7 +107,7 @@ async def test_route_reports_invalid_path_param_value():
 
 
 @pytest.mark.asyncio
-async def test_route_matches_repeated_query_params_in_any_order(bot_token):
+async def test_route_matches_repeated_query_params_in_any_order(bot_token: str) -> None:
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
@@ -135,10 +136,10 @@ async def test_route_matches_repeated_query_params_in_any_order(bot_token):
     ids=["no-query", "other-query"],
 )
 async def test_route_reports_missing_required_query_param(
-    bot_token,
-    query,
-    available_query_params,
-):
+    bot_token: str,
+    query: MultiDict[str],
+    available_query_params: tuple[str, ...],
+) -> None:
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
@@ -157,7 +158,7 @@ async def test_route_reports_missing_required_query_param(
 
 
 @pytest.mark.asyncio
-async def test_route_reports_query_param_value_mismatch(bot_token):
+async def test_route_reports_query_param_value_mismatch(bot_token: str) -> None:
     wrong_token = "wrong"  # noqa: S105
     route = Route(
         base_url="https://example.com",
@@ -181,7 +182,7 @@ async def test_route_reports_query_param_value_mismatch(bot_token):
 
 
 @pytest.mark.asyncio
-async def test_route_reports_unexpected_query_param(bot_token):
+async def test_route_reports_unexpected_query_param(bot_token: str) -> None:
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
@@ -204,7 +205,7 @@ async def test_route_reports_unexpected_query_param(bot_token):
 
 
 @pytest.mark.asyncio
-async def test_route_allows_unexpected_query_param_by_default(bot_token):
+async def test_route_allows_unexpected_query_param_by_default(bot_token: str) -> None:
     route = Route(
         base_url="https://example.com",
         path="/webhook/{bot_token}",
@@ -222,7 +223,9 @@ async def test_route_allows_unexpected_query_param_by_default(bot_token):
 
 
 @pytest.mark.asyncio
-async def test_route_reports_any_query_param_when_strict_query_has_no_query_spec():
+async def test_route_reports_any_query_param_when_strict_query_has_no_query_spec() -> (
+    None
+):
     route = Route(base_url="https://example.com", path="/webhook", strict_query=True)
     request = DummyWebRequest(DummyRequest(query=MultiDict({"extra": "value"})))
 

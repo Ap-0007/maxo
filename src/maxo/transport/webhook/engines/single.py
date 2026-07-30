@@ -20,6 +20,7 @@ from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security import Security
 from maxo.transport.webhook.tasks import TaskTracker
 from maxo.transport.webhook.web.base import WebAdapter
+from maxo.types import SimpleQueryResult
 
 
 class SingleBotEngine(
@@ -52,7 +53,10 @@ class SingleBotEngine(
     def _get_task_tracker(self, bot: Bot) -> TaskTracker:
         return self._task_tracker
 
-    async def subscribe(self, webhook_config: WebhookConfig | None = None) -> bool:
+    async def subscribe(
+        self,
+        webhook_config: WebhookConfig | None = None,
+    ) -> SimpleQueryResult:
         await self.bot.start()
         kwargs = await self._build_webhook_kwargs(
             bot=self.bot,

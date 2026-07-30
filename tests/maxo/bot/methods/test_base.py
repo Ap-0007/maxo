@@ -1,4 +1,5 @@
 from http.cookies import SimpleCookie
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -37,7 +38,7 @@ from maxo.errors import (
     ],
 )
 def test_on_error(status_code: int, error_class: type[MaxBotApiError]) -> None:
-    response = HTTPResponse(
+    response: HTTPResponse[dict[str, Any]] = HTTPResponse(
         status_code=status_code,
         data={},
         headers=CIMultiDict(),

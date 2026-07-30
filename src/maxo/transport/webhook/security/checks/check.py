@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.web.base import WebRequest
@@ -9,7 +9,7 @@ class SecurityCheck(Protocol):
 
     async def verify(
         self,
-        request: WebRequest,
+        request: WebRequest[Any],
         route_params: RouteParams,
     ) -> bool:
         """

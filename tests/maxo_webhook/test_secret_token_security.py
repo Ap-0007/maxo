@@ -1,5 +1,6 @@
 import pytest
 
+from maxo import Bot
 from maxo.transport.webhook.security import Security, StaticSecretToken
 from maxo.transport.webhook.security.secret_token import SECRET_TOKEN_HEADER
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
@@ -16,9 +17,9 @@ from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebReques
     ids=["match", "mismatch", "none"],
 )
 async def test_secret_token_check_verifies_telegram_header(
-    request_token,
-    expected,
-):
+    request_token: str | None,
+    expected: bool,
+) -> None:
     secret_token = StaticSecretToken("my-secret")
     headers = {SECRET_TOKEN_HEADER: request_token} if request_token is not None else {}
     req = DummyWebRequest(DummyRequest(headers=headers))
@@ -27,7 +28,9 @@ async def test_secret_token_check_verifies_telegram_header(
 
 
 @pytest.mark.parametrize("secret_token", ["", "has space", "x" * 257])
-def test_secret_token_check_rejects_telegram_incompatible_values(secret_token):
+def test_secret_token_check_rejects_telegram_incompatible_values(
+    secret_token: str,
+) -> None:
     with pytest.raises(ValueError, match="Invalid secret token format"):
         StaticSecretToken(secret_token)
 
@@ -42,9 +45,9 @@ def test_secret_token_check_rejects_telegram_incompatible_values(secret_token):
     ids=["with-secret", "without-secret"],
 )
 async def test_security_resolves_secret_token_from_static_value_or_callable(
-    bot,
-    secret_token,
-    expected,
-):
+    bot: Bot,
+    secret_token: StaticSecretToken | None,
+    expected: str | None,
+) -> None:
     sec = Security(secret_token=secret_token)
     assert await sec.secret_token(bot=bot) == expected

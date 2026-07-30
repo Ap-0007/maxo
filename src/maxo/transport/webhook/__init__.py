@@ -27,14 +27,12 @@ SOFTWARE.
 from maxo.transport.webhook.configs.bot import BotConfig
 from maxo.transport.webhook.configs.webhook import WebhookConfig
 from maxo.transport.webhook.engines.single import SingleBotEngine
-from maxo.transport.webhook.engines.token import TokenEngine
 from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
 
 __all__ = [
     "AiohttpAdapter",
     "BotConfig",
     "SingleBotEngine",
-    "TokenEngine",
     "WebhookConfig",
 ]
 

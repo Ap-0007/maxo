@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security.checks.check import SecurityCheck
 from maxo.transport.webhook.web.base import WebRequest
@@ -11,7 +13,7 @@ class RecordingCheck(SecurityCheck):
 
     async def verify(
         self,
-        request: WebRequest,
+        request: WebRequest[Any],
         route_params: RouteParams,
     ) -> bool:
         self.calls.append(self.name)

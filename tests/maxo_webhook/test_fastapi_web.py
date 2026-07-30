@@ -1,21 +1,21 @@
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
 
-from maxo.transport.webhook.engines.base import BaseWebhookEngine
+from maxo import Bot
 from maxo.transport.webhook.route import Route
-from maxo.transport.webhook.tasks import TaskTracker
+from maxo.transport.webhook.web.base import WebRequest
 from maxo.transport.webhook.web.fastapi import FastAPIAdapter
-from tests.maxo_webhook.fixtures.webhook_engine import DummyDispatcher
+from tests.maxo_webhook.fixtures.webhook_engine import DummyDispatcher, SpyEngine
 
 
-def test_fastapi_adapter_passes_bound_request_to_registered_post_handler():
+def test_fastapi_adapter_passes_bound_request_to_registered_post_handler() -> None:
     adapter = FastAPIAdapter()
     app = FastAPI()
-    seen = {}
+    seen: dict[str, Any] = {}
 
-    async def handler(request):
+    async def handler(request: WebRequest[Any]) -> Response:
         seen["raw"] = request.raw
         seen["client_ip"] = request.client_ip
         seen["header"] = request.headers["X-Test"]
@@ -29,10 +29,10 @@ def test_fastapi_adapter_passes_bound_request_to_registered_post_handler():
             headers={"X-Reply": "done"},
         )
 
-    async def on_startup(_app):
+    async def on_startup(_app: Any) -> None:
         return None
 
-    async def on_shutdown(_app):
+    async def on_shutdown(_app: Any) -> None:
         return None
 
     adapter.register(
@@ -61,27 +61,14 @@ def test_fastapi_adapter_passes_bound_request_to_registered_post_handler():
     assert seen["json"] == {"update_id": 1}
 
 
-def test_fastapi_adapter_registers_lifecycle_callbacks_via_router(bot):
-    events = []
+def test_fastapi_adapter_registers_lifecycle_callbacks_via_router(bot: Bot) -> None:
+    events: list[Any] = []
     adapter = FastAPIAdapter()
 
-    class SpyEngine(BaseWebhookEngine[Any, Any, Any]):
-        _task_tracker = TaskTracker()
-
-        async def _on_startup(self, app, *args, **kwargs) -> None:
-            events.append(("engine_startup", app))
-
-        async def _on_shutdown(self, app, *args, **kwargs) -> None:
-            events.append(("engine_shutdown", app))
-
-        async def _resolve_bot(self, route_params) -> Any:
-            return bot
-
-        def _get_task_tracker(self, bot) -> TaskTracker:
-            return self._task_tracker
-
     engine = SpyEngine(
-        DummyDispatcher(),  # ty:ignore[invalid-argument-type]
+        DummyDispatcher(),
+        bot,
+        events,
         web=adapter,
         route=Route(base_url="https://example.com", path="/webhook"),
     )

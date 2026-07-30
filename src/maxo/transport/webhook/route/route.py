@@ -77,7 +77,7 @@ class Route:
 
     async def build_url(self, bot: Bot) -> str:
         if self._path_params:
-            route_params = {}
+            route_params: dict[str, Any] = {}
             for binding in self._path_params:
                 route_params[binding.name] = await binding.param.build(
                     bot=bot,

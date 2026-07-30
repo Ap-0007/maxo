@@ -34,7 +34,8 @@ class FastAPIWebRequest(WebRequest[Request]):
         return self._request.client.host if self._request.client is not None else None
 
     async def json(self) -> dict[str, Any]:
-        return await self._request.json()
+        data: dict[str, Any] = await self._request.json()
+        return data
 
     @property
     def headers(self) -> Headers:

@@ -1,13 +1,14 @@
 import json
+from typing import Any
 from unittest.mock import Mock
 
 from aiohttp.test_utils import make_mocked_request
-from aiohttp.web import Application
+from aiohttp.web import Application, Response
 
 from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
 
 
-def test_aiohttp_adapter_exposes_framework_request_data():
+def test_aiohttp_adapter_exposes_framework_request_data() -> None:
     transport = Mock()
     transport.get_extra_info.return_value = ("127.0.0.1", 12345)
     raw_request = make_mocked_request(
@@ -27,17 +28,17 @@ def test_aiohttp_adapter_exposes_framework_request_data():
     assert request.path_params["bot_token"] == "42:TEST"  # noqa: S105
 
 
-def test_aiohttp_adapter_registers_post_route_and_lifecycle_callbacks():
+def test_aiohttp_adapter_registers_post_route_and_lifecycle_callbacks() -> None:
     adapter = AiohttpAdapter()
     app = Application()
 
-    async def handler(_request):
+    async def handler(_request: Any) -> Response:
         return adapter.json_response(status_code=200, data={"ok": "yes"})
 
-    async def on_startup(_app):
+    async def on_startup(_app: Any) -> None:
         return None
 
-    async def on_shutdown(_app):
+    async def on_shutdown(_app: Any) -> None:
         return None
 
     adapter.register(
@@ -57,7 +58,7 @@ def test_aiohttp_adapter_registers_post_route_and_lifecycle_callbacks():
     assert app.on_shutdown[-1] is on_shutdown
 
 
-def test_aiohttp_adapter_builds_json_response_with_status_and_headers():
+def test_aiohttp_adapter_builds_json_response_with_status_and_headers() -> None:
     response = AiohttpAdapter().json_response(
         status_code=418,
         data={"detail": "teapot"},

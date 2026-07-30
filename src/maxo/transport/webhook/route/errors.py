@@ -43,8 +43,8 @@ class RouteMatchError(RouteError):
 class InvalidBaseUrlError(RouteConfigError):
     code = "route_config_invalid_base_url"
 
-    base_url: URL
-    reason: str
+    base_url: URL = field(kw_only=True)
+    reason: str = field(kw_only=True)
 
     def __str__(self) -> str:
         return (
@@ -55,8 +55,8 @@ class InvalidBaseUrlError(RouteConfigError):
 class InvalidRoutePathError(RouteConfigError):
     code = "route_config_invalid_path"
 
-    path: URL
-    reason: str
+    path: URL = field(kw_only=True)
+    reason: str = field(kw_only=True)
 
     def __str__(self) -> str:
         return f"Invalid Route path. Reason: {self.reason}. path={self.path!r}."
@@ -65,9 +65,9 @@ class InvalidRoutePathError(RouteConfigError):
 class InvalidPathTemplateError(RouteConfigError):
     code = "route_config_invalid_path_template"
 
-    path: str
-    reason: str
-    value: str | None = None
+    path: str = field(kw_only=True)
+    reason: str = field(kw_only=True)
+    value: str | None = field(default=None, kw_only=True)
 
     def __str__(self) -> str:
         message = (
@@ -83,8 +83,8 @@ class InvalidPathTemplateError(RouteConfigError):
 class RepeatedPathParamError(RouteConfigError):
     code = "route_config_repeated_path_params"
 
-    path: str
-    repeated_params: tuple[str, ...]
+    path: str = field(kw_only=True)
+    repeated_params: Iterable[str] = field(kw_only=True)
 
     def __post_init__(self) -> None:
         self.repeated_params = tuple(sorted(self.repeated_params))
@@ -100,8 +100,8 @@ class RepeatedPathParamError(RouteConfigError):
 class MissingRouteParamDeclarationError(RouteConfigError):
     code = "route_config_missing_param_declarations"
 
-    path: str
-    missing_params: tuple[str, ...]
+    path: str = field(kw_only=True)
+    missing_params: Iterable[str] = field(kw_only=True)
 
     def __post_init__(self) -> None:
         self.missing_params = tuple(sorted(self.missing_params))
@@ -117,8 +117,8 @@ class MissingRouteParamDeclarationError(RouteConfigError):
 class UnusedRouteParamDeclarationError(RouteConfigError):
     code = "route_config_unused_param_declarations"
 
-    path: str
-    unused_params: tuple[str, ...]
+    path: str = field(kw_only=True)
+    unused_params: Iterable[str] = field(kw_only=True)
 
     def __post_init__(self) -> None:
         self.unused_params = tuple(sorted(self.unused_params))
@@ -134,8 +134,8 @@ class UnusedRouteParamDeclarationError(RouteConfigError):
 class UnknownQueryParamReferenceError(RouteConfigError):
     code = "route_config_unknown_query_param_refs"
 
-    path: str
-    unknown_params: tuple[str, ...]
+    path: str = field(kw_only=True)
+    unknown_params: Iterable[str] = field(kw_only=True)
 
     def __post_init__(self) -> None:
         self.unknown_params = tuple(sorted(self.unknown_params))
@@ -174,7 +174,7 @@ class MissingPathParamError(RouteMatchError):
     code = "route_match_missing_path_param"
 
     param: str
-    available_params: tuple[str, ...]
+    available_params: Iterable[str]
 
     def __post_init__(self) -> None:
         self.available_params = tuple(sorted(self.available_params))
@@ -204,7 +204,7 @@ class MissingQueryParamError(RouteMatchError):
     code = "route_match_missing_query_param"
 
     query_param: str
-    available_query_params: tuple[str, ...]
+    available_query_params: Iterable[str]
 
     def __post_init__(self) -> None:
         self.available_query_params = tuple(sorted(self.available_query_params))
@@ -221,8 +221,8 @@ class QueryParamMismatchError(RouteMatchError):
     code = "route_match_query_param_mismatch"
 
     query_param: str
-    expected: tuple[str, ...]
-    got: tuple[str, ...]
+    expected: Iterable[str]
+    got: Iterable[str]
 
     def __post_init__(self) -> None:
         self.expected = tuple(self.expected)
@@ -240,8 +240,8 @@ class QueryParamMismatchError(RouteMatchError):
 class UnexpectedQueryParamError(RouteMatchError):
     code = "route_match_unexpected_query_param"
 
-    query_params: tuple[str, ...]
-    expected_query_params: tuple[str, ...]
+    query_params: Iterable[str]
+    expected_query_params: Iterable[str]
 
     def __post_init__(self) -> None:
         self.query_params = tuple(sorted(self.query_params))

@@ -61,12 +61,12 @@ async def test_bot_start_and_close() -> None:
         username="testbot",
         last_activity_time=NOW,
     )
-    bot = make_bot(transport=transport)
+    bot = make_bot(client=transport)
     assert bot.started is False
 
     await bot.start()
     assert bot.started is True
-    assert bot.info.user_id == 1
+    assert bot.info.user_id == 1  # type: ignore[unreachable]
     transport.call_method.assert_awaited_once()
 
     await bot.close()
@@ -84,7 +84,7 @@ async def test_bot_context(bot: Bot) -> None:
 
 async def test_bot_call_method(bot: Bot) -> None:
     bot._info = MagicMock()  # уже "started" - call_method не должен звать start()
-    with patch.object(bot, "_transport", MagicMock()) as mock_transport:
+    with patch.object(bot, "_client", MagicMock()) as mock_transport:
         mock_transport.call_method = AsyncMock(return_value="test_result")
         result: object = await bot.call_method(MagicMock())
         assert result == "test_result"
@@ -96,7 +96,7 @@ async def test_bot_silent_call_method(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     bot._info = MagicMock()
-    with patch.object(bot, "_transport", MagicMock()) as mock_transport:
+    with patch.object(bot, "_client", MagicMock()) as mock_transport:
         mock_transport.call_method = AsyncMock(
             side_effect=MockMaxBotApiError("test error"),
         )
@@ -125,8 +125,8 @@ async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
 async def test_close_twice_is_noop() -> None:
     bot = make_bot()
     transport = AsyncMock()
-    bot._transport = transport
-    bot._owns_transport = True
+    bot._client = transport
+    bot._owns_client = True
     bot._info = MagicMock()
 
     await bot.close()
@@ -176,7 +176,7 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
 
 async def test_start_caches_info() -> None:
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         mock_transport.call_method.return_value = BotInfo(
@@ -198,7 +198,7 @@ async def test_start_caches_info() -> None:
 
 async def test_start_retries_info_after_previous_failure() -> None:
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         mock_transport.call_method.side_effect = MockMaxBotApiError("boom")
@@ -225,7 +225,7 @@ async def test_start_retries_info_after_previous_failure() -> None:
 
 async def test_get_my_info_starts_lazily() -> None:
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         mock_transport.call_method.return_value = BotInfo(
@@ -245,7 +245,7 @@ async def test_call_method_starts_lazily_and_resolves_info() -> None:
     """Exact scenario: `bot.send_message(...)` then `bot.info`, without ever
     calling `start()` explicitly — both must work, not just the send."""
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         info = BotInfo(
@@ -290,7 +290,7 @@ async def test_get_my_info_updates_cached_info_directly() -> None:
     """Calling `get_my_info()` on its own (without `start()`) must still
     refresh `.info` — it's the only way it stays consistent with reality."""
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         mock_transport.call_method.return_value = BotInfo(
@@ -310,7 +310,7 @@ async def test_get_my_info_always_hits_network() -> None:
     """Unlike `start()`, repeated `get_my_info()` calls must not be cached —
     it's the "give me fresh data now" escape hatch."""
     mock_transport = AsyncMock()
-    bot = make_bot(transport=mock_transport)
+    bot = make_bot(client=mock_transport)
 
     if True:
         mock_transport.call_method.return_value = BotInfo(

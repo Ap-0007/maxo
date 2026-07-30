@@ -1,3 +1,5 @@
+from typing import Any
+
 from unihttp.http import HTTPResponse
 
 from maxo.bot.methods.base import MaxoMethod
@@ -40,6 +42,6 @@ class AddMembers(MaxoMethod[ModifyMembersResult]):
 
     user_ids: Body[list[int]]
 
-    def validate_response(self, response: HTTPResponse) -> None:
+    def validate_response(self, response: HTTPResponse[Any]) -> None:
         # AddMembers возвращает частичный результат при success=false.
         pass

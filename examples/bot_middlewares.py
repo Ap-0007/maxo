@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from collections.abc import Sequence
+from typing import Any
 
 from unihttp.http.request import HTTPRequest
 from unihttp.http.response import HTTPResponse
@@ -27,7 +28,7 @@ class LoggingMiddleware(AsyncMiddleware):
         self,
         request: HTTPRequest,
         next_handler: AsyncHandler,
-    ) -> HTTPResponse:
+    ) -> HTTPResponse[Any]:
         logger.info("Request: %s", request)
         response = await next_handler(request)
         logger.info("Response: %s", response)
@@ -51,7 +52,7 @@ class RetryMiddleware(AsyncMiddleware):
         self,
         request: HTTPRequest,
         next_handler: AsyncHandler,
-    ) -> HTTPResponse:
+    ) -> HTTPResponse[Any]:
         attempt = 0
         backoff = Backoff(self._backoff_config)
         while True:

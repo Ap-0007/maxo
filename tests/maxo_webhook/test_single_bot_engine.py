@@ -3,6 +3,7 @@ import asyncio
 import pytest
 
 from maxo import Bot
+from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.engines.single import SingleBotEngine
 from tests.maxo_webhook.fixtures.shutdown import (
     BlockingDispatcher,
@@ -10,16 +11,20 @@ from tests.maxo_webhook.fixtures.shutdown import (
     TrackableTransport,
 )
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
-from tests.maxo_webhook.fixtures.webhook_engine import DummyDispatcher, DummyRoute
+from tests.maxo_webhook.fixtures.webhook_engine import (
+    CapturingAdapter,
+    DummyDispatcher,
+    DummyRoute,
+)
 
 
 @pytest.mark.asyncio
 async def test_single_bot_engine_uses_configured_bot_instead_of_route_params(
-    bot,
-    bot_token,
-    adapter,
-    update_request,
-):
+    bot: Bot,
+    bot_token: str,
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     dispatcher = DummyDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -34,15 +39,17 @@ async def test_single_bot_engine_uses_configured_bot_instead_of_route_params(
     assert response["status_code"] == 200  # ty:ignore[not-subscriptable]
     assert dispatcher.webhook_bot is bot
     assert dispatcher.webhook_bot.token == bot_token
-    assert dispatcher.webhook_update == update_request.raw.json_data
+    assert isinstance(dispatcher.webhook_update, MaxoUpdate)
+    assert dispatcher.webhook_update.update.message.body.text == "hello"
+    assert dispatcher.webhook_update.update.message.body.mid == "msg-1"
 
 
 @pytest.mark.asyncio
 async def test_single_bot_engine_rejects_new_requests_once_shutdown_has_started(
-    bot,
-    adapter,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     dispatcher = BlockingDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -71,10 +78,10 @@ async def test_single_bot_engine_rejects_new_requests_once_shutdown_has_started(
 
 @pytest.mark.asyncio
 async def test_background_engine_rejects_request_during_shutdown(
-    bot,
-    adapter,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -106,10 +113,10 @@ async def test_background_engine_rejects_request_during_shutdown(
 
 @pytest.mark.asyncio
 async def test_foreground_engine_rejects_request_during_shutdown(
-    bot,
-    adapter,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -133,11 +140,11 @@ async def test_foreground_engine_rejects_request_during_shutdown(
 
 @pytest.mark.asyncio
 async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_session(
-    adapter,
-    update_request,
-):
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     transport = TrackableTransport(bot_id=42)
-    bot = Bot("42:TEST", transport=transport, warming_up=False)
+    bot = Bot("42:TEST", client=transport, warming_up=False)
     await bot.start()
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
@@ -166,11 +173,11 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
 
 @pytest.mark.asyncio
 async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_session(
-    adapter,
-    update_request,
-):
+    adapter: CapturingAdapter,
+    update_request: DummyWebRequest,
+) -> None:
     transport = TrackableTransport(bot_id=42)
-    bot = Bot("42:TEST", transport=transport)
+    bot = Bot("42:TEST", client=transport)
     await bot.start()
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(

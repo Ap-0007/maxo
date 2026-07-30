@@ -66,11 +66,11 @@ def bind_bot[T](obj: T, bot: "Bot") -> T:
             bind_bot(item, bot)
         return obj
 
+    if isinstance(obj, BotMixin):
+        obj._bot = bot  # noqa: SLF001
+
     if not isinstance(obj, BaseMaxoType):
         return obj
-
-    if isinstance(obj, BotMixin):
-        obj._bot = bot  # type: ignore[attr-defined]  # noqa: SLF001
 
     for name in _plan(type(obj)):
         bind_bot(getattr(obj, name), bot)

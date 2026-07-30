@@ -36,10 +36,10 @@ class EngineProbe(BaseWebhookEngine[Any, Any, dict[str, Any]]):
             route=DummyRoute({"bot_token": "42:TEST"}),  # ty:ignore[invalid-argument-type]
         )
 
-    async def _on_startup(self, _app: Any, *args: Any, **kwargs: Any) -> None:
+    async def _on_startup(self, app: Any, *args: Any, **kwargs: Any) -> None:
         return None
 
-    async def _on_shutdown(self, _app: Any, *args: Any, **kwargs: Any) -> None:
+    async def _on_shutdown(self, app: Any, *args: Any, **kwargs: Any) -> None:
         return None
 
     async def _resolve_bot(self, route_params: RouteParams) -> Bot | None:
@@ -51,11 +51,11 @@ class EngineProbe(BaseWebhookEngine[Any, Any, dict[str, Any]]):
 
 @pytest.mark.asyncio
 async def test_foreground_engine_acknowledges_empty_dispatcher_result(
-    bot,
-    adapter,
-    dispatcher,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
     engine = EngineProbe(dispatcher, bot, web=adapter)
 
     response = await engine.handle_request(update_request)
@@ -66,11 +66,11 @@ async def test_foreground_engine_acknowledges_empty_dispatcher_result(
 
 @pytest.mark.asyncio
 async def test_engine_stops_accepting_requests_after_shutdown_starts(
-    bot,
-    adapter,
-    dispatcher,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
     engine = EngineProbe(dispatcher, bot, web=adapter)
     await engine.on_shutdown(None)
 
@@ -87,11 +87,11 @@ async def test_engine_stops_accepting_requests_after_shutdown_starts(
 
 @pytest.mark.asyncio
 async def test_engine_accepts_requests_again_after_startup(
-    bot,
-    adapter,
-    dispatcher,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
     engine = EngineProbe(dispatcher, bot, web=adapter)
     await engine.on_shutdown(None)
     await engine.on_startup(None)
@@ -107,10 +107,10 @@ async def test_engine_accepts_requests_again_after_startup(
 
 @pytest.mark.asyncio
 async def test_engine_returns_not_found_when_bot_cannot_be_resolved(
-    adapter,
-    dispatcher,
-    update_request,
-):
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
     engine = EngineProbe(dispatcher, bot=None, web=adapter)
 
     response = await engine.handle_request(update_request)
@@ -126,10 +126,10 @@ async def test_engine_returns_not_found_when_bot_cannot_be_resolved(
 
 @pytest.mark.asyncio
 async def test_engine_returns_bad_request_when_json_payload_is_invalid(
-    bot,
-    adapter,
-    dispatcher,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+) -> None:
     engine = EngineProbe(dispatcher, bot, web=adapter)
 
     response = await engine.handle_request(
@@ -147,11 +147,11 @@ async def test_engine_returns_bad_request_when_json_payload_is_invalid(
 
 @pytest.mark.asyncio
 async def test_engine_lifespan_runs_startup_then_shutdown(
-    bot,
-    adapter,
-    dispatcher,
-    update_request,
-):
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
     engine = EngineProbe(dispatcher, bot, web=adapter)
 
     await engine.on_startup(None)
@@ -161,5 +161,5 @@ async def test_engine_lifespan_runs_startup_then_shutdown(
     await engine.on_shutdown(None)
 
     assert engine._is_shutting_down
-    response = await engine.handle_request(update_request)
+    response = await engine.handle_request(update_request)  # type: ignore[unreachable]
     assert response["status_code"] == 503

@@ -1,7 +1,7 @@
 import re
 from abc import ABC, abstractmethod
 from hmac import compare_digest
-from typing import Final
+from typing import Any, Final
 
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.web.base import WebRequest
@@ -15,7 +15,7 @@ class SecretToken(ABC):
 
     async def verify(
         self,
-        request: WebRequest,
+        request: WebRequest[Any],
         route_params: RouteParams,
     ) -> bool:
         """

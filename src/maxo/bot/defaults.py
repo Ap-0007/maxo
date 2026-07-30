@@ -39,7 +39,7 @@ def apply_defaults(method: _MethodT, defaults: BotDefaults) -> _MethodT:
     if isinstance(method, (SendMessage, EditMessage)):
         return _fill(method, defaults)  # type: ignore[no-any-return]
     if isinstance(method, AnswerOnCallback) and is_defined(method.message):
-        return dataclasses.replace(  # type: ignore[type-var]
+        return dataclasses.replace(
             method,
             message=_fill(method.message, defaults),
         )

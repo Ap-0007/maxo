@@ -1,3 +1,5 @@
+from typing import Any
+
 from maxo import Bot
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security.checks.check import SecurityCheck
@@ -18,7 +20,7 @@ class Security:
     async def verify(
         self,
         *,
-        request: WebRequest,
+        request: WebRequest[Any],
         route_params: RouteParams,
     ) -> None:
         if self._secret_token is not None:

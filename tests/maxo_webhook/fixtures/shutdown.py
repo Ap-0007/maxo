@@ -43,7 +43,7 @@ class BlockingDispatcher(DummyDispatcher):
         self.started_updates = 0
         self.release_updates = asyncio.Event()
 
-    async def feed_update(self, bot: Any, update: Any) -> Any:
+    async def feed_update(self, update: Any, bot: Any = None) -> Any:
         self.started_updates += 1
         self.webhook_bot = bot
         self.webhook_update = update
@@ -64,7 +64,7 @@ class TrackableTransport(BaseAsyncClient):
         self._bot_id = bot_id
         self.seen_tokens: list[str | None] = []
 
-    async def make_request(self, request: HTTPRequest) -> HTTPResponse:
+    async def make_request(self, request: HTTPRequest) -> HTTPResponse[Any]:
         token = request.header.get("Authorization")
         self.seen_tokens.append(token)
         if request.url == "me":
