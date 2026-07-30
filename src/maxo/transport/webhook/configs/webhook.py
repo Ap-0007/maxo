@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from unihttp.markers import Body
-
 from maxo.omit import Omittable, Omitted
 
 
@@ -9,4 +7,4 @@ from maxo.omit import Omittable, Omitted
 class WebhookConfig:
     """Webhook configuration for setWebhook API parameters."""
 
-    update_types: Body[Omittable[list[str]]] = Omitted()  # noqa: RUF009
+    update_types: Omittable[list[str]] = Omitted()  # noqa: RUF009
