@@ -149,10 +149,12 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
                 await self.close()
 
     async def start(self) -> None:
-        if self._info is None:
-            async with self._lock:
-                if self._info is None:
-                    await self.get_my_info()
+        if self._info is not None:
+            return
+        async with self._lock:
+            if self._info is not None:
+                return
+            await self.get_my_info()
 
     async def get_my_info(self) -> BotInfo:
         info = await self.client.call_method(GetMyInfo(), middleware=self.middleware)
