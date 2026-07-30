@@ -39,10 +39,11 @@ class BaseMaxoType(metaclass=_MaxoTypeMetaClass):
 
 
 class BotMixin:
-    __slots__ = ("_bot",)
-
     def __init__(self, bot: Optional["Bot"] = None) -> None:
         self._bot = bot
+
+    def __post_init__(self) -> None:
+        self._bot = None
 
     @property
     def bot(self) -> "Bot":
@@ -63,9 +64,8 @@ class BotMixin:
         return self
 
 
-class MaxoType(BaseMaxoType, BotMixin):
-    def __post_init__(self) -> None:
-        BotMixin.__init__(self)
+class MaxoType(BaseMaxoType):
+    pass
 
 
 class BaseUpdate(MaxoType):
