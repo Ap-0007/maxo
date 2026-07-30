@@ -768,7 +768,7 @@ def test_small_generated_accessors() -> None:
 
 
 def test_upload_media_result_last_token() -> None:
-    photo_token = "photo-upload-token"
+    photo_token = "photo-upload-token"  # noqa: S105
 
     assert UploadMediaResult(token=TOKEN).last_token == TOKEN
     assert (
@@ -1259,15 +1259,6 @@ def test_missing_optional_fields_raise_for_unsafe_accessors() -> None:
         _ = message.unsafe_stat
     with pytest.raises(AttributeIsEmptyError):
         _ = message.unsafe_url
-
-
-def make_callback() -> Callback:
-    return Callback(
-        callback_id="cb",
-        timestamp=NOW,
-        user=make_user(),
-        payload="payload",
-    )
 
 
 def test_bot_stopped_unsafe_user_locale() -> None:

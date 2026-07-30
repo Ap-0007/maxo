@@ -7,11 +7,11 @@ from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.interfaces.middleware import BaseMiddleware
 from maxo.routing.routers.simple import Router
+from maxo.serialization import get_retort
 from maxo.utils.text_decorations import (
     html_decoration as html,
     markdown_decoration as md,
 )
-from maxo.serialization import get_retort
 
 __all__ = (
     "BASE_URL",
@@ -21,13 +21,13 @@ __all__ = (
     "Dispatcher",
     "Router",
     "__version__",
+    "build_ssl_context",
+    "default_client",
     "enums",
+    "get_retort",
     "html",
     "md",
     "methods",
     "types",
-    "build_ssl_context",
-    "default_client",
-    "get_retort",
     "warm_up",
 )

@@ -194,11 +194,12 @@ async def test_handles_general_exception(
             ANY,
         )
         mock_client.transport.call_method.assert_called_once()
+
+
 async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
     nothing: tuple[Any, ...] = ()
     for update in nothing:
         yield update
-
 
         mock_feed_max_update.assert_not_called()
 
