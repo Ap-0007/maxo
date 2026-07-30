@@ -9,6 +9,7 @@ from unittest.mock import ANY, AsyncMock, call, patch
 import pytest
 from adaptix.load_error import LoadError
 
+from maxo.backoff import BackoffConfig
 from maxo.bot.api_client import MaxApiClient
 from maxo.bot.bot import Bot
 from maxo.bot.methods import GetUpdates
@@ -73,6 +74,12 @@ async def run_generator_once(generator: AsyncIterator[Any]) -> None:
     await asyncio.sleep(0.1)
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
+
+
+async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
+    nothing: tuple[Any, ...] = ()
+    for update in nothing:
+        yield update
 
 
 async def test_handles_load_error_and_skips_update(
@@ -217,10 +224,6 @@ async def test_start_collects_used_updates_when_types_not_given(
 
     long_polling = LongPolling(dispatcher=dispatcher)
 
-    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-        return
-        yield  # pragma: no cover
-
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(mock_bot, types=types, auto_close_bot=False)
 
@@ -235,10 +238,6 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
 
     long_polling = LongPolling(dispatcher=dispatcher)
 
-    async def empty_updates(**_kwargs: Any) -> AsyncIterator[Any]:
-        return
-        yield  # pragma: no cover
-
     with patch.object(long_polling, "_get_updates", side_effect=empty_updates) as spy:
         await long_polling.start(
             mock_bot,
@@ -247,3 +246,93 @@ async def test_start_respects_explicit_types(mock_bot: Bot) -> None:
         )
 
     assert spy.call_args.kwargs["types"] == ["bot_started"]
+
+
+async def test_start_feeds_updates_to_dispatcher(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+    mock_feed_max_update: AsyncMock,
+) -> None:
+    update = MaxoUpdate(update=cast(Updates, MockUpdate(timestamp=1)), marker=1)
+
+    async def single_update(**_kwargs: Any) -> AsyncIterator[MaxoUpdate[Any]]:
+        yield update
+
+    with patch.object(long_polling, "_get_updates", side_effect=single_update):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    mock_feed_max_update.assert_awaited_once_with(update, mock_bot)
+
+
+async def test_start_polling_delegates_to_long_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
+
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
+        await dispatcher.start_polling(
+            mock_bot,
+            timeout=5,
+            limit=10,
+            types=["message_created"],
+            auto_close_bot=False,
+            drop_pending_updates=True,
+            backoff_config=backoff_config,
+            extra="context",
+        )
+
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
+    start.assert_awaited_once_with(
+        bot=mock_bot,
+        timeout=5,
+        limit=10,
+        marker=Omitted(),
+        types=["message_created"],
+        auto_close_bot=False,
+        drop_pending_updates=True,
+        extra="context",
+    )
+
+
+async def test_start_polling_omits_types_by_default(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+
+    with patch.object(LongPolling, "start", new_callable=AsyncMock) as start:
+        await dispatcher.start_polling(mock_bot)
+
+    assert start.await_args is not None
+    assert start.await_args.kwargs["types"] == Omitted()
+
+
+def test_run_polling_runs_start_polling(mock_bot: Bot) -> None:
+    dispatcher = Dispatcher()
+    backoff_config = BackoffConfig(
+        min_delay=0.1,
+        max_delay=1.0,
+        factor=2.0,
+        jitter=0.1,
+    )
+
+    with (
+        patch.object(LongPolling, "__init__", return_value=None) as init,
+        patch.object(LongPolling, "start", new_callable=AsyncMock) as start,
+    ):
+        dispatcher.run_polling(
+            mock_bot,
+            timeout=7,
+            auto_close_bot=False,
+            backoff_config=backoff_config,
+        )
+
+    init.assert_called_once_with(dispatcher, backoff_config=backoff_config)
+    start.assert_awaited_once()
+    assert start.await_args is not None
+    assert start.await_args.kwargs["timeout"] == 7
+    assert start.await_args.kwargs["auto_close_bot"] is False

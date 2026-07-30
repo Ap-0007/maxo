@@ -1,11 +1,13 @@
 import asyncio
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Sequence
 from typing import Any
 
 from maxo import Bot, loggers
+from maxo.backoff import BackoffConfig
 from maxo.fsm.key_builder import BaseKeyBuilder, DefaultKeyBuilder
 from maxo.fsm.storages.base import BaseEventIsolation, BaseStorage
 from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
+from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import Ctx
 from maxo.routing.facades.middleware import FacadeMiddleware
 from maxo.routing.middlewares.error import ErrorMiddleware
@@ -67,6 +69,62 @@ class Dispatcher(Router):
 
         # Facade settings
         self.update.middleware.outer(FacadeMiddleware())
+
+    async def start_polling(
+        self,
+        bot: Bot,
+        backoff_config: BackoffConfig | None = None,
+        timeout: Omittable[int] = 30,
+        limit: Omittable[int] = 100,
+        marker: Omittable[int | None] = Omitted(),
+        types: Omittable[Sequence[str]] = Omitted(),
+        auto_close_bot: bool = True,
+        drop_pending_updates: bool = False,
+        **workflow_data: Any,
+    ) -> None:
+        from maxo.transport.long_polling import LongPolling  # noqa: PLC0415
+
+        polling = (
+            LongPolling(self, backoff_config=backoff_config)
+            if backoff_config is not None
+            else LongPolling(self)
+        )
+        await polling.start(
+            bot=bot,
+            timeout=timeout,
+            limit=limit,
+            marker=marker,
+            types=types,
+            auto_close_bot=auto_close_bot,
+            drop_pending_updates=drop_pending_updates,
+            **workflow_data,
+        )
+
+    def run_polling(
+        self,
+        bot: Bot,
+        backoff_config: BackoffConfig | None = None,
+        timeout: Omittable[int] = 30,
+        limit: Omittable[int] = 100,
+        marker: Omittable[int | None] = Omitted(),
+        types: Omittable[Sequence[str]] = Omitted(),
+        auto_close_bot: bool = True,
+        drop_pending_updates: bool = False,
+        **workflow_data: Any,
+    ) -> None:
+        asyncio.run(
+            self.start_polling(
+                bot,
+                backoff_config=backoff_config,
+                timeout=timeout,
+                limit=limit,
+                marker=marker,
+                types=types,
+                auto_close_bot=auto_close_bot,
+                drop_pending_updates=drop_pending_updates,
+                **workflow_data,
+            ),
+        )
 
     async def feed_max_update(
         self,
