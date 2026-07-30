@@ -55,69 +55,55 @@
     profile = UserProfile(user_id=1, name="Alice").as_(bot)
     await profile.notify("Привет!")
 
-Автоматическая инъекция через ретроту
---------------------------------------
+Привязка бота при десериализации
+---------------------------------
 
-Основной сценарий использования ``BotMixin`` - автоматическое внедрение бота при десериализации
-через `Retort <https://adaptix.readthedocs.io/>`_. Реторта бота (``bot.retort``) настроена так,
-что при загрузке любого ``MaxoType`` бот автоматически присваивается каждому объекту в дереве вложенности.
-
-.. code-block:: python
-
-    from maxo.types import MaxoType
-
-    class Sub(MaxoType):
-        value: int
-
-    class MyData(MaxoType):
-        name: str
-        sub: Sub
-
-    # bot.retort автоматически внедряет бот во все MaxoType-объекты
-    data = {"name": "test", "sub": {"value": 42}}
-    my = bot.retort.load(data, MyData)
-
-    assert my.bot is bot       # бот внедрён в корневой объект
-    assert my.sub.bot is bot   # и во вложенный
-
-Обратная операция - ``dump`` - также работает корректно и не включает поле ``_bot`` в результат:
+Реторта одна на процесс и о боте ничего не знает, а привязка делается
+явным шагом - :func:`~maxo.bot.binding.bind`. Он проставляет ``_bot`` только
+тем типам, которым он нужен: у которых есть методы-фасады
+(``message.answer()`` и подобные), и спускается к ним по полям.
 
 .. code-block:: python
 
-    result = bot.retort.dump(my, MyData)
-    assert result == {"name": "test", "sub": {"value": 42}}
+    from maxo import get_retort
+    from maxo.bot.binding import bind
+    from maxo.types import Updates
 
-Создание ретроты вручную
-------------------------
+    update = bind(get_retort().load(data, Updates), bot)
 
-Если вы создаёте ретроту самостоятельно, используйте
-:func:`~maxo.serialization.create_retort_with_bot` - она внедряет бота во все
-загружаемые ``MaxoType``:
+    assert update.bot is bot
+    assert update.message.bot is bot
+
+В обычном коде звать ``bind`` не нужно - его делают за вас: ``Bot.call_method``
+привязывает ответы методов, а вебхук и лонг-поллинг - входящие апдейты.
+
+.. note::
+
+   Изменение поведения: ``BotMixin`` есть только у типов с методами-фасадами
+   (``message.answer()`` и подобные). У типов без фасадов (``User``,
+   ``MessageBody``, ``Recipient`` и прочих) свойства ``.bot`` нет вообще -
+   обращение к нему упадёт с обычным ``AttributeError``. Если бот нужен
+   вашему собственному типу, унаследуйтесь от ``BotMixin`` явно (см. ниже)
+   и вызовите ``as_(bot)`` вручную.
+
+Прогрев
+-------
+
+Компиляция загрузчиков и дамперов ленивая. :func:`~maxo.bot.warming_up.warm_up` переносит эту цену в
+инициализацию процесса:
 
 .. code-block:: python
 
-    from maxo.serialization import create_retort_with_bot
+    import maxo
+    from maxo.bot.methods import SendMessage
+    from maxo.types import Updates
 
-    retort = create_retort_with_bot(bot)
-    my = retort.load(data, MyData)
-    assert my.bot is bot
+    # в глобальной области модуля, а не в хендлере
+    maxo.warm_up(loaded=[Updates], dumped=[SendMessage])
 
-Функция :func:`~maxo.serialization.create_retort` создаёт ретроту без инъекции
-бота. Объекты загрузятся, но обращение к ``.bot`` вызовет
-:class:`~maxo.errors.AttributeIsEmptyError`:
-
-.. code-block:: python
-
-    from maxo.errors import AttributeIsEmptyError
-    from maxo.serialization import create_retort
-
-    retort = create_retort()  # без бота
-    my = retort.load(data, MyData)
-
-    try:
-        _ = my.bot
-    except AttributeIsEmptyError:
-        print("Бот не внедрён!")  # ожидаемое поведение
+``Bot(warming_up=True)`` делает то же самое (это поведение по умолчанию, как и
+раньше), но греет всё подряд. Список стоит сузить: задержка первого запроса
+будет той же, а инициализация - втрое короче.
 
 Создание собственных миксинов
 ------------------------------
@@ -134,9 +120,8 @@
 
 .. note::
 
-   При использовании ``BotMixin`` без ``MaxoType`` инъекция через ``bot.retort`` работает
-   только для типов, которые являются подклассами ``MaxoType``. Для ``LightType`` потребуется
-   вызвать ``as_(bot)`` вручную.
+   ``bind`` привязывает бота только к типам с методами-фасадами. Для
+   ``LightType`` и прочих собственных типов вызывайте ``as_(bot)`` вручную.
 
 API
 ---
