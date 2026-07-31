@@ -36,8 +36,9 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
             )
         ):
             loggers.bot_session.warning(
-                "Patch the status code from %d to 400 due to an error on the MAX API",
-                response,
+                "Patch the status code from %d to 400 due to an error on the MAX API: %r",
+                response.status_code,
+                response.data,
             )
             response.status_code = 400
 
