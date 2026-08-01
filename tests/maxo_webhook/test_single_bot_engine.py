@@ -145,7 +145,6 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
 ) -> None:
     transport = TrackableTransport(bot_id=42)
     bot = Bot("42:TEST", client=transport, warming_up=False)
-    await bot.start()
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -178,7 +177,6 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
 ) -> None:
     transport = TrackableTransport(bot_id=42)
     bot = Bot("42:TEST", client=transport)
-    await bot.start()
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
