@@ -11,7 +11,6 @@ from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
 from maxo.types import MessageCreated
 from maxo.utils.chat_action import ChatActionMiddleware
 
-bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher()
 
 
@@ -79,6 +78,7 @@ async def limited_handler(update: MessageCreated) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
+    bot = Bot(os.environ["TOKEN"])
     dp.run_polling(bot)
 
 

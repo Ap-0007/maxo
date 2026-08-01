@@ -34,8 +34,6 @@ from maxo.omit import Omitted, is_omitted
 from maxo.routing.interfaces.filter import Filter
 
 if TYPE_CHECKING:
-    from magic_filter import MagicFilter
-
     from maxo.routing.interfaces.handler import Handler
 
     FlagsSource = Handler[Any, Any] | MutableMapping[str, Any] | None
@@ -238,18 +236,3 @@ def get_flag(
 
     """
     return extract_flags(source).get(name, default)
-
-
-def check_flags(source: "FlagsSource", magic: "MagicFilter") -> Any:
-    """
-    Проверяет флаги магическим фильтром.
-
-    Args:
-        source: хендлер или ctx мидлвари/фильтра.
-        magic: магический фильтр из `magic_filter`.
-
-    Returns:
-        Результат применения магического фильтра к флагам.
-
-    """
-    return magic.resolve(AttrDict(extract_flags(source)))

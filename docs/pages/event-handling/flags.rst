@@ -155,7 +155,7 @@
 
     from magic_filter import F
 
-    from maxo.routing.flags import check_flags
+    from maxo.integrations.magic_filter import check_flags
 
     if check_flags(ctx, F.chat_action.action == "sending_photo"):
         ...
@@ -198,6 +198,8 @@
 ----------
 
 .. automodule:: maxo.routing.flags
-   :members: flags, FlagGenerator, FlagDecorator, Flag, extract_flags, extract_flags_from_object, get_flag, check_flags
+   :members: flags, FlagGenerator, FlagDecorator, Flag, extract_flags, extract_flags_from_object, get_flag
    :undoc-members:
    :show-inheritance:
+
+.. autofunction:: maxo.integrations.magic_filter.check_flags

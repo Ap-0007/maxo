@@ -7,7 +7,6 @@ from maxo.routing.filters import Command
 from maxo.types import MessageCreated
 from maxo.utils.chat_action import ChatActionSender
 
-bot = Bot(os.environ["TOKEN"])
 dp = Dispatcher()
 
 
@@ -36,6 +35,7 @@ async def file_handler(update: MessageCreated, bot: Bot) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
+    bot = Bot(os.environ["TOKEN"])
     dp.run_polling(bot)
 
 
