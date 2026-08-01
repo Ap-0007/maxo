@@ -5,7 +5,12 @@ from typing import Any, Generic
 
 from maxo import Bot, Dispatcher
 from maxo.loggers import webhook
-from maxo.routing.signals import AfterStartup, BeforeStartup
+from maxo.routing.signals import (
+    AfterShutdown,
+    AfterStartup,
+    BeforeShutdown,
+    BeforeStartup,
+)
 from maxo.transport.webhook import WebhookConfig
 from maxo.transport.webhook.engines.base import (
     AppT,
@@ -69,7 +74,8 @@ class BaseMultiBotEngine(
             self.dispatcher.workflow_data.update(lifecycle_data)
 
             await self.dispatcher.feed_signal(BeforeStartup(), bot)
-            await bot.start()
+            await bot.get_my_info()
+            self._bots[bot.info.id] = bot
             await self.dispatcher.feed_signal(AfterStartup(), bot)
 
     def _get_task_tracker(self, bot: Bot) -> TaskTracker:
@@ -80,3 +86,26 @@ class BaseMultiBotEngine(
             self._task_trackers[bot.info.id] = tracker
 
         return tracker
+
+    async def _on_shutdown(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        webhook.info(
+            "Stopping %s with %s bot(s)",
+            self.__class__.__name__,
+            len(self._bots),
+        )
+
+        lifecycle_data = self._build_lifecycle_data(
+            app=app,
+            bots=set(self._bots.values()),
+            **kwargs,
+        )
+        self.dispatcher.workflow_data.update(lifecycle_data)
+        await self.dispatcher.feed_signal(BeforeShutdown())
+
+        for bot in self._bots.values():
+            if (tracker := self._task_trackers.pop(bot.info.id, None)) is not None:
+                await tracker.close(timeout=self.shutdown_timeout)
+            await bot.close()
+
+        self._bots.clear()
+        await self.dispatcher.feed_signal(AfterShutdown())
