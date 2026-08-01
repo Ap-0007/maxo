@@ -4,7 +4,6 @@ import os
 
 from maxo import Bot, Dispatcher
 from maxo.routing.filters import Command
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 from maxo.utils.chat_action import ChatActionSender
 
@@ -37,7 +36,7 @@ async def file_handler(update: MessageCreated, bot: Bot) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

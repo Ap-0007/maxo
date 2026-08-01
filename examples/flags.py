@@ -8,7 +8,6 @@ from maxo.enums import SenderAction
 from maxo.routing.filters import Command
 from maxo.routing.flags import get_flag
 from maxo.routing.interfaces import BaseMiddleware, NextMiddleware
-from maxo.transport.long_polling import LongPolling
 from maxo.types import MessageCreated
 from maxo.utils.chat_action import ChatActionMiddleware
 
@@ -80,7 +79,7 @@ async def limited_handler(update: MessageCreated) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    LongPolling(dp).run(bot)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

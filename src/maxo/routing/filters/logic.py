@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from collections.abc import Sequence
 from copy import copy
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 from maxo.routing.ctx import Ctx
 from maxo.routing.filters.always import AlwaysTrueFilter
@@ -57,6 +57,12 @@ class AndFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
         return True
 
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        for filter_ in self._filters:
+            update_handler_flags = getattr(filter_, "update_handler_flags", None)
+            if update_handler_flags is not None:
+                update_handler_flags(flags)
+
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []
 
@@ -89,6 +95,12 @@ class OrFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
                 return True
 
         return False
+
+    def update_handler_flags(self, flags: dict[str, Any]) -> None:
+        for filter_ in self._filters:
+            update_handler_flags = getattr(filter_, "update_handler_flags", None)
+            if update_handler_flags is not None:
+                update_handler_flags(flags)
 
     def _inlining(self) -> None:
         inlined_filters: list[Filter[_UpdateT]] = []

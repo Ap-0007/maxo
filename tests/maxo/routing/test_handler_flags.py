@@ -187,6 +187,18 @@ class TestFiltersUpdateFlags:
             "commands": [start, help_],
         }
 
+    def test_logic_filters_register_nested_commands_flag(self) -> None:
+        start = Command("start")
+        help_ = Command("help")
+
+        for logic_filter in (start | help_, start & help_):
+            router = Router()
+            router.message_created.handler(handler, logic_filter)
+
+            assert router.message_created.handlers[0].flags == {
+                "commands": [start, help_],
+            }
+
 
 class TestFlagsInRuntime:
     async def test_flag_above_registration_is_visible_in_middleware(
