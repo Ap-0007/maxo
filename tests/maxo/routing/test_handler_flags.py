@@ -199,6 +199,14 @@ class TestFiltersUpdateFlags:
                 "commands": [start, help_],
             }
 
+    def test_inverted_command_filter_registers_commands_flag(self) -> None:
+        router = Router()
+        command = Command("start")
+
+        router.message_created.handler(handler, ~command)
+
+        assert router.message_created.handlers[0].flags == {"commands": [command]}
+
 
 class TestFlagsInRuntime:
     async def test_flag_above_registration_is_visible_in_middleware(
