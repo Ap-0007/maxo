@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator, Iterable
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from urllib.parse import unquote
 
 import pytest
@@ -46,15 +46,29 @@ class _Retort:
 
 
 class _FakeBot:
-    """Подменяет бота для `_send_chunk`, который зовёт `bot.call_method`."""
+    """Подменяет бота для `resumable_upload`, который зовёт `bot.call_method`
+    и читает `bot.upload_config`. `resumable_upload` передаёт per-call
+    `middleware=[ChunkUploadRetryMiddleware(...)]` - тут он просто
+    принимается и игнорируется, ретраи по нему проверяются отдельно в
+    `test_chunk_upload_retry_middleware.py`."""
 
-    def __init__(self, responses: Iterable[_FakeResponse | Exception]) -> None:
+    def __init__(
+        self,
+        responses: Iterable[_FakeResponse | Exception],
+        upload_config: UploadConfig | None = None,
+    ) -> None:
         self._responses = list(responses)
         self.calls: list[dict[str, Any]] = []
         self.transport = self
         self.response_loader = _Retort()
+        self.upload_config = upload_config or UploadConfig()
 
-    async def call_method(self, method: Any) -> _FakeResponse:
+    async def call_method(
+        self,
+        method: Any,
+        *,
+        middleware: Any = None,
+    ) -> _FakeResponse:
         self.calls.append(
             {"url": method.url, "data": method.chunk, "headers": method.headers},
         )
@@ -68,14 +82,13 @@ async def _run(
     api_client: _FakeBot,
     data: bytes,
     chunk_size: int,
-    chunk_retries: int = 3,
 ) -> UploadMediaResult | None:
+    api_client.upload_config = UploadConfig(chunk_size=chunk_size)
     file = BufferedInputFile.file(data, "f.bin")
     return await resumable_upload(
+        bot=api_client,  # type: ignore[arg-type]
         url="https://upload.example/upload.do",
         file=file,
-        bot=api_client,  # type: ignore[arg-type]
-        config=UploadConfig(chunk_size=chunk_size, chunk_retries=chunk_retries),
     )
 
 
@@ -191,7 +204,10 @@ class _TrackingInputFile(InputFile):
 
 
 async def test_stream_is_closed_when_chunk_fails() -> None:
-    session = _FakeBot([_FakeResponse(400, b"nope")])
+    session = _FakeBot(
+        [_FakeResponse(400, b"nope")],
+        upload_config=UploadConfig(chunk_size=4),
+    )
     file = _TrackingInputFile()
 
     with pytest.raises(MaxBotApiError):
@@ -199,7 +215,6 @@ async def test_stream_is_closed_when_chunk_fails() -> None:
             url="https://upload.example/upload.do",
             file=file,
             bot=session,  # type: ignore[arg-type]
-            config=UploadConfig(chunk_size=4),
         )
 
     assert file.closed is True
@@ -299,103 +314,34 @@ async def test_client_error_status_preserves_typed_api_error(
     assert len(session.calls) == 1
 
 
-async def test_server_error_is_retried_then_succeeds() -> None:
-    session = _FakeBot(
-        [
-            _FakeResponse(500, {"message": "temporary"}),
-            _FakeResponse(200, {"token": "tok"}),
-        ],
-    )
+async def test_server_error_status_raises_immediately() -> None:
+    # Ретраи 5xx теперь целиком в `ChunkUploadRetryMiddleware`
+    # (`tests/maxo/bot/test_chunk_upload_retry_middleware.py`) - тут только
+    # проверяем, что `resumable_upload` сам не ретраит и не глотает ошибку.
+    session = _FakeBot([_FakeResponse(500, b"temporary")])
 
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await _run(session, b"hello", 1024, chunk_retries=3)
+    with pytest.raises(MaxBotApiError) as exc_info:
+        await _run(session, b"hello", 1024)
 
-    assert result is not None
-    assert result.token == "tok"  # noqa: S105
-    assert len(session.calls) == 2
+    assert exc_info.value.error == "upload failed with status 500"
+    assert len(session.calls) == 1
 
 
-async def test_network_error_is_retried_then_reraised() -> None:
-    session = _FakeBot(
-        [
-            _network_error(ConnectionError("boom")),
-            _network_error(ConnectionError("boom")),
-        ],
-    )
+async def test_network_error_propagates_without_retry() -> None:
+    # См. комментарий выше - ретраи сети живут в `ChunkUploadRetryMiddleware`.
+    session = _FakeBot([_network_error(ConnectionError("boom"))])
 
-    with (
-        patch("asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(MaxBotNetworkError, match="boom") as exc_info,
-    ):
-        await _run(session, b"hello", 1024, chunk_retries=1)
+    with pytest.raises(MaxBotNetworkError, match="boom") as exc_info:
+        await _run(session, b"hello", 1024)
 
-    assert len(session.calls) == 2
-    # Исходная ошибка aiohttp не теряется.
+    assert len(session.calls) == 1
     assert isinstance(exc_info.value.__cause__, ConnectionError)
-
-
-async def test_timeout_is_retried_then_succeeds() -> None:
-    # aiohttp кидает голый TimeoutError, он не наследник ClientError.
-    session = _FakeBot(
-        [
-            _network_error(TimeoutError("timed out")),
-            _FakeResponse(200, {"token": "tok"}),
-        ],
-    )
-
-    with patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await _run(session, b"hello", 1024, chunk_retries=3)
-
-    assert result is not None
-    assert result.token == "tok"  # noqa: S105
-    assert len(session.calls) == 2
-
-
-async def test_timeout_is_reraised_after_retries() -> None:
-    session = _FakeBot(
-        [
-            _network_error(TimeoutError("timed out")),
-            _network_error(TimeoutError("timed out")),
-        ],
-    )
-
-    with (
-        patch("asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(MaxBotTimeoutError, match="timed out") as exc_info,
-    ):
-        await _run(session, b"hello", 1024, chunk_retries=1)
-
-    assert len(session.calls) == 2
-    assert isinstance(exc_info.value.__cause__, TimeoutError)
 
 
 async def test_network_error_is_a_maxo_error() -> None:
     # Ловить сетевые сбои можно одним `except MaxoError`.
     assert issubclass(MaxBotNetworkError, MaxoError)
     assert issubclass(MaxBotTimeoutError, MaxBotNetworkError)
-
-
-async def test_empty_aiohttp_error_message_falls_back_to_class_name() -> None:
-    session = _FakeBot([_network_error(ConnectionError())])
-
-    with pytest.raises(MaxBotNetworkError, match="ConnectionError"):
-        await _run(session, b"hello", 1024, chunk_retries=0)
-
-
-async def test_first_retry_waits_backoff_min_delay() -> None:
-    session = _FakeBot(
-        [
-            _FakeResponse(500, b"temporary"),
-            _FakeResponse(200, {"token": "tok"}),
-        ],
-    )
-
-    with patch("asyncio.sleep", new_callable=AsyncMock) as sleep_mock:
-        await _run(session, b"hello", 1024, chunk_retries=3)
-
-    # Первая пауза - ровно `min_delay`, а не удвоенная.
-    first_delay = sleep_mock.await_args_list[0].args[0]
-    assert first_delay == UploadConfig().chunk_backoff.min_delay
 
 
 async def test_size_mismatch_raises() -> None:
@@ -410,24 +356,6 @@ async def test_size_mismatch_raises() -> None:
             bot=session,  # type: ignore[arg-type]
             size=999,
         )
-
-
-async def test_server_error_is_raised_after_retries() -> None:
-    session = _FakeBot(
-        [
-            _FakeResponse(500, b"temporary"),
-            _FakeResponse(500, b"temporary"),
-        ],
-    )
-
-    with (
-        patch("asyncio.sleep", new_callable=AsyncMock),
-        pytest.raises(MaxBotApiError) as exc_info,
-    ):
-        await _run(session, b"hello", 1024, chunk_retries=1)
-
-    assert exc_info.value.error == "upload failed with status 500"
-    assert len(session.calls) == 2
 
 
 def test_should_use_resumable_respects_explicit_method() -> None:

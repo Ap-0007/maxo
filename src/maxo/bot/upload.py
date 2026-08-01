@@ -3,12 +3,12 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-from maxo.backoff import Backoff, BackoffConfig
+from maxo.backoff import BackoffConfig
 from maxo.bot.methods.upload.chunk_upload import UploadResponseBody, _ChunkUpload
+from maxo.bot.middlewares import ChunkUploadRetryMiddleware
 from maxo.enums import UploadType
 from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
-from maxo.errors.network import MaxBotNetworkError
 from maxo.serialization import get_retort
 from maxo.types import BaseMaxoType
 from maxo.types.upload_media_result import UploadMediaResult
@@ -18,12 +18,7 @@ if TYPE_CHECKING:
     from maxo.bot.bot import Bot
 
 _MIB = 1024 * 1024
-_OCTET_STREAM = "application/octet-stream"
-_CONTENT_TYPE = "Content-Type"
-_CONTENT_DISPOSITION = "Content-Disposition"
-_CONTENT_RANGE = "Content-Range"
 _CLIENT_ERROR_STATUS = 400
-_SERVER_ERROR_STATUS = 500
 
 _INSTANT_UPLOAD_TYPES = frozenset({UploadType.IMAGE, UploadType.VIDEO})
 
@@ -99,11 +94,9 @@ class UploadConfig(BaseMaxoType):
 
 
 async def resumable_upload(
-    *,
+    bot: "Bot",
     url: str,
     file: InputFile,
-    bot: "Bot",
-    config: UploadConfig | None = None,
     size: int | None = None,
 ) -> UploadMediaResult | None:
     """
@@ -111,8 +104,7 @@ async def resumable_upload(
 
     `size` - заранее известный размер файла в байтах
     """
-    if config is None:
-        config = UploadConfig()
+    config = bot.upload_config
 
     if size is None:
         size = await file.size()
@@ -131,17 +123,34 @@ async def resumable_upload(
         async for chunk in chunks:
             end = offset + len(chunk) - 1
             headers: dict[str, str] = {
-                _CONTENT_TYPE: _OCTET_STREAM,
-                _CONTENT_DISPOSITION: disposition,
-                _CONTENT_RANGE: f"bytes {offset}-{end}/{size}",
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": disposition,
+                "Content-Range": f"bytes {offset}-{end}/{size}",
             }
-            final_body = await _send_chunk(
-                bot=bot,
-                url=url,
-                chunk=chunk,
-                headers=headers,
-                config=config,
+            response = await bot.call_method(
+                _ChunkUpload(url=url, chunk=chunk, headers=headers),
+                middleware=[
+                    ChunkUploadRetryMiddleware(
+                        max_retries=config.chunk_retries,
+                        backoff_config=config.chunk_backoff,
+                    ),
+                ],
             )
+            body = response.data
+            if response.status_code < _CLIENT_ERROR_STATUS:
+                final_body = body
+            elif isinstance(body, dict):
+                raise_api_error(response.status_code, body)
+            else:
+                raise MaxBotApiError(
+                    code="",
+                    error=f"upload failed with status {response.status_code}",
+                    message=body.decode("utf-8", "replace")
+                    if isinstance(body, bytes)
+                    else str(body or ""),
+                    raw_data=body,
+                )
+
             offset += len(chunk)
 
     if offset != size:
@@ -152,47 +161,3 @@ async def resumable_upload(
     if not isinstance(final_body, dict):
         return None
     return get_retort().load(final_body, UploadMediaResult)
-
-
-async def _send_chunk(
-    *,
-    bot: "Bot",
-    url: str,
-    chunk: bytes,
-    headers: dict[str, str],
-    config: UploadConfig,
-) -> UploadResponseBody:
-    backoff = Backoff(config.chunk_backoff)
-    while True:
-        try:
-            # Через `bot.call_method`, а не мимо: иначе на этом пути не будет
-            # `NetworkErrorMiddleware`, и `except MaxBotNetworkError` ниже
-            # молча перестанет ловить - ретраи чанков умрут без единой ошибки.
-            response = await bot.call_method(
-                _ChunkUpload(url=url, chunk=chunk, headers=headers),
-            )
-        except MaxBotNetworkError:
-            if backoff.counter >= config.chunk_retries:
-                raise
-        else:
-            body = response.data
-            if response.status_code < _CLIENT_ERROR_STATUS:
-                return body
-            # 4xx считаем неретраибельными, ретраим только 5xx.
-            if (
-                response.status_code < _SERVER_ERROR_STATUS
-                or backoff.counter >= config.chunk_retries
-            ):
-                if isinstance(body, dict):
-                    raise_api_error(response.status_code, body)
-                raise MaxBotApiError(
-                    code="",
-                    error=f"upload failed with status {response.status_code}",
-                    message=body.decode("utf-8", "replace")
-                    if isinstance(body, bytes)
-                    else str(body or ""),
-                    raw_data=body,
-                )
-
-        backoff.next()
-        await backoff.sleep()
