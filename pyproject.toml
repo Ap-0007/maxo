@@ -77,16 +77,19 @@ dependencies = [
     "jinja2>=3.0.0,<4.0.0",
     "adaptix==3.0.0b12",
     "typing-extensions>=4.12.0,<5.0.0",
-    "multidict>=6.7.1,<7.0.0",
 ]
 
 [project.optional-dependencies]
 magic_filter = ["magic_filter>=1.0.0,<2.0.0"]
 dishka = ["dishka>=1.0.0,<2.0.0"]
 redis = ["redis[hiredis]>=5.0.1,<8.0.0"]
-fastapi = [
-    "fastapi>=0.128.0,<1.0.0; python_version <= '3.12'",
-    "fastapi>=0.138.0,<1.0.0; python_version > '3.12'"
+webhook = [
+    "multidict>=6.7.1,<7.0.0",
+    "yarl>=1.17.0,<2.0.0",
+]
+webhook_fastapi = [
+    "maxo[webhook]",
+    "fastapi>=0.128.0",
 ]
 preview = ["diagrams>=0.25.1,<1.0.0"]
 
@@ -134,7 +137,7 @@ dev = [
     { include-group = "lint" },
     { include-group = "tests" },
     { include-group = "docs" },
-    "maxo[magic_filter,dishka,redis,fastapi,preview]"
+    "maxo[magic_filter,dishka,redis,webhook,fastapi,preview]"
 ]
 
 [project.urls]

@@ -2,14 +2,16 @@ import json
 import pathlib
 import ssl
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from unihttp.clients.aiohttp import AiohttpAsyncClient
 from unihttp.middlewares import AsyncMiddleware
 from unihttp.serialize import RequestDumper, ResponseLoader
 
 from maxo.serialization import get_retort
+
+if TYPE_CHECKING:
+    from aiohttp import ClientSession, ClientTimeout
+    from unihttp.clients.aiohttp import AiohttpAsyncClient
 
 CA_CERT_PATH = (pathlib.Path(__file__).parent / "russiantrustedca.pem").resolve()
 BASE_URL = "https://platform-api2.max.ru/"
@@ -31,9 +33,15 @@ def default_client(
     json_dumps: Callable[[Any], str] = json.dumps,
     json_loads: Callable[[str | bytes | bytearray], Any] = json.loads,
     limit: int | None = None,
-    timeout: ClientTimeout | None = None,
-    session: ClientSession | None = None,
-) -> AiohttpAsyncClient:
+    timeout: "ClientTimeout | None" = None,
+    session: "ClientSession | None" = None,
+) -> "AiohttpAsyncClient":
+    # Отложенный импорт: `aiohttp` нужен только тому, кто берет клиент по
+    # умолчанию. `Bot(client=...)` с другой реализацией `BaseAsyncClient`
+    # его не тянет, как и импорт самого `maxo`.
+    from aiohttp import ClientSession, TCPConnector  # noqa: PLC0415
+    from unihttp.clients.aiohttp import AiohttpAsyncClient  # noqa: PLC0415
+
     if request_dumper is None:
         request_dumper = get_retort()
     if response_loader is None:
