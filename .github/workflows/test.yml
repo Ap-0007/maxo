@@ -37,7 +37,7 @@ jobs:
           version: 0.11.23
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Install dependencies with ${{ matrix.dependency-resolution }} resolution
         run: |
