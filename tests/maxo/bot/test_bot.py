@@ -51,13 +51,10 @@ def test_explicit_upload_config_is_preserved() -> None:
     assert bot.upload_config is config
 
 
-async def test_bot_start_and_close() -> None:
-    """`start()` only builds/ensures the client now - it must not touch the
-    network or resolve `.info` (that's `get_my_info()`'s job)."""
+async def test_bot_close() -> None:
     transport = AsyncMock()
     bot = make_bot(client=transport)
 
-    await bot.start()
     assert bot.client is transport
     assert bot.started is False
     transport.call_method.assert_not_awaited()
@@ -184,14 +181,13 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
     )
 
 
-async def test_start_never_hits_network() -> None:
-    """`start()` only ensures the client exists; repeated calls must not
-    touch the network at all."""
+async def test_client_access_never_hits_network() -> None:
+    """Accessing `.client` repeatedly must not touch the network at all."""
     mock_transport = AsyncMock()
     bot = make_bot(client=mock_transport)
 
-    await bot.start()
-    await bot.start()
+    assert bot.client is mock_transport
+    assert bot.client is mock_transport
 
     mock_transport.call_method.assert_not_awaited()
 
