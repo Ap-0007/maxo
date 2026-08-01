@@ -1,4 +1,3 @@
-import asyncio
 import io
 import pathlib
 from collections.abc import AsyncIterator, Sequence
@@ -106,7 +105,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
             warm_up()
 
         self._info: BotInfo | None = None
-        self._lock = asyncio.Lock()
 
     @property
     def client(self) -> BaseAsyncClient:
@@ -141,20 +139,18 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         return self._token
 
     @asynccontextmanager
-    async def context(self, auto_close: bool = True) -> AsyncIterator[Self]:
+    async def context(
+        self,
+        auto_close: bool = True,
+        get_my_info: bool = True,
+    ) -> AsyncIterator[Self]:
         try:
+            if get_my_info:
+                await self.get_my_info()
             yield self
         finally:
             if auto_close:
                 await self.close()
-
-    async def start(self) -> None:
-        if self._info is not None:
-            return
-        async with self._lock:
-            if self._info is not None:
-                return
-            await self.get_my_info()
 
     async def get_my_info(self) -> BotInfo:
         info = await self.client.call_method(GetMyInfo(), middleware=self.middleware)
@@ -175,7 +171,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         *,
         middleware: Sequence[AsyncMiddleware] | None = None,
     ) -> ResponseType:
-        await self.start()
         method = apply_defaults(method, self._defaults)
         result = await self.client.call_method(
             method,
@@ -251,13 +246,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
 
         `size` - заранее известный размер файла, чтобы не делать лишний `stat`.
         """
-        return await resumable_upload(
-            url=upload_url,
-            file=file,
-            bot=self,
-            config=self._upload_config,
-            size=size,
-        )
+        return await resumable_upload(bot=self, url=upload_url, file=file, size=size)
 
     # Bots
     edit_bot_info = bind_method(EditBotInfo)

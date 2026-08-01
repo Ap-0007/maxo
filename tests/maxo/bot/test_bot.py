@@ -1,4 +1,3 @@
-import asyncio
 import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -53,21 +52,15 @@ def test_explicit_upload_config_is_preserved() -> None:
 
 
 async def test_bot_start_and_close() -> None:
+    """`start()` only builds/ensures the client now - it must not touch the
+    network or resolve `.info` (that's `get_my_info()`'s job)."""
     transport = AsyncMock()
-    transport.call_method.return_value = BotInfo(
-        user_id=1,
-        is_bot=True,
-        first_name="Test",
-        username="testbot",
-        last_activity_time=NOW,
-    )
     bot = make_bot(client=transport)
-    assert bot.started is False
 
     await bot.start()
-    assert bot.started is True
-    assert bot.info.user_id == 1  # type: ignore[unreachable]
-    transport.call_method.assert_awaited_once()
+    assert bot.client is transport
+    assert bot.started is False
+    transport.call_method.assert_not_awaited()
 
     await bot.close()
     assert bot.closed is True
@@ -77,25 +70,43 @@ async def test_bot_start_and_close() -> None:
 
 async def test_bot_context(bot: Bot) -> None:
     with patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close:
-        async with bot.context():
+        async with bot.context(get_my_info=False):
             pass
         mock_close.assert_awaited_once()
 
 
+async def test_bot_context_fetches_info_by_default() -> None:
+    mock_transport = AsyncMock()
+    mock_transport.call_method.return_value = BotInfo(
+        user_id=1,
+        is_bot=True,
+        first_name="Test",
+        username="testbot",
+        last_activity_time=NOW,
+    )
+    bot = make_bot(client=mock_transport)
+
+    async with bot.context():
+        assert bot.info.user_id == 1
+
+    mock_transport.call_method.assert_awaited_once()
+
+
 async def test_bot_call_method(bot: Bot) -> None:
-    bot._info = MagicMock()  # уже "started" - call_method не должен звать start()
+    """`call_method` no longer resolves `.info` as a side effect."""
     with patch.object(bot, "_client", MagicMock()) as mock_transport:
         mock_transport.call_method = AsyncMock(return_value="test_result")
         result: object = await bot.call_method(MagicMock())
         assert result == "test_result"
         mock_transport.call_method.assert_awaited_once()
+        with pytest.raises(StateError, match="Bot info is not resolved yet"):
+            _ = bot.info
 
 
 async def test_bot_silent_call_method(
     bot: Bot,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    bot._info = MagicMock()
     with patch.object(bot, "_client", MagicMock()) as mock_transport:
         mock_transport.call_method = AsyncMock(
             side_effect=MockMaxBotApiError("test error"),
@@ -147,7 +158,7 @@ async def test_bot_async_context_manager() -> None:
 
 async def test_context_without_auto_close(bot: Bot) -> None:
     with patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close:
-        async with bot.context(auto_close=False):
+        async with bot.context(auto_close=False, get_my_info=False):
             pass
 
     mock_close.assert_not_awaited()
@@ -166,37 +177,26 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
 
     assert result is upload_result
     mock_upload.assert_awaited_once_with(
+        bot=bot,
         url="https://example.com/upload",
         file=file,
-        bot=bot,
-        config=bot.upload_config,
         size=None,
     )
 
 
-async def test_start_caches_info() -> None:
+async def test_start_never_hits_network() -> None:
+    """`start()` only ensures the client exists; repeated calls must not
+    touch the network at all."""
     mock_transport = AsyncMock()
     bot = make_bot(client=mock_transport)
 
-    if True:
-        mock_transport.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
+    await bot.start()
+    await bot.start()
 
-        await bot.start()
-        info = bot.info
-        await bot.start()
-        again = bot.info
-
-        assert info is again
-        mock_transport.call_method.assert_awaited_once()
+    mock_transport.call_method.assert_not_awaited()
 
 
-async def test_start_retries_info_after_previous_failure() -> None:
+async def test_get_my_info_retries_after_previous_failure() -> None:
     mock_transport = AsyncMock()
     bot = make_bot(client=mock_transport)
 
@@ -204,7 +204,7 @@ async def test_start_retries_info_after_previous_failure() -> None:
         mock_transport.call_method.side_effect = MockMaxBotApiError("boom")
 
         with pytest.raises(MaxBotApiError):
-            await bot.start()
+            await bot.get_my_info()
 
         assert bot.started is False
         with pytest.raises(StateError, match="Bot info is not resolved yet"):
@@ -219,7 +219,7 @@ async def test_start_retries_info_after_previous_failure() -> None:
             last_activity_time=NOW,
         )
 
-        await bot.start()
+        await bot.get_my_info()
         assert bot.info.user_id == 1
 
 
@@ -241,49 +241,19 @@ async def test_get_my_info_starts_lazily() -> None:
         assert bot.started is True
 
 
-async def test_call_method_starts_lazily_and_resolves_info() -> None:
-    """Exact scenario: `bot.send_message(...)` then `bot.info`, without ever
-    calling `start()` explicitly — both must work, not just the send."""
+async def test_call_method_does_not_resolve_info() -> None:
+    """`bot.send_message(...)` alone must not implicitly resolve `.info` —
+    only an explicit `get_my_info()`/`context()` call does that now."""
     mock_transport = AsyncMock()
     bot = make_bot(client=mock_transport)
 
-    if True:
-        info = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
-        mock_transport.call_method.side_effect = [info, "ok"]
+    mock_transport.call_method.return_value = "ok"
 
-        result: object = await bot.call_method(MagicMock())
+    result: object = await bot.call_method(MagicMock())
 
-        assert result == "ok"
-        assert bot.info is info
-
-
-async def test_get_my_info_waits_for_lock() -> None:
-    """`get_my_info` must actually respect `_lock`, not just check
-    `_info is None` — otherwise concurrent first calls could each
-    build their own transport/session and leak one."""
-    bot = make_bot()
-
-    async with bot._lock:
-        task = asyncio.create_task(bot.get_my_info())
-        await asyncio.sleep(0)
-        assert not task.done()
-
-
-async def test_start_waits_for_lock() -> None:
-    """`start` must respect `_lock` — otherwise concurrent first calls would
-    each make a redundant `get_my_info` network call."""
-    bot = make_bot()
-
-    async with bot._lock:
-        task = asyncio.create_task(bot.start())
-        await asyncio.sleep(0)
-        assert not task.done()
+    assert result == "ok"
+    with pytest.raises(StateError, match="Bot info is not resolved yet"):
+        _ = bot.info
 
 
 async def test_get_my_info_updates_cached_info_directly() -> None:
