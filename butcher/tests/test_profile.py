@@ -1,12 +1,20 @@
 """Тесты трансформаций maxo-профиля."""
 
+import copy
 import json
 from pathlib import Path
 
 import pytest
 
 from butcher import overrides
-from butcher.profile import Enum, MaxoDocument, Method, Model, build_profile
+from butcher.profile import (
+    Enum,
+    MaxoDocument,
+    Method,
+    Model,
+    ProfileError,
+    build_profile,
+)
 from butcher.spec import load
 from butcher.tests.conftest import SPEC
 
@@ -21,6 +29,12 @@ def _enum(document: MaxoDocument, name: str) -> Enum:
 
 def _method(document: MaxoDocument, name: str) -> Method:
     return next(item for item in document.methods if item.name == name)
+
+
+def _build_document(tmp_path: Path, spec: object) -> MaxoDocument:
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec), encoding="utf-8")
+    return build_profile(load(str(path)))
 
 
 def test_inheritance_keeps_only_own_fields(document: MaxoDocument) -> None:
@@ -216,3 +230,59 @@ def test_method_field_type_override(
     document = build_profile(load(str(path)))
     text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
     assert text.annotation == "list[int]"
+
+
+def test_unhandled_alias_is_rejected(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["UserIds"] = {
+        "type": "array",
+        "items": {"type": "integer"},
+    }
+
+    with pytest.raises(ProfileError, match="UserIds"):
+        _build_document(tmp_path, spec)
+
+
+def test_raw_json_body_is_rejected(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["paths"]["/raw"] = {
+        "post": {
+            "operationId": "sendRaw",
+            "tags": ["messages"],
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                        },
+                    },
+                },
+            },
+            "responses": {"204": {"description": "ok"}},
+        },
+    }
+
+    with pytest.raises(ProfileError, match="SendRaw"):
+        _build_document(tmp_path, spec)
+
+
+@pytest.mark.parametrize("description", ["candidate identifier", "updates count"])
+def test_timestamp_hint_matches_whole_words(
+    description: str,
+    tmp_path: Path,
+) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["Message"]["properties"]["value"] = {
+        "type": "integer",
+        "format": "int64",
+        "description": description,
+    }
+
+    document = _build_document(tmp_path, spec)
+    value = next(
+        item for item in _model(document, "Message").fields if item.name == "value"
+    )
+
+    assert value.annotation == "int"

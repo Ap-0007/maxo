@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 
 from unihttp_openapi_generator.ir.document import IRDocument
-from unihttp_openapi_generator.ir.models import IREnum, IRField, IRModel
+from unihttp_openapi_generator.ir.models import IRAlias, IREnum, IRField, IRModel
 from unihttp_openapi_generator.ir.operations import (
     BodyKind,
     IROperation,
@@ -193,6 +193,9 @@ class _Profile:
             for decl in document.declarations
             if isinstance(decl, IREnum)
         }
+        self._aliases: set[str] = {
+            decl.name for decl in document.declarations if isinstance(decl, IRAlias)
+        }
         self._skipped: set[str] = set()
         self._class_names: dict[str, str] = {}
         self._enums: dict[str, Enum] = {}
@@ -222,6 +225,16 @@ class _Profile:
                 name.removesuffix(overrides.UPDATE_CLASS_SUFFIX)
                 if self._is_update(name)
                 else name
+            )
+
+    def _check_aliases(self) -> None:
+        unsupported = sorted(
+            self._aliases - self._skipped - overrides.INLINE_ALIASES.keys(),
+        )
+        if unsupported:
+            raise ProfileError(
+                f"IRAlias {unsupported} не поддерживаются профилем maxo. "
+                f"Добавь их в INLINE_ALIASES или реализуй рендеринг.",
             )
 
     def _is_update(self, name: str) -> bool:
@@ -607,16 +620,10 @@ class _Profile:
             return tuple(fields)
 
         if body.json_type is not None:
-            annotation = self._annotate(body.json_type, imports)
-            fields.append(
-                Field(
-                    name="body",
-                    annotation=annotation,
-                    omittable=not body.required,
-                    marker="Body",
-                ),
+            raise ProfileError(
+                f"метод {operation.class_name!r} использует сырое JSON-тело, "
+                f"которое unihttp не умеет отправлять без обёртки",
             )
-            return tuple(fields)
 
         for body_field in body.fields:
             annotation = self._method_field_type(
@@ -646,6 +653,7 @@ class _Profile:
 
     def build(self) -> MaxoDocument:
         self._collect_skipped()
+        self._check_aliases()
         self._collect_class_names()
         self._collect_enums()
         self._collect_union_modules()
@@ -723,7 +731,10 @@ def _is_int(ir_type: IRType) -> bool:
 
 def _has_timestamp_hint(description: str | None) -> bool:
     text = (description or "").lower()
-    return any(hint in text for hint in overrides.TIMESTAMP_HINTS)
+    return any(
+        re.search(rf"\b{re.escape(hint)}\b", text)
+        for hint in overrides.TIMESTAMP_HINTS
+    )
 
 
 def _by_name(item: Field) -> str:
