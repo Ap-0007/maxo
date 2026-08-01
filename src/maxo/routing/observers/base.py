@@ -111,14 +111,7 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
 @contextmanager
 def bind_handler(ctx: Ctx, handler: Handler[Any, Any]) -> Iterator[None]:
-    """
-    Привязывает хендлер к ctx на время его фильтрации и обработки.
-
-    Фильтры и inner-мидлвари читают флаги хендлера через `get_flag` и
-    `extract_flags`, то есть по ключу `handler` в ctx. За пределами этого окна
-    восстанавливается предыдущее значение ключа, а если его не было - ключ
-    убирается, чтобы флаги не «протекли» в дочерние роутеры.
-    """
+    """Временно привязывает хендлер к `ctx`."""
     had_handler = HANDLER_KEY in ctx
     previous_handler = ctx.get(HANDLER_KEY)
 

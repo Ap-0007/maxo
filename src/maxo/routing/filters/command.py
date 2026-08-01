@@ -118,9 +118,8 @@ class Command(BaseFilter[MessageCreated]):
         )
 
     def update_handler_flags(self, flags: dict[str, Any]) -> None:
-        """Складывает фильтр во флаг `commands` хендлера."""
-        # Новый список, а не `setdefault(...).append(...)`: словарь флагов
-        # копируется поверхностно, и мутация списка утекла бы в чужие флаги
+        """Добавляет себя во флаг `commands`."""
+        # Не мутируем список из входного словаря
         flags["commands"] = [*flags.get("commands", ()), self]
 
     async def __call__(

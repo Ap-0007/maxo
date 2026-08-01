@@ -14,8 +14,7 @@ from maxo.utils.chat_action import ChatActionMiddleware
 dp = Dispatcher()
 
 
-# Флаги - это маркеры на хендлерах. Сам хендлер про них ничего не знает,
-# читают их мидлвари и утилиты через `get_flag`, `extract_flags` и `check_flags`
+# Флаги доступны фильтрам, inner-мидлварям и утилитам
 class RateLimitMiddleware(BaseMiddleware[MessageCreated]):
     def __init__(self) -> None:
         self._last_call: dict[int, float] = {}
@@ -26,7 +25,6 @@ class RateLimitMiddleware(BaseMiddleware[MessageCreated]):
         ctx: Ctx,
         next: NextMiddleware[MessageCreated],
     ) -> Any:
-        # Хендлеры без флага `rate_limit` не ограничиваются
         rate_limit = get_flag(ctx, "rate_limit")
         if rate_limit is None:
             return await next(ctx)
@@ -41,12 +39,12 @@ class RateLimitMiddleware(BaseMiddleware[MessageCreated]):
         return await next(ctx)
 
 
-# Обе мидлвари - inner: флаги хендлера доступны только после выбора хендлера
+# Флаги недоступны outer-мидлварям
 dp.message_created.middleware(RateLimitMiddleware())
 dp.message_created.middleware(ChatActionMiddleware())
 
 
-# Флаг через декоратор: значение по умолчанию - True
+# Флаг без аргументов равен True
 @dp.message_created(Command("typing"))
 @flags.chat_action
 async def typing_handler(update: MessageCreated) -> None:
@@ -54,7 +52,7 @@ async def typing_handler(update: MessageCreated) -> None:
     await update.answer(text="Всё это время бот «набирал сообщение»")
 
 
-# Флаг со значением: меняем только тип действия
+# Явное значение
 @dp.message_created(Command("photo"))
 @flags.chat_action(SenderAction.SENDING_PHOTO)
 async def photo_handler(update: MessageCreated) -> None:
@@ -62,7 +60,7 @@ async def photo_handler(update: MessageCreated) -> None:
     await update.answer(text="А тут бот «отправлял фото»")
 
 
-# Флаг с именованными аргументами: настраиваем отправщик целиком
+# Именованные параметры
 @dp.message_created(Command("file"))
 @flags.chat_action(action="sending_file", interval=3, initial_sleep=1)
 async def file_handler(update: MessageCreated) -> None:
@@ -70,7 +68,7 @@ async def file_handler(update: MessageCreated) -> None:
     await update.answer(text="Действие ушло не сразу и повторялось раз в 3 секунды")
 
 
-# Флаги можно задать и при регистрации хендлера, без декоратора
+# Флаг при регистрации
 @dp.message_created(Command("limited"), flags={"rate_limit": 5})
 async def limited_handler(update: MessageCreated) -> None:
     await update.answer(text="Эту команду можно звать раз в 5 секунд")

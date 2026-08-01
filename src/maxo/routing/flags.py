@@ -39,27 +39,19 @@ if TYPE_CHECKING:
     FlagsSource = Handler[Any, Any] | MutableMapping[str, Any] | None
 
 FLAG_ATTR_NAME: Final = "maxo_flag"
-"""Имя атрибута, в котором декораторы флагов хранят флаги на функции-хендлере."""
 
 HANDLER_KEY: Final = "handler"
-"""Ключ ctx, под которым лежит текущий хендлер во время фильтрации и обработки."""
 
 
 class AttrDict(dict[str, Any]):
-    """
-    Словарь с доступом к значениям через атрибуты.
-
-    Нужен, чтобы `magic_filter` мог обращаться к значениям флага как к атрибутам,
-    например `F.chat_action.action`. Повторяет `magic_filter.AttrDict`, потому что
-    `magic_filter` - опциональная зависимость `maxo`.
-    """
+    """Словарь с доступом к значениям как к атрибутам без `magic_filter`."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.__dict__ = self
 
     if TYPE_CHECKING:
-        # Значения читаются как атрибуты, но их имена известны только в рантайме
+        # Имена атрибутов определяются в рантайме
         def __getattr__(self, name: str) -> Any: ...
 
 
@@ -73,12 +65,7 @@ class Flag:
 
 @dataclass(frozen=True, slots=True)
 class FlagDecorator:
-    """
-    Декоратор, навешивающий флаг на функцию-хендлер.
-
-    Вызов с функцией навешивает флаг, вызов со значением или именованными
-    аргументами возвращает новый декоратор с этим значением.
-    """
+    """Декоратор, добавляющий флаг хендлеру."""
 
     flag: Flag
 
@@ -120,19 +107,7 @@ class FlagDecorator:
 
 
 class FlagGenerator:
-    """
-    Генератор декораторов флагов.
-
-    Любой атрибут - это новый флаг с этим именем и значением `True`:
-
-    ```python
-    from maxo import flags
-
-
-    @flags.chat_action
-    async def handler(update: MessageCreated) -> None: ...
-    ```
-    """
+    """Создаёт декораторы флагов через атрибуты."""
 
     __slots__ = ()
 
@@ -143,20 +118,11 @@ class FlagGenerator:
 
 
 flags = FlagGenerator()
-"""Точка входа для навешивания флагов на хендлеры."""
+"""Генератор декораторов флагов."""
 
 
 def extract_flags_from_object(obj: Any) -> dict[str, Any]:
-    """
-    Достаёт флаги, навешенные декораторами на объект.
-
-    Args:
-        obj: функция-хендлер или любой другой объект.
-
-    Returns:
-        Словарь флагов, пустой если флагов нет.
-
-    """
+    """Возвращает флаги, добавленные декораторами."""
     obj_flags = getattr(obj, FLAG_ATTR_NAME, None)
     if obj_flags is None:
         return {}
@@ -168,21 +134,7 @@ def resolve_handler_flags(
     filters: Sequence[Filter[Any]] = (),
     flags: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """
-    Собирает итоговые флаги хендлера.
-
-    Приоритет по возрастанию: явно переданные `flags`, флаги от фильтров,
-    флаги от декораторов на функции-хендлере.
-
-    Args:
-        handler_fn: функция-хендлер.
-        filters: фильтры хендлера.
-        flags: флаги, переданные при регистрации.
-
-    Returns:
-        Словарь флагов хендлера.
-
-    """
+    """Собирает флаги регистрации, фильтров и декораторов."""
     resolved: dict[str, Any] = dict(flags) if flags else {}
 
     for filter_ in filters:
@@ -190,24 +142,14 @@ def resolve_handler_flags(
         if update_handler_flags is not None:
             update_handler_flags(resolved)
 
-    # Флаги ищутся и на обёртке, и под ней: декоратор флага мог оказаться как
-    # выше, так и ниже декоратора, оборачивающего хендлер
+    # Декоратор флага может быть с любой стороны обёртки
     resolved.update(extract_flags_from_object(inspect.unwrap(handler_fn)))
     resolved.update(extract_flags_from_object(handler_fn))
     return resolved
 
 
 def extract_flags(source: "FlagsSource") -> dict[str, Any]:
-    """
-    Достаёт флаги из хендлера или из ctx.
-
-    Args:
-        source: хендлер или ctx мидлвари/фильтра.
-
-    Returns:
-        Словарь всех флагов хендлера, пустой если флагов нет.
-
-    """
+    """Возвращает флаги из хендлера или `ctx`."""
     if isinstance(source, (dict, MutableMapping)) and HANDLER_KEY in source:
         source = source[HANDLER_KEY]
 
@@ -223,16 +165,5 @@ def get_flag(
     *,
     default: Any | None = None,
 ) -> Any:
-    """
-    Достаёт значение флага по имени.
-
-    Args:
-        source: хендлер или ctx мидлвари/фильтра.
-        name: имя флага.
-        default: значение по умолчанию, если флага нет.
-
-    Returns:
-        Значение флага или `default`.
-
-    """
+    """Возвращает значение флага или `default`."""
     return extract_flags(source).get(name, default)

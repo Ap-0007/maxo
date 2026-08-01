@@ -48,19 +48,7 @@ CHAT_ACTION_KEY: Final = "chat_action"
 
 
 class ChatActionSender:
-    """
-    Шлёт действие бота в чат, пока выполняется долгая операция.
-
-    MAX показывает действие («бот набирает сообщение», «бот отправляет фото»)
-    ограниченное время, поэтому его надо переотправлять. Отправкой занимается
-    фоновая задача, которая живёт, пока открыт асинхронный контекстный менеджер:
-
-    ```python
-    async with ChatActionSender.typing_on(bot=bot, chat_id=chat_id):
-        result = await do_something_long()
-    await update.answer(text=result)
-    ```
-    """
+    """Отправляет действие бота, пока открыт асинхронный контекст."""
 
     __slots__ = (
         "_close_event",
@@ -83,17 +71,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> None:
-        """
-        Создаёт отправщик действий, не запуская его.
-
-        Args:
-            bot: экземпляр бота.
-            chat_id: ID чата, в который шлётся действие.
-            action: тип действия.
-            interval: интервал между отправками в секундах.
-            initial_sleep: задержка перед первой отправкой в секундах.
-
-        """
         self.bot = bot
         self.chat_id = chat_id
         self.action = SenderAction(action)
@@ -107,7 +84,7 @@ class ChatActionSender:
 
     @property
     def running(self) -> bool:
-        """Фоновая задача отправки действий запущена."""
+        """Запущена ли фоновая отправка."""
         return bool(self._task)
 
     async def _wait(self, interval: float) -> None:
@@ -134,8 +111,7 @@ class ChatActionSender:
                 try:
                     await self.bot.send_action(chat_id=self.chat_id, action=self.action)
                 except Exception:  # noqa: BLE001
-                    # Иначе исключение остаётся в брошенной задаче и всплывает
-                    # как "Task exception was never retrieved"
+                    # Ошибка фоновой отправки не должна прерывать хендлер
                     loggers.utils.warning(
                         "Не удалось отправить действие %r в chat_id=%s",
                         self.action,
@@ -171,8 +147,7 @@ class ChatActionSender:
                     self._close_event.set()
                     await self._closed_event.wait()
             finally:
-                # Ожидание могут отменить (например при остановке бота),
-                # иначе задача останется слать действия в чат навсегда
+                # Не оставляем задачу работать после отмены `_stop`
                 task, self._task = self._task, None
                 if task is not None and not task.done():
                     task.cancel()
@@ -310,20 +285,7 @@ class ChatActionSender:
 
 
 class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
-    """
-    Inner-мидлварь: шлёт действие бота, пока работает хендлер.
-
-    Подключается к нужному обсёрверу:
-
-    ```python
-    dp.message_created.middleware(ChatActionMiddleware())
-    ```
-
-    Дефолты задаются в конструкторе, конкретный хендлер переопределяет их флагом
-    `chat_action`: строкой/`SenderAction` меняется только тип действия,
-    именованными аргументами - вся конфигурация отправщика, а `False` или `None`
-    полностью выключают отправку для этого хендлера.
-    """
+    """Отправляет действие бота с учётом флага `chat_action`."""
 
     __slots__ = ("_action", "_initial_sleep", "_interval")
 
@@ -333,16 +295,6 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> None:
-        """
-        Создаёт мидлварь с дефолтами отправщика.
-
-        Args:
-            action: тип действия по умолчанию.
-            interval: интервал между отправками в секундах.
-            initial_sleep: задержка перед первой отправкой в секундах. Ненулевое
-                значение избавляет короткие хендлеры от лишнего запроса к API.
-
-        """
         self._action = SenderAction(action)
         self._interval = interval
         self._initial_sleep = initial_sleep
@@ -377,7 +329,6 @@ class ChatActionMiddleware(BaseMiddleware[BaseUpdate]):
         return None
 
     def _resolve_sender_kwargs(self, ctx: Ctx) -> dict[str, Any] | None:
-        """Собирает аргументы отправщика или `None`, если действие выключено."""
         chat_action = get_flag(ctx, CHAT_ACTION_KEY, default=True)
 
         if chat_action is None or chat_action is False:

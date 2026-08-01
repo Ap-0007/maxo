@@ -113,13 +113,7 @@ class CallbackAnswer:
 
 
 class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
-    """
-    Inner-middleware: автоматически отвечает на колбэк.
-
-    Дефолты задаются в конструкторе, конкретный хендлер переопределяет их
-    флагом `callback_answer`, а во время работы хендлер может домутировать
-    `CallbackAnswer` из ctx.
-    """
+    """Автоматически отвечает на колбэк с учётом флага `callback_answer`."""
 
     __slots__ = ("_before", "_disabled", "_notification")
 
@@ -152,25 +146,14 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
                 await self._answer(update, answer)
 
     def construct_callback_answer(self, properties: Any) -> CallbackAnswer:
-        """
-        Собирает `CallbackAnswer` из дефолтов мидлвари и значения флага.
-
-        Args:
-            properties: значение флага `callback_answer`. Словарь переопределяет
-                дефолты по ключам `disabled`, `before` и `notification`,
-                `bool` включает или выключает авто-ответ, `None` ничего не меняет.
-
-        Returns:
-            Настроенный `CallbackAnswer`.
-
-        """
+        """Объединяет настройки мидлвари со значением флага."""
         disabled, before, notification = (
             self._disabled,
             self._before,
             self._notification,
         )
 
-        if properties is None:  # хендлер не помечен флагом - только дефолты
+        if properties is None:
             return CallbackAnswer(
                 disabled=disabled,
                 before=before,
@@ -195,7 +178,4 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
             await update.answer(notification=answer.notification)
         else:
             await update.answer()
-        # `answered` намеренно read-only для хендлеров (публичного сеттера нет),
-        # а middleware и CallbackAnswer - тесно связаны в одном модуле,
-        # поэтому внутренний флаг ставим напрямую
-        answer._answered = True  # noqa: SLF001
+        answer._answered = True  # noqa: SLF001 - объект принадлежит мидлвари

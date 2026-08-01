@@ -27,14 +27,12 @@ def make_bot_info(
 
 
 async def _stub_handler(update: BaseUpdate) -> None:
-    """Хендлер-заглушка: важны только его флаги, не тело."""
+    pass
 
 
 def make_flagged_handler(**flags: Any) -> UpdateHandler[Any, None]:
-    """Зарегистрированный хендлер с заданными флагами."""
     return UpdateHandler(_stub_handler, flags=flags)
 
 
 def make_flagged_ctx(**flags: Any) -> Ctx:
-    """Ctx с привязанным хендлером, как его видят фильтры и inner-мидлвари."""
     return Ctx({HANDLER_KEY: make_flagged_handler(**flags)})

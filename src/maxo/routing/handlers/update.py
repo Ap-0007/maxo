@@ -63,7 +63,7 @@ class UpdateHandler(
 
     @property
     def flags(self) -> dict[str, Any]:
-        """Флаги-маркеры хендлера."""
+        """Флаги хендлера."""
         self._flags.update(resolve_handler_flags(self._handler_fn))
         return self._flags
 

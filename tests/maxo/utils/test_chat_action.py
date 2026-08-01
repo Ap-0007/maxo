@@ -86,7 +86,6 @@ def make_ctx_with_flags(update: Any, bot: Any, **handler_flags: Any) -> Ctx:
 
 
 async def _next_slow(ctx: Ctx) -> str:
-    """`next`, который работает достаточно долго, чтобы действие успело уйти."""
     await asyncio.sleep(0.05)
     return "OK"
 
@@ -157,10 +156,10 @@ class TestChatActionSender:
 
     async def test_context_manager(self, bot: AsyncMock) -> None:
         sender = ChatActionSender.typing_on(bot=cast(Bot, bot), chat_id=CHAT_ID)
-        # Через список, потому что mypy сужает `sender.running` после assert
+        # Список не даёт mypy сузить `running` до `False`.
         states: list[bool] = [sender.running]
 
-        await sender._stop()  # ничего не делает, воркер не запущен
+        await sender._stop()
 
         async with sender:
             states.append(sender.running)
