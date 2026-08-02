@@ -1,7 +1,7 @@
 import dataclasses
 import typing
 from functools import cache
-from typing import TYPE_CHECKING, Any, Final, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from maxo.types.base import BaseMaxoType, BotMixin
 
@@ -19,27 +19,26 @@ def _flatten(hint: Any) -> list[Any]:
 
 @cache
 def _field_models(tp: Any) -> tuple[tuple[str, tuple[type, ...]], ...]:
-    """Для каждого поля - модели, которые могут в нем лежать."""
+    """Для каждого поля - модели BaseMaxoType, спрятанные в хинте на любой глубине."""
     if not dataclasses.is_dataclass(tp):
         return ()
 
     hints = typing.get_type_hints(tp)
-    return tuple(
-        (
-            field.name,
-            tuple(
-                hint
-                for hint in _flatten(hints.get(field.name, field.type))
-                if isinstance(hint, type) and issubclass(hint, BaseMaxoType)
-            ),
-        )
-        for field in dataclasses.fields(tp)
-    )
+    field_models = []
+    for field in dataclasses.fields(tp):
+        hint = hints.get(field.name, field.type)
+
+        models = []
+        for part in _flatten(hint):
+            if isinstance(part, type) and issubclass(part, BaseMaxoType):
+                models.append(part)  # noqa: PERF401
+
+        field_models.append((field.name, tuple(models)))
+
+    return tuple(field_models)
 
 
-_BINDS: dict[type, bool] = {}
-
-
+@cache
 def _binds_bot(tp: Any) -> bool:
     """
     Найдется ли BotMixin в самом tp или в его полях на любой глубине.
@@ -47,12 +46,14 @@ def _binds_bot(tp: Any) -> bool:
     По ответу решается, спускаться ли в такое поле при обходе. DFS + memo,
     граф ациклический (test_type_graph_is_acyclic), поэтому рекурсия конечна.
     """
-    binds = _BINDS.get(tp)
-    if binds is None:
-        binds = _BINDS[tp] = issubclass(tp, BotMixin) or any(
-            _binds_bot(model) for _, models in _field_models(tp) for model in models
-        )
-    return binds
+    if issubclass(tp, BotMixin):
+        return True
+
+    for _, models in _field_models(tp):
+        if any(_binds_bot(model) for model in models):
+            return True
+
+    return False
 
 
 def warm(*roots: Any) -> None:
@@ -75,45 +76,56 @@ def warm(*roots: Any) -> None:
             continue
         seen.add(current)
 
-        _, names = _PLANS[current]
+        _, _, fields = _PLANS[current]
         for name, models in _field_models(current):
-            if name in names:
+            if name in fields:
                 stack.extend(models)
 
-_SEQUENCE: Final = "<sequence>"
-_MAPPING: Final = "<mapping>"
 
-_Plan: TypeAlias = tuple[bool, tuple[str, ...] | str]
-_SKIP: Final[_Plan] = (False, ())
+_SEQUENCE: Final = object()
+_MAPPING: Final = object()
+_OBJECT: Final = object()
 
 
-class _Plans(dict[type, _Plan]):
-    """План на класс: ставить ли бота и в какие поля спускаться."""
+class Plan(NamedTuple):
+    kind: object
+    set_bot: bool = False
+    fields: tuple[str, ...] = ()
 
-    def __missing__(self, class_: type) -> _Plan:
-        plan: _Plan
 
-        if issubclass(class_, (list, tuple)):
-            plan = (False, _SEQUENCE)
-        elif issubclass(class_, dict):  # UploadMediaResult.photos
-            plan = (False, _MAPPING)
-        elif issubclass(class_, BaseMaxoType):
-            plan = (
-                issubclass(class_, BotMixin),
-                tuple(
-                    name
-                    for name, models in _field_models(class_)
-                    if any(_binds_bot(model) for model in models)
-                ),
-            )
-        elif issubclass(class_, BotMixin):
-            # Фасады: бота ставим, но спускаться некуда - это не dataclass.
-            plan = (True, ())
-        else:
-            plan = _SKIP
+_SKIP = Plan(kind=_OBJECT)
 
-        self[class_] = plan
+
+class _Plans(dict[type, Plan]):
+    """Кэш `Plan` на класс, считается один раз при первом обращении."""
+
+    def __missing__(self, class_: type) -> Plan:
+        self[class_] = plan = self._compute_plan(class_)
         return plan
+
+    @staticmethod
+    def _compute_plan(class_: type) -> Plan:
+        if issubclass(class_, (list, tuple)):
+            return Plan(kind=_SEQUENCE)
+        if issubclass(class_, dict):  # UploadMediaResult.photos
+            return Plan(kind=_MAPPING)
+        if issubclass(class_, BotMixin) and not issubclass(class_, BaseMaxoType):
+            # Фасады: бота ставим, но спускаться некуда - это не dataclass.
+            return Plan(kind=_OBJECT, set_bot=True)
+        if not issubclass(class_, BaseMaxoType):
+            return _SKIP
+
+        bound_fields = []
+        for name, models in _field_models(class_):
+            field_binds_bot = any(_binds_bot(model) for model in models)
+            if field_binds_bot:
+                bound_fields.append(name)
+
+        return Plan(
+            kind=_OBJECT,
+            set_bot=issubclass(class_, BotMixin),
+            fields=tuple(bound_fields),
+        )
 
 
 _PLANS = _Plans()
@@ -129,20 +141,20 @@ def bind_bot[T](obj: T, bot: "Bot") -> T:
 
     while stack:
         current = stack.pop()
-        set_bot, names = _PLANS[current.__class__]
+        kind, set_bot, fields = _PLANS[current.__class__]
 
-        if names is _SEQUENCE:
+        if kind is _SEQUENCE:
             stack.extend(current)
             continue
 
-        if names is _MAPPING:
+        if kind is _MAPPING:
             stack.extend(current.values())
             continue
 
         if set_bot:
             current._bot = bot  # noqa: SLF001
 
-        for name in names:
+        for name in fields:
             value = getattr(current, name)
             if value is not None:
                 stack.append(value)
