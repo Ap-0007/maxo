@@ -1,5 +1,4 @@
 import dataclasses
-import sys
 import typing
 from functools import cache
 from typing import TYPE_CHECKING, Any, Final, TypeAlias
@@ -24,7 +23,7 @@ def _field_models(tp: Any) -> tuple[tuple[str, tuple[type, ...]], ...]:
     if not dataclasses.is_dataclass(tp):
         return ()
 
-    hints = typing.get_type_hints(tp, globalns=vars(sys.modules[tp.__module__]))
+    hints = typing.get_type_hints(tp)
     return tuple(
         (
             field.name,

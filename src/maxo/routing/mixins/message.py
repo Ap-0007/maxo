@@ -27,9 +27,6 @@ class MessageMethodsFacade(ChatMethodsFacade):
         def message(self) -> "Message | None":
             raise NotImplementedError
 
-    else:
-        message: "Message | None"
-
     @property
     def unsafe_message(self) -> "Message":
         """
