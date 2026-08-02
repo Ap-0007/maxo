@@ -1,4 +1,4 @@
-from maxo.bot.binding import bind_bot
+from maxo.bot.binding import _field_models, bind_bot
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
 from maxo.bot.warming_up import DUMPED_ROOTS, LOADED_ROOTS
@@ -119,3 +119,28 @@ def test_defaults_land_in_dumped_request() -> None:
 
     edit = retort.dump(apply_defaults(EditMessage(message_id="m", text="hi"), defaults))
     assert edit["body"]["format"] == "html"
+
+
+def test_type_graph_is_acyclic() -> None:
+    """
+    _binds_bot рекурсивен и защиты от циклов не имеет.
+
+    DFS + раскраска. Пример цикла: (A.b: B, B.a: A)
+    """
+    visiting: set[type] = set()
+    visited: set[type] = set()
+
+    def visit(current: type, path: list[str]) -> None:
+        if current in visited:
+            return
+        assert current not in visiting, f"цикл в графе типов: {' -> '.join(path)}"
+
+        visiting.add(current)
+        for _, models in _field_models(current):
+            for model in models:
+                visit(model, [*path, model.__name__])
+        visiting.discard(current)
+        visited.add(current)
+
+    for root in LOADED_ROOTS:
+        visit(root, [root.__name__])
