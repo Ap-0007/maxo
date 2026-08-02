@@ -130,11 +130,6 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
             return filter_result
         return not filter_result
 
-    def update_handler_flags(self, flags: dict[str, Any]) -> None:
-        update_handler_flags = getattr(self._filter, "update_handler_flags", None)
-        if update_handler_flags is not None:
-            update_handler_flags(flags)
-
     def _inlining(self) -> None:
         if isinstance(self._filter, InvertFilter):
             self._filter = self._filter._filter

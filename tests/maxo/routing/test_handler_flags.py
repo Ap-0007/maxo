@@ -11,10 +11,10 @@ from maxo.routing.flags import HANDLER_KEY, extract_flags, flags, get_flag
 from maxo.routing.interfaces.middleware import NextMiddleware
 from maxo.routing.observers.base import bind_handler
 from maxo.routing.routers.simple import Router
-from maxo.routing.signals import BeforeStartup
+from maxo.routing.signals import BeforeStartup, MaxoUpdate
 from maxo.types import Message, MessageBody, MessageCreated, Recipient, User
 from tests.constants import NOW
-from tests.factories import make_flagged_handler
+from tests.factories import make_bot, make_flagged_handler
 
 
 @pytest.fixture
@@ -199,13 +199,22 @@ class TestFiltersUpdateFlags:
                 "commands": [start, help_],
             }
 
-    def test_inverted_command_filter_registers_commands_flag(self) -> None:
+    def test_inverted_filter_does_not_register_nested_flags(self) -> None:
         router = Router()
-        command = Command("start")
 
-        router.message_created.handler(handler, ~command)
+        router.message_created.handler(handler, ~Command("start"))
 
-        assert router.message_created.handlers[0].flags == {"commands": [command]}
+        assert router.message_created.handlers[0].flags == {}
+
+    def test_inversion_inside_logic_filter_does_not_register_nested_flags(
+        self,
+    ) -> None:
+        router = Router()
+        help_ = Command("help")
+
+        router.message_created.handler(handler, help_ & ~Command("start"))
+
+        assert router.message_created.handlers[0].flags == {"commands": [help_]}
 
 
 class TestFlagsInRuntime:
@@ -313,6 +322,28 @@ class TestFlagsInRuntime:
         await dp.feed_signal(BeforeStartup())
         assert await dp.trigger(ctx) == "OK"
         assert seen == [{}]
+
+    async def test_internal_handler_does_not_leak_to_outer_middleware(
+        self,
+        update: MessageCreated,
+    ) -> None:
+        dp = Dispatcher(disable_fsm=True)
+        seen: list[bool] = []
+
+        async def middleware(
+            update: MessageCreated,
+            ctx: Ctx,
+            next: NextMiddleware[MessageCreated],
+        ) -> Any:
+            seen.append(HANDLER_KEY in ctx)
+            return await next(ctx)
+
+        dp.message_created.middleware.outer(middleware)
+        dp.message_created.handler(handler)
+
+        await dp.feed_signal(BeforeStartup())
+        assert await dp.feed_max_update(MaxoUpdate(update=update), make_bot()) == "OK"
+        assert seen == [False]
 
     async def test_handler_key_is_cleaned_when_unhandled(self, ctx: Ctx) -> None:
         dp = Dispatcher()
