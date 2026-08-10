@@ -49,3 +49,5 @@ def main() -> FastAPI:
 
 logging.basicConfig(level=logging.DEBUG)
 app = main()
+
+# TOKEN=f9LHod fastapi dev ./examples/webhook_fastapi.py
