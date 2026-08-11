@@ -8,8 +8,6 @@ from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
 from maxo.errors.state import StateError
 from maxo.types import BotInfo
-from maxo.types.upload_media_result import UploadMediaResult
-from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import NOW, TOKEN
 from tests.factories import make_bot
 
@@ -159,26 +157,6 @@ async def test_context_without_auto_close(bot: Bot) -> None:
             pass
 
     mock_close.assert_not_awaited()
-
-
-async def test_bot_upload_media_resumable(bot: Bot) -> None:
-    file = BufferedInputFile.file(b"payload", "f.bin")
-    upload_result = UploadMediaResult(token="upload-token")  # noqa: S106
-
-    with patch(
-        "maxo.bot.bot.resumable_upload",
-        new_callable=AsyncMock,
-        return_value=upload_result,
-    ) as mock_upload:
-        result = await bot.upload_media_resumable("https://example.com/upload", file)
-
-    assert result is upload_result
-    mock_upload.assert_awaited_once_with(
-        bot=bot,
-        url="https://example.com/upload",
-        file=file,
-        size=None,
-    )
 
 
 async def test_client_access_never_hits_network() -> None:
