@@ -93,10 +93,10 @@ def warm_up(
 ) -> None:
     from maxo.serialization import get_retort  # noqa: PLC0415 - avoids import cycle
 
-    target = get_retort() if retort is None else retort
+    if retort is None:
+        retort = get_retort()
 
-    loaded_roots = _LOADED_ROOTS if loaded is None else loaded
-    for type_ in loaded_roots:
-        target.get_loader(type_)
+    for type_ in _LOADED_ROOTS if loaded is None else loaded:
+        retort.get_loader(type_)
     for type_ in _DUMPED_ROOTS if dumped is None else dumped:
-        target.get_dumper(type_)
+        retort.get_dumper(type_)
