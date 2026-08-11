@@ -1,6 +1,6 @@
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
-from maxo.bot.warming_up import DUMPED_ROOTS, LOADED_ROOTS
+from maxo.bot.warming_up import _DUMPED_ROOTS, _LOADED_ROOTS
 from maxo.enums import TextFormat
 from maxo.omit import is_defined, is_omitted
 from maxo.serialization import get_retort
@@ -104,9 +104,9 @@ def test_warm_roots_cover_every_top_level_load() -> None:
     Сверху грузятся только `Updates` и возвращаемые типы методов -
     unihttp делает `response_loader.load(data, method.__returning__)`
     """
-    returning = {method.__returning__ for method in DUMPED_ROOTS}
-    assert returning <= set(LOADED_ROOTS)
-    assert Updates in LOADED_ROOTS
+    returning = {method.__returning__ for method in _DUMPED_ROOTS}
+    assert returning <= set(_LOADED_ROOTS)
+    assert Updates in _LOADED_ROOTS
 
 
 def test_defaults_land_in_dumped_request() -> None:
@@ -154,5 +154,5 @@ def test_type_graph_is_acyclic() -> None:
         visiting.discard(current)
         visited.add(current)
 
-    for root in LOADED_ROOTS:
+    for root in _LOADED_ROOTS:
         visit(root, [getattr(root, "__name__", str(root))])

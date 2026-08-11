@@ -42,7 +42,7 @@ from maxo.bot.methods import (
 )
 from maxo.types import Updates
 
-DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
+_DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     AddMembers,
     AnswerOnCallback,
     DeleteAdmin,
@@ -79,9 +79,9 @@ DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     UploadMedia,
 )
 
-LOADED_ROOTS: tuple[Any, ...] = (
+_LOADED_ROOTS: tuple[Any, ...] = (
     Updates,
-    *dict.fromkeys(method.__returning__ for method in DUMPED_ROOTS),
+    *dict.fromkeys(method.__returning__ for method in _DUMPED_ROOTS),
 )
 
 
@@ -95,8 +95,8 @@ def warm_up(
 
     target = get_retort() if retort is None else retort
 
-    loaded_roots = LOADED_ROOTS if loaded is None else loaded
+    loaded_roots = _LOADED_ROOTS if loaded is None else loaded
     for type_ in loaded_roots:
         target.get_loader(type_)
-    for type_ in DUMPED_ROOTS if dumped is None else dumped:
+    for type_ in _DUMPED_ROOTS if dumped is None else dumped:
         target.get_dumper(type_)
