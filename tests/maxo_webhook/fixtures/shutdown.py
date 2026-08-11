@@ -51,8 +51,8 @@ class BlockingDispatcher(DummyDispatcher):
         return self.result
 
 
-class TrackableTransport(BaseAsyncClient):
-    """Fake unihttp transport that answers GetMyInfo and tracks whether it was closed."""
+class TrackableClient(BaseAsyncClient):
+    """Fake unihttp client that answers GetMyInfo and tracks whether it was closed."""
 
     def __init__(self, bot_id: int = 42) -> None:
         super().__init__(
@@ -81,7 +81,7 @@ class TrackableTransport(BaseAsyncClient):
                 cookies={},
                 raw_response=None,
             )
-        raise NotImplementedError(f"TrackableTransport can't answer {request.url!r}")
+        raise NotImplementedError(f"TrackableClient can't answer {request.url!r}")
 
     async def close(self) -> None:
         self.closed = True

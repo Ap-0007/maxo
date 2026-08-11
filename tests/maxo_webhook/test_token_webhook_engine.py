@@ -6,7 +6,7 @@ from maxo.transport.webhook.configs.bot import BotConfig
 from maxo.transport.webhook.engines.token import TokenEngine
 from tests.maxo_webhook.fixtures.shutdown import (
     BlockingShutdownDispatcher,
-    TrackableTransport,
+    TrackableClient,
 )
 from tests.maxo_webhook.fixtures.web_request import DummyWebRequest
 from tests.maxo_webhook.fixtures.webhook_engine import (
@@ -24,12 +24,12 @@ async def test_token_webhook_engine_dispatches_to_bot_resolved_from_route_token(
     update_request: DummyWebRequest,
 ) -> None:
     dispatcher = DummyDispatcher()
-    transport = TrackableTransport(bot_id=bot_id)
+    client = TrackableClient(bot_id=bot_id)
     engine = TokenEngine(
         dispatcher,
         web=adapter,
         route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
-        bot_config=BotConfig(client=transport),
+        bot_config=BotConfig(client=client),
     )
 
     response = await engine.handle_request(update_request)
@@ -60,7 +60,7 @@ async def test_token_webhook_engine_returns_not_found_when_route_token_is_missin
         dispatcher,
         web=adapter,
         route=DummyRoute(route_params),  # ty:ignore[invalid-argument-type]
-        bot_config=BotConfig(client=TrackableTransport()),
+        bot_config=BotConfig(client=TrackableClient()),
     )
 
     response = await engine.handle_request(update_request)
@@ -83,12 +83,12 @@ async def test_token_background_engine_rejects_request_during_shutdown_without_c
     update_request: DummyWebRequest,
 ) -> None:
     dispatcher = BlockingShutdownDispatcher()
-    transport = TrackableTransport(bot_id=bot_id)
+    client = TrackableClient(bot_id=bot_id)
     engine = TokenEngine(
         dispatcher,
         web=adapter,
         route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
-        bot_config=BotConfig(client=transport),
+        bot_config=BotConfig(client=client),
     )
 
     shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]
@@ -119,12 +119,12 @@ async def test_token_foreground_engine_rejects_request_during_shutdown_without_c
     update_request: DummyWebRequest,
 ) -> None:
     dispatcher = BlockingShutdownDispatcher()
-    transport = TrackableTransport(bot_id=bot_id)
+    client = TrackableClient(bot_id=bot_id)
     engine = TokenEngine(
         dispatcher,
         web=adapter,
         route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
-        bot_config=BotConfig(client=transport),
+        bot_config=BotConfig(client=client),
     )
 
     shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]

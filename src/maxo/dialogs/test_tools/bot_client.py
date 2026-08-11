@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock
 
+from unihttp.clients.base import BaseAsyncClient
+
 from maxo import Bot, Dispatcher
 from maxo.enums import ChatStatus, ChatType, MessageLinkType
 from maxo.omit import Omitted
@@ -40,7 +42,7 @@ class FakeBot(Bot):
             is_bot=True,
             last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
         )
-        self._transport = AsyncMock()
+        self._client = cast(BaseAsyncClient, AsyncMock())
 
     # `Bot.answer_on_callback` - это атрибут `bind_method(...)`, а не метод,
     # поэтому подмена его в наследнике для mypy выглядит как covariant override.

@@ -8,7 +8,7 @@ from maxo.transport.webhook.engines.single import SingleBotEngine
 from tests.maxo_webhook.fixtures.shutdown import (
     BlockingDispatcher,
     BlockingShutdownDispatcher,
-    TrackableTransport,
+    TrackableClient,
 )
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
 from tests.maxo_webhook.fixtures.webhook_engine import (
@@ -143,8 +143,8 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
     adapter: CapturingAdapter,
     update_request: DummyWebRequest,
 ) -> None:
-    transport = TrackableTransport(bot_id=42)
-    bot = Bot("42:TEST", client=transport, warming_up=False)
+    client = TrackableClient(bot_id=42)
+    bot = Bot("42:TEST", client=client, warming_up=False)
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -162,8 +162,8 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
     if engine._task_tracker._tasks:
         await asyncio.wait_for(asyncio.gather(*engine._task_tracker._tasks), timeout=1)
 
-    # Транспорт создали снаружи - бот его не закрывает, даже при shutdown
-    assert transport.closed is False
+    # Клиент создали снаружи - бот его не закрывает, даже при shutdown
+    assert client.closed is False
     assert bot.closed is True
     assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
     assert dispatcher.background_updates == []
@@ -175,8 +175,8 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
     adapter: CapturingAdapter,
     update_request: DummyWebRequest,
 ) -> None:
-    transport = TrackableTransport(bot_id=42)
-    bot = Bot("42:TEST", client=transport)
+    client = TrackableClient(bot_id=42)
+    bot = Bot("42:TEST", client=client)
     dispatcher = BlockingShutdownDispatcher()
     engine = SingleBotEngine(
         dispatcher,
@@ -190,8 +190,8 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
 
     response = await engine.handle_request(update_request)
 
-    # Транспорт создали снаружи - бот его не закрывает, даже при shutdown.
-    assert transport.closed is False
+    # Клиент создали снаружи - бот его не закрывает, даже при shutdown.
+    assert client.closed is False
     assert bot.closed is True
     assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
     assert dispatcher.foreground_updates == []
