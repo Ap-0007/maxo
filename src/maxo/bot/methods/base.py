@@ -8,18 +8,6 @@ from maxo.errors.api import raise_api_error
 from maxo.types.base import MaxoType
 
 
-class MaxoStreamMethod(StreamMethod, MaxoType):
-    """
-    Базовый метод для стриминговых методов Bot API Max.
-
-    Тело ответа не буферизуется, поэтому `raise_api_error` вызывается
-    только по `status_code` (без тела с `code`/`error`/`message`).
-    """
-
-    def on_error(self, response: HTTPResponse[Any]) -> None:
-        raise_api_error(response.status_code, None)
-
-
 class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
     """
     Базовый метод для методов Bot API Max.
@@ -44,3 +32,10 @@ class MaxoMethod[MethodResultT](BaseMethod[MethodResultT], MaxoType):
 
     def on_error(self, response: HTTPResponse[Any]) -> None:
         raise_api_error(response.status_code, response.data)
+
+
+class MaxoStreamMethod(StreamMethod, MaxoType):
+    """Базовый метод для стриминговых методов Bot API Max."""
+
+    def on_error(self, response: HTTPResponse[Any]) -> None:
+        raise_api_error(response.status_code, None)
