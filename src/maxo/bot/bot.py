@@ -79,7 +79,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         upload_config: UploadConfig | None = None,
         warming_up: bool = True,
         client: BaseAsyncClient | None = None,
-        middleware: Sequence[AsyncMiddleware] = (),
+        middlewares: Sequence[AsyncMiddleware] = (),
     ) -> None:
         self._defaults = defaults or BotDefaults()
         self._token = token
@@ -88,7 +88,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         )
 
         self.middleware: list[AsyncMiddleware] = [
-            *middleware,
+            *middlewares,
             AuthMiddleware(self._token),
             AttachmentNotReadyRetryMiddleware(
                 max_retries=self._upload_config.not_ready_max_retries,
