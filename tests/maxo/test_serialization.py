@@ -1,7 +1,6 @@
 import pytest
 from adaptix.load_error import LoadError
 
-from maxo.bot.binding import bind_bot
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, SendMessage
 from maxo.enums import TextFormat
@@ -9,7 +8,8 @@ from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort
 from maxo.types import NewMessageBody, UpdateList
-from maxo.types.base import BotMixin, MaxoType
+from maxo.types.base import MaxoType
+from maxo.types.binding import BotMixin, bind_bot
 from tests.factories import make_bot
 
 

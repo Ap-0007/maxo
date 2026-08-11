@@ -1,11 +1,11 @@
-from maxo.bot.binding import _field_models, bind_bot
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
 from maxo.bot.warming_up import DUMPED_ROOTS, LOADED_ROOTS
 from maxo.enums import TextFormat
 from maxo.omit import is_defined, is_omitted
 from maxo.serialization import get_retort
-from maxo.types import ChatList, MessageCreated, NewMessageBody, Updates
+from maxo.types import ChatList, MessageCreated, NewMessageBody, Updates, bind_bot
+from maxo.types.binding import _field_classes
 from tests.factories import make_bot
 
 UPDATE = {
@@ -121,6 +121,18 @@ def test_defaults_land_in_dumped_request() -> None:
     assert edit["body"]["format"] == "html"
 
 
+def test_bind_reaches_whole_tree_from_root() -> None:
+    """`as_` и сеттер `bot` тоже идут по дереву, а не только по корню."""
+    bot = make_bot()
+    update = get_retort().load(UPDATE, Updates)
+
+    update.as_(bot)
+    assert update.message.bot is bot
+
+    update.bot = None
+    assert update.message._bot is None
+
+
 def test_type_graph_is_acyclic() -> None:
     """
     _binds_bot рекурсивен и защиты от циклов не имеет.
@@ -136,11 +148,11 @@ def test_type_graph_is_acyclic() -> None:
         assert current not in visiting, f"цикл в графе типов: {' -> '.join(path)}"
 
         visiting.add(current)
-        for _, models in _field_models(current):
-            for model in models:
-                visit(model, [*path, model.__name__])
+        for classes in _field_classes(current).values():
+            for field_class in classes:
+                visit(field_class, [*path, field_class.__name__])
         visiting.discard(current)
         visited.add(current)
 
     for root in LOADED_ROOTS:
-        visit(root, [root.__name__])
+        visit(root, [getattr(root, "__name__", str(root))])

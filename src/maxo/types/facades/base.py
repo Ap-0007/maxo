@@ -18,6 +18,6 @@ https://github.com/K1rL3s/maxo/pull/103
 https://github.com/K1rL3s/maxo/pull/107
 """
 
-from maxo.types import BotMixin
+from maxo.types.binding import BotMixin
 
 BaseMethodsFacade = BotMixin

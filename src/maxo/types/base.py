@@ -1,13 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Self, dataclass_transform
+from typing import Any, ClassVar, dataclass_transform
 
 from maxo.enums.update_type import UpdateType
-from maxo.errors import AttributeIsEmptyError
-from maxo.omit import is_defined
-
-if TYPE_CHECKING:
-    from maxo import Bot
 
 
 @dataclass_transform(
@@ -36,32 +31,6 @@ class _MaxoTypeMetaClass(type):
 
 class BaseMaxoType(metaclass=_MaxoTypeMetaClass):
     pass
-
-
-class BotMixin:
-    def __init__(self, bot: Optional["Bot"] = None) -> None:
-        self._bot = bot
-
-    def __post_init__(self) -> None:
-        self._bot = None
-
-    @property
-    def bot(self) -> "Bot":
-        if is_defined(self._bot):
-            return self._bot
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="_bot",
-        )
-
-    @bot.setter
-    def bot(self, bot: Optional["Bot"]) -> None:
-        self._bot = bot
-
-    def as_(self, bot: Optional["Bot"]) -> Self:
-        self.bot = bot
-        return self
 
 
 class MaxoType(BaseMaxoType):

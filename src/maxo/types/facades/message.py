@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
@@ -5,16 +7,16 @@ from typing import TYPE_CHECKING, cast
 from maxo.enums import MessageLinkType, TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.routing.mixins.attachments import MediaInput
-from maxo.routing.mixins.chat import ChatMethodsFacade
-from maxo.types.attachments import Attachments, AttachmentsRequests
-from maxo.types.buttons import InlineButtons
+from maxo.types.facades.attachments import MediaInput
+from maxo.types.facades.chat import ChatMethodsFacade
 from maxo.types.new_message_link import NewMessageLink
-from maxo.types.simple_query_result import SimpleQueryResult
 from maxo.utils.helpers.calculating import calculate_chat_id_and_user_id
 
 if TYPE_CHECKING:
+    from maxo.types.attachments import Attachments, AttachmentsRequests
+    from maxo.types.buttons import InlineButtons
     from maxo.types.message import Message
+    from maxo.types.simple_query_result import SimpleQueryResult
 
 
 class MessageMethodsFacade(ChatMethodsFacade):
@@ -24,11 +26,13 @@ class MessageMethodsFacade(ChatMethodsFacade):
 
         @property
         @abstractmethod
-        def message(self) -> "Message | None":
+        def message(self) -> Message | None:
             raise NotImplementedError
+    else:
+        message: Message | None
 
     @property
-    def unsafe_message(self) -> "Message":
+    def unsafe_message(self) -> Message:
         """
         Сообщение апдейта. Кидает ошибку, если сообщения нет.
 
@@ -61,7 +65,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
         keyboard: Sequence[Sequence[InlineButtons]] | None = None,
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
-    ) -> "Message":
+    ) -> Message:
         message = self.unsafe_message
         recipient = message.recipient
         sender = message.sender
@@ -81,7 +85,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             chat_id=chat_id,
             user_id=user_id,
             text=text,
-            attachments=cast(list[AttachmentsRequests | Attachments], attachments),
+            attachments=cast("list[AttachmentsRequests | Attachments]", attachments),
             link=link,
             notify=notify,
             format=format,
@@ -100,7 +104,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
         keyboard: Sequence[Sequence[InlineButtons]] | None = None,
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
-    ) -> "Message":
+    ) -> Message:
         link = self._make_new_message_link(type=MessageLinkType.REPLY)
         return await self.send_message(
             text=text,
@@ -120,7 +124,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
         notify: Omittable[bool] = True,
         format: Omittable[TextFormat | None] = Omitted(),
         disable_link_preview: Omittable[bool] = Omitted(),
-    ) -> "Message":
+    ) -> Message:
         return await self.send_message(
             text=text,
             notify=notify,
@@ -136,7 +140,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
         notify: Omittable[bool] = True,
         format: Omittable[TextFormat | None] = Omitted(),
         disable_link_preview: Omittable[bool] = Omitted(),
-    ) -> "Message":
+    ) -> Message:
         return await self.send_message(
             text=text,
             notify=notify,
@@ -155,7 +159,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
         format: Omittable[TextFormat | None] = Omitted(),
         link: NewMessageLink | None = None,
         disable_link_preview: Omittable[bool] = Omitted(),
-    ) -> "Message":
+    ) -> Message:
         if not isinstance(media, Sequence):
             media = (media,)
 
@@ -199,7 +203,7 @@ class MessageMethodsFacade(ChatMethodsFacade):
             message_id=message_id,
             text=text,
             attachments=cast(
-                list[AttachmentsRequests | Attachments] | None,
+                "list[AttachmentsRequests | Attachments] | None",
                 prepared_attachments,
             ),
             link=link,
@@ -213,5 +217,5 @@ class MessageMethodsFacade(ChatMethodsFacade):
             mid=self.unsafe_message.body.mid,
         )
 
-    async def get_message_by_id(self, message_id: str) -> "Message":
+    async def get_message_by_id(self, message_id: str) -> Message:
         return await self.bot.get_message_by_id(message_id=message_id)

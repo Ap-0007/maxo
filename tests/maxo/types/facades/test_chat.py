@@ -5,9 +5,9 @@ import pytest
 
 from maxo.enums import TextFormat
 from maxo.omit import Omitted
-from maxo.routing.mixins.chat import ChatMethodsFacade
 from maxo.types.chat import Chat
 from maxo.types.chat_members_list import ChatMembersList
+from maxo.types.facades import ChatMethodsFacade
 from maxo.types.message import Message
 from maxo.types.message_list import MessageList
 from maxo.types.send_message_result import SendMessageResult

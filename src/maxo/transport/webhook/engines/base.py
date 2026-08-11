@@ -5,7 +5,6 @@ from adaptix.load_error import LoadError
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo import Bot, Dispatcher
-from maxo.bot.binding import bind_bot
 from maxo.loggers import webhook
 from maxo.routing.signals import MaxoUpdate
 from maxo.serialization import get_retort
@@ -85,9 +84,7 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
                 raise InvalidJsonError(original_error=exc) from exc
 
             try:
-                update = MaxoUpdate(
-                    update=bind_bot(get_retort().load(raw_update, Updates), bot),
-                )
+                update = MaxoUpdate(update=get_retort().load(raw_update, Updates))
             except LoadError as exc:
                 raise InvalidJsonError(original_error=exc) from exc
 

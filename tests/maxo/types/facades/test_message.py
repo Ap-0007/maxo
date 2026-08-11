@@ -6,7 +6,6 @@ import pytest
 from maxo import Bot
 from maxo.enums import ChatType, MessageLinkType
 from maxo.omit import Omitted
-from maxo.routing.mixins.message import MessageMethodsFacade
 from maxo.types import (
     CallbackButton,
     Message,
@@ -16,6 +15,7 @@ from maxo.types import (
     SimpleQueryResult,
     User,
 )
+from maxo.types.facades import MessageMethodsFacade
 from tests.constants import NOW
 
 

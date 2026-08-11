@@ -20,15 +20,15 @@ from maxo.routing.facades.message_removed import MessageRemovedFacade
 from maxo.routing.facades.middleware import FACADE_KEY, FacadeMiddleware
 from maxo.routing.facades.user_added_to_chat import UserAddedToChatFacade
 from maxo.routing.facades.user_removed_from_chat import UserRemovedFromChatFacade
-from maxo.routing.mixins import (
+from maxo.types.facades import (
     AttachmentsFacade,
     BaseMethodsFacade,
     BotMethodsFacade,
+    CallbackMethodsFacade,
     ChatMethodsFacade,
     MessageMethodsFacade,
     SubscriptionMethodsFacade,
 )
-from maxo.routing.mixins.callback import CallbackMethodsFacade
 
 
 def test_deprecation_warning() -> None:

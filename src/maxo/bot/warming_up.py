@@ -4,7 +4,6 @@ from typing import Any
 from adaptix import Retort
 from unihttp.method import BaseMethod
 
-from maxo.bot.binding import warm as warm_binding
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
@@ -101,5 +100,3 @@ def warm_up(
         target.get_loader(type_)
     for type_ in DUMPED_ROOTS if dumped is None else dumped:
         target.get_dumper(type_)
-
-    warm_binding(*loaded_roots)

@@ -14,7 +14,6 @@ from unihttp.method import BaseMethod, ResponseType, StreamMethod
 from unihttp.middlewares import AsyncMiddleware
 
 from maxo import loggers
-from maxo.bot.binding import bind_bot
 from maxo.bot.client import default_client
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import (
@@ -64,6 +63,7 @@ from maxo.bot.warming_up import warm_up
 from maxo.errors import MaxBotApiError
 from maxo.errors.state import StateError
 from maxo.types import AttachmentPayload, BotInfo, MaxoType
+from maxo.types.binding import bind_bot
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 

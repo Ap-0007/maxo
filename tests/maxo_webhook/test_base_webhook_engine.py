@@ -4,13 +4,13 @@ from typing import Any
 import pytest
 
 from maxo import Bot
-from maxo.bot.binding import bind_bot
 from maxo.routing.signals import MaxoUpdate
 from maxo.serialization import get_retort
 from maxo.transport.webhook.engines.base import BaseWebhookEngine
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.tasks import TaskTracker
 from maxo.types import Updates
+from maxo.types.binding import bind_bot
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
 from tests.maxo_webhook.fixtures.webhook_engine import (
     CapturingAdapter,

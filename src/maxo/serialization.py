@@ -18,7 +18,6 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
-from maxo.routing.mixins import message
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -77,6 +76,7 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
+from maxo.types.facades import message
 
 _UPDATE_TAGS: Mapping[type, UpdateType] = {
     BotAddedToChat: UpdateType.BOT_ADDED,

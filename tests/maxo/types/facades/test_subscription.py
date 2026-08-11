@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from maxo.omit import Omitted
-from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
+from maxo.types.facades import SubscriptionMethodsFacade
 from maxo.types.get_subscriptions_result import GetSubscriptionsResult
 from maxo.types.simple_query_result import SimpleQueryResult
 
