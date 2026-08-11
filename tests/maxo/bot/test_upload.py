@@ -6,7 +6,7 @@ from urllib.parse import unquote
 import pytest
 
 from maxo.bot.methods.upload.chunk_upload import UploadResponseBody
-from maxo.bot.upload import UploadConfig, UploadMethod, resumable_upload
+from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.enums import UploadType
 from maxo.errors import (
     MaxBotApiError,
@@ -20,6 +20,7 @@ from maxo.errors import (
 from maxo.errors.network import to_network_error
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile, InputFile
+from tests.factories import make_bot
 
 _MIB = 1024 * 1024
 
@@ -40,28 +41,15 @@ class _FakeResponse:
         self.data = data
 
 
-class _Retort:
-    def load(self, data: Any, tp: type) -> Any:
-        return tp(**data)
-
-
-class _FakeBot:
-    """Подменяет бота для `resumable_upload`, который зовёт `bot.call_method`
-    и читает `bot.upload_config`. `resumable_upload` передаёт per-call
-    `middleware=[ChunkUploadRetryMiddleware(...)]` - тут он просто
-    принимается и игнорируется, ретраи по нему проверяются отдельно в
+class _FakeClient:
+    """HTTP-клиент бота: отдаёт заготовленные ответы и пишет запросы.
+    Per-call `middleware=[ChunkUploadRetryMiddleware(...)]` тут просто
+    игнорируется, ретраи по нему проверяются отдельно в
     `test_chunk_upload_retry_middleware.py`."""
 
-    def __init__(
-        self,
-        responses: Iterable[_FakeResponse | Exception],
-        upload_config: UploadConfig | None = None,
-    ) -> None:
+    def __init__(self, responses: Iterable[_FakeResponse | Exception]) -> None:
         self._responses = list(responses)
         self.calls: list[dict[str, Any]] = []
-        self.transport = self
-        self.response_loader = _Retort()
-        self.upload_config = upload_config or UploadConfig()
 
     async def call_method(
         self,
@@ -78,22 +66,11 @@ class _FakeBot:
         return item
 
 
-async def _run(
-    api_client: _FakeBot,
-    data: bytes,
-    chunk_size: int,
-) -> UploadMediaResult | None:
-    api_client.upload_config = UploadConfig(chunk_size=chunk_size)
-    file = BufferedInputFile.file(data, "f.bin")
-    return await resumable_upload(
-        bot=api_client,  # type: ignore[arg-type]
-        url="https://upload.example/upload.do",
-        file=file,
-    )
+_URL = "https://upload.example/upload.do"
 
 
 async def test_sends_chunks_with_correct_content_range() -> None:
-    session = _FakeBot(
+    client = _FakeClient(
         [
             _FakeResponse(201, b"0-3/10"),
             _FakeResponse(201, b"0-7/10"),
@@ -101,80 +78,99 @@ async def test_sends_chunks_with_correct_content_range() -> None:
         ],
     )
 
-    result = await _run(session, b"abcdefghij", 4)
+    bot = make_bot(client=client, upload_config=UploadConfig(chunk_size=4))
+    result = await bot.upload_media_resumable(
+        _URL,
+        BufferedInputFile.file(b"abcdefghij", "f.bin"),
+    )
 
     assert isinstance(result, UploadMediaResult)
     assert result.token == "tok"  # noqa: S105
-    ranges = [call["headers"]["Content-Range"] for call in session.calls]
+    ranges = [call["headers"]["Content-Range"] for call in client.calls]
     assert ranges == ["bytes 0-3/10", "bytes 4-7/10", "bytes 8-9/10"]
-    assert [call["data"] for call in session.calls] == [b"abcd", b"efgh", b"ij"]
-    assert 'filename="f.bin"' in session.calls[0]["headers"]["Content-Disposition"]
+    assert [call["data"] for call in client.calls] == [b"abcd", b"efgh", b"ij"]
+    assert 'filename="f.bin"' in client.calls[0]["headers"]["Content-Disposition"]
 
 
 async def test_single_chunk_small_file() -> None:
-    session = _FakeBot([_FakeResponse(200, {"token": "tok"})])
+    client = _FakeClient([_FakeResponse(200, {"token": "tok"})])
 
-    result = await _run(session, b"hello", 1024)
+    bot = make_bot(client=client)
+    result = await bot.upload_media_resumable(
+        _URL,
+        BufferedInputFile.file(b"hello", "f.bin"),
+    )
 
     assert result is not None
     assert result.token == "tok"  # noqa: S105
-    assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
+    assert client.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
 
 
 async def test_non_json_final_body_returns_none() -> None:
-    session = _FakeBot([_FakeResponse(200, b"0-4/5")])
+    client = _FakeClient([_FakeResponse(200, b"0-4/5")])
 
-    assert await _run(session, b"hello", 1024) is None
+    bot = make_bot(client=client)
+    assert (
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
+        is None
+    )
 
 
 async def test_json_non_dict_final_body_returns_none() -> None:
-    session = _FakeBot([_FakeResponse(200, ["0-4/5"])])
+    client = _FakeClient([_FakeResponse(200, ["0-4/5"])])
 
-    assert await _run(session, b"hello", 1024) is None
+    bot = make_bot(client=client)
+    assert (
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
+        is None
+    )
 
 
 async def test_empty_file_raises() -> None:
-    session = _FakeBot([])
+    client = _FakeClient([])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(ValueError, match="пустой файл"):
-        await _run(session, b"", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"", "f.bin"),
+        )
 
 
 async def test_content_disposition_is_latin1_safe() -> None:
-    session = _FakeBot([_FakeResponse(200, {"token": "tok"})])
+    client = _FakeClient([_FakeResponse(200, {"token": "tok"})])
     file_name = 'файл "1".bin'
     file = BufferedInputFile.file(b"hello", file_name)
 
-    await resumable_upload(
-        url="https://upload.example/upload.do",
-        file=file,
-        bot=session,  # type: ignore[arg-type]
-    )
+    await make_bot(client=client).upload_media_resumable(_URL, file)
 
-    disposition = session.calls[0]["headers"]["Content-Disposition"]
+    disposition = client.calls[0]["headers"]["Content-Disposition"]
     disposition.encode("latin-1")
     encoded = disposition.removeprefix('attachment; filename="').removesuffix('"')
     assert unquote(encoded) == file_name
 
 
 async def test_explicit_total_skips_size_call() -> None:
-    session = _FakeBot([_FakeResponse(200, {"token": "tok"})])
+    client = _FakeClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
+    bot = make_bot(client=client)
 
     with patch.object(
         BufferedInputFile,
         "size",
         side_effect=AssertionError("size() не должен вызываться"),
     ):
-        result = await resumable_upload(
-            url="https://upload.example/upload.do",
-            file=file,
-            bot=session,  # type: ignore[arg-type]
-            size=5,
-        )
+        result = await bot.upload_media_resumable(_URL, file, size=5)
 
     assert result is not None
-    assert session.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
+    assert client.calls[0]["headers"]["Content-Range"] == "bytes 0-4/5"
 
 
 class _TrackingInputFile(InputFile):
@@ -204,18 +200,12 @@ class _TrackingInputFile(InputFile):
 
 
 async def test_stream_is_closed_when_chunk_fails() -> None:
-    session = _FakeBot(
-        [_FakeResponse(400, b"nope")],
-        upload_config=UploadConfig(chunk_size=4),
-    )
+    client = _FakeClient([_FakeResponse(400, b"nope")])
     file = _TrackingInputFile()
+    bot = make_bot(client=client, upload_config=UploadConfig(chunk_size=4))
 
     with pytest.raises(MaxBotApiError):
-        await resumable_upload(
-            url="https://upload.example/upload.do",
-            file=file,
-            bot=session,  # type: ignore[arg-type]
-        )
+        await bot.upload_media_resumable(_URL, file)
 
     assert file.closed is True
 
@@ -238,33 +228,39 @@ def test_upload_config_rejects_invalid_values(kwargs: dict[str, int]) -> None:
 
 
 async def test_default_config_is_used() -> None:
-    session = _FakeBot([_FakeResponse(200, {"token": "tok"})])
+    client = _FakeClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
 
-    result = await resumable_upload(
-        url="https://upload.example/upload.do",
-        file=file,
-        bot=session,  # type: ignore[arg-type]
-    )
+    result = await make_bot(client=client).upload_media_resumable(_URL, file)
 
     assert result is not None
     assert result.token == "tok"  # noqa: S105
 
 
 async def test_client_error_status_raises_without_retry() -> None:
-    session = _FakeBot([_FakeResponse(406, {"code": "upload.error"})])
+    client = _FakeClient([_FakeResponse(406, {"code": "upload.error"})])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(MaxBotApiError):
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
-    assert len(session.calls) == 1
+    assert len(client.calls) == 1
 
 
 async def test_non_json_error_status_raises_base_error() -> None:
-    session = _FakeBot([_FakeResponse(406, b"plain error")])
+    client = _FakeClient([_FakeResponse(406, b"plain error")])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(MaxBotApiError) as exc_info:
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
     error = exc_info.value
     assert error.error == "upload failed with status 406"
@@ -273,10 +269,15 @@ async def test_non_json_error_status_raises_base_error() -> None:
 
 
 async def test_json_non_dict_error_status_raises_base_error() -> None:
-    session = _FakeBot([_FakeResponse(406, ["plain error"])])
+    client = _FakeClient([_FakeResponse(406, ["plain error"])])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(MaxBotApiError) as exc_info:
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
     error = exc_info.value
     assert error.error == "upload failed with status 406"
@@ -301,40 +302,55 @@ async def test_client_error_status_preserves_typed_api_error(
         "error_data": "attachment.not.ready",
         "message": "cannot process attachment",
     }
-    session = _FakeBot([_FakeResponse(status, payload)])
+    client = _FakeClient([_FakeResponse(status, payload)])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(error_class) as exc_info:
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
     error = exc_info.value
     assert error.code == "proto.payload"
     assert error.error == "attachment.not.ready"
     assert error.message == "cannot process attachment"
     assert error.raw_data == payload
-    assert len(session.calls) == 1
+    assert len(client.calls) == 1
 
 
 async def test_server_error_status_raises_immediately() -> None:
     # Ретраи 5xx теперь целиком в `ChunkUploadRetryMiddleware`
     # (`tests/maxo/bot/test_chunk_upload_retry_middleware.py`) - тут только
-    # проверяем, что `resumable_upload` сам не ретраит и не глотает ошибку.
-    session = _FakeBot([_FakeResponse(500, b"temporary")])
+    # проверяем, что `Bot.upload_media_resumable` сам не ретраит и не глотает ошибку.
+    client = _FakeClient([_FakeResponse(500, b"temporary")])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(MaxBotApiError) as exc_info:
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
     assert exc_info.value.error == "upload failed with status 500"
-    assert len(session.calls) == 1
+    assert len(client.calls) == 1
 
 
 async def test_network_error_propagates_without_retry() -> None:
     # См. комментарий выше - ретраи сети живут в `ChunkUploadRetryMiddleware`.
-    session = _FakeBot([_network_error(ConnectionError("boom"))])
+    client = _FakeClient([_network_error(ConnectionError("boom"))])
+
+    bot = make_bot(client=client)
 
     with pytest.raises(MaxBotNetworkError, match="boom") as exc_info:
-        await _run(session, b"hello", 1024)
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
 
-    assert len(session.calls) == 1
+    assert len(client.calls) == 1
     assert isinstance(exc_info.value.__cause__, ConnectionError)
 
 
@@ -345,17 +361,13 @@ async def test_network_error_is_a_maxo_error() -> None:
 
 
 async def test_size_mismatch_raises() -> None:
-    session = _FakeBot([_FakeResponse(200, {"token": "tok"})])
+    client = _FakeClient([_FakeResponse(200, {"token": "tok"})])
     file = BufferedInputFile.file(b"hello", "f.bin")
+    bot = make_bot(client=client)
 
     # Файл «усох» между замером размера и стримом.
     with pytest.raises(ValueError, match="изменился во время загрузки"):
-        await resumable_upload(
-            url="https://upload.example/upload.do",
-            file=file,
-            bot=session,  # type: ignore[arg-type]
-            size=999,
-        )
+        await bot.upload_media_resumable(_URL, file, size=999)
 
 
 def test_should_use_resumable_respects_explicit_method() -> None:

@@ -1,4 +1,3 @@
-import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,8 +7,8 @@ from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
 from maxo.errors.state import StateError
 from maxo.types import BotInfo
-from tests.constants import NOW, TOKEN
-from tests.factories import make_bot
+from tests.constants import BOT_ID, TOKEN
+from tests.factories import make_bot, make_bot_info
 
 
 class MockMaxBotApiError(MaxBotApiError):
@@ -22,6 +21,21 @@ class MockMaxBotApiError(MaxBotApiError):
 @pytest.fixture
 def bot() -> Bot:
     return make_bot()
+
+
+@pytest.fixture
+def mock_client() -> AsyncMock:
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_bot(mock_client: AsyncMock) -> Bot:
+    return make_bot(client=mock_client)
+
+
+@pytest.fixture
+def bot_info() -> BotInfo:
+    return make_bot_info()
 
 
 async def test_bot_init(bot: Bot) -> None:
@@ -49,18 +63,12 @@ def test_explicit_upload_config_is_preserved() -> None:
     assert bot.upload_config is config
 
 
-async def test_bot_close() -> None:
-    client = AsyncMock()
-    bot = make_bot(client=client)
+async def test_bot_close(mock_bot: Bot, mock_client: AsyncMock) -> None:
+    await mock_bot.close()
 
-    assert bot.client is client
-    assert bot.started is False
-    client.call_method.assert_not_awaited()
-
-    await bot.close()
-    assert bot.closed is True
+    assert mock_bot.closed is True
     # Клиент передали снаружи - закрывать его боту нельзя.
-    client.close.assert_not_awaited()
+    mock_client.close.assert_not_awaited()
 
 
 async def test_bot_context(bot: Bot) -> None:
@@ -70,56 +78,41 @@ async def test_bot_context(bot: Bot) -> None:
         mock_close.assert_awaited_once()
 
 
-async def test_bot_context_fetches_info_by_default() -> None:
-    mock_client = AsyncMock()
-    mock_client.call_method.return_value = BotInfo(
-        user_id=1,
-        is_bot=True,
-        first_name="Test",
-        username="testbot",
-        last_activity_time=NOW,
-    )
-    bot = make_bot(client=mock_client)
+async def test_bot_context_fetches_info_by_default(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.return_value = bot_info
 
-    async with bot.context():
-        assert bot.info.user_id == 1
+    async with mock_bot.context():
+        assert mock_bot.info.user_id == BOT_ID
 
     mock_client.call_method.assert_awaited_once()
 
 
-async def test_bot_call_method(bot: Bot) -> None:
+async def test_bot_call_method(mock_bot: Bot, mock_client: AsyncMock) -> None:
     """`call_method` no longer resolves `.info` as a side effect."""
-    with patch.object(bot, "_client", MagicMock()) as mock_client:
-        mock_client.call_method = AsyncMock(return_value="test_result")
-        result: object = await bot.call_method(MagicMock())
-        assert result == "test_result"
-        mock_client.call_method.assert_awaited_once()
-        with pytest.raises(StateError, match="Bot info is not resolved yet"):
-            _ = bot.info
+    mock_client.call_method.return_value = "test_result"
+
+    result: object = await mock_bot.call_method(MagicMock())
+
+    assert result == "test_result"
+    mock_client.call_method.assert_awaited_once()
+    with pytest.raises(StateError, match="Bot info is not resolved yet"):
+        _ = mock_bot.info
 
 
 async def test_bot_silent_call_method(
-    bot: Bot,
+    mock_bot: Bot,
+    mock_client: AsyncMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    with patch.object(bot, "_client", MagicMock()) as mock_client:
-        mock_client.call_method = AsyncMock(
-            side_effect=MockMaxBotApiError("test error"),
-        )
-        await bot.silent_call_method(MagicMock())
-        assert "Failed to make answer" in caplog.text
+    mock_client.call_method.side_effect = MockMaxBotApiError("test error")
 
+    await mock_bot.silent_call_method(MagicMock())
 
-async def test_bot_download(bot: Bot) -> None:
-    downloaded = io.BytesIO(b"downloaded")
-    with patch.object(Bot, "download", AsyncMock(return_value=downloaded)) as mock:
-        result = await bot.download("https://example.com/file")
-        assert result is downloaded
-        mock.assert_awaited_once()
-
-
-async def test_bot_defaults(bot: Bot) -> None:
-    assert bot.defaults is not None
+    assert "Failed to make answer" in caplog.text
 
 
 async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
@@ -128,22 +121,16 @@ async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
     assert bot.closed is False
 
 
-async def test_close_twice_is_noop() -> None:
-    bot = make_bot()
-    client = AsyncMock()
-    bot._client = client
-    bot._owns_client = True
-    bot._info = MagicMock()
+async def test_close_twice_is_noop(mock_bot: Bot, mock_client: AsyncMock) -> None:
+    mock_bot._owns_client = True
 
-    await bot.close()
-    await bot.close()
+    await mock_bot.close()
+    await mock_bot.close()
 
-    client.close.assert_awaited_once()
+    mock_client.close.assert_awaited_once()
 
 
-async def test_bot_async_context_manager() -> None:
-    bot = make_bot()
-
+async def test_bot_async_context_manager(bot: Bot) -> None:
     with patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close:
         async with bot as entered:
             assert entered is bot
@@ -159,113 +146,63 @@ async def test_context_without_auto_close(bot: Bot) -> None:
     mock_close.assert_not_awaited()
 
 
-async def test_client_access_never_hits_network() -> None:
+async def test_client_access_never_hits_network(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+) -> None:
     """Accessing `.client` repeatedly must not touch the network at all."""
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
-
-    assert bot.client is mock_client
-    assert bot.client is mock_client
+    assert mock_bot.client is mock_client
+    assert mock_bot.client is mock_client
 
     mock_client.call_method.assert_not_awaited()
 
 
-async def test_get_my_info_retries_after_previous_failure() -> None:
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
+async def test_get_my_info_retries_after_previous_failure(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.side_effect = MockMaxBotApiError("boom")
 
-    if True:
-        mock_client.call_method.side_effect = MockMaxBotApiError("boom")
+    with pytest.raises(MaxBotApiError):
+        await mock_bot.get_my_info()
 
-        with pytest.raises(MaxBotApiError):
-            await bot.get_my_info()
-
-        assert bot.started is False
-        with pytest.raises(StateError, match="Bot info is not resolved yet"):
-            _ = bot.info
-
-        mock_client.call_method.side_effect = None
-        mock_client.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
-
-        await bot.get_my_info()
-        assert bot.info.user_id == 1
-
-
-async def test_get_my_info_starts_lazily() -> None:
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
-
-    if True:
-        mock_client.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
-
-        info = await bot.get_my_info()
-        assert info.user_id == 1
-        assert bot.started is True
-
-
-async def test_call_method_does_not_resolve_info() -> None:
-    """`bot.send_message(...)` alone must not implicitly resolve `.info` —
-    only an explicit `get_my_info()`/`context()` call does that now."""
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
-
-    mock_client.call_method.return_value = "ok"
-
-    result: object = await bot.call_method(MagicMock())
-
-    assert result == "ok"
+    assert mock_bot.started is False
     with pytest.raises(StateError, match="Bot info is not resolved yet"):
-        _ = bot.info
+        _ = mock_bot.info
+
+    mock_client.call_method.side_effect = None
+    mock_client.call_method.return_value = bot_info
+
+    await mock_bot.get_my_info()
+    assert mock_bot.info.user_id == BOT_ID
 
 
-async def test_get_my_info_updates_cached_info_directly() -> None:
-    """Calling `get_my_info()` on its own (without `start()`) must still
-    refresh `.info` — it's the only way it stays consistent with reality."""
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
+async def test_get_my_info_starts_lazily_and_caches_info(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
+    mock_client.call_method.return_value = bot_info
 
-    if True:
-        mock_client.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
+    info = await mock_bot.get_my_info()
 
-        info = await bot.get_my_info()
-
-        assert bot.info is info
+    assert info is not None
+    assert info.user_id == BOT_ID
+    assert mock_bot.info is info
+    assert mock_bot.started is True
 
 
-async def test_get_my_info_always_hits_network() -> None:
+async def test_get_my_info_always_hits_network(
+    mock_bot: Bot,
+    mock_client: AsyncMock,
+    bot_info: BotInfo,
+) -> None:
     """Unlike `start()`, repeated `get_my_info()` calls must not be cached —
     it's the "give me fresh data now" escape hatch."""
-    mock_client = AsyncMock()
-    bot = make_bot(client=mock_client)
+    mock_client.call_method.return_value = bot_info
 
-    if True:
-        mock_client.call_method.return_value = BotInfo(
-            user_id=1,
-            is_bot=True,
-            first_name="Test",
-            username="testbot",
-            last_activity_time=NOW,
-        )
+    await mock_bot.get_my_info()
+    await mock_bot.get_my_info()
 
-        await bot.get_my_info()
-        await bot.get_my_info()
-
-        assert mock_client.call_method.await_count == 2
+    assert mock_client.call_method.await_count == 2

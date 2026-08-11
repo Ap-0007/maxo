@@ -2,7 +2,6 @@ import asyncio
 from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any, cast
 from unittest.mock import ANY, AsyncMock, call, patch
 
@@ -16,9 +15,9 @@ from maxo.omit import Omitted
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.signals.update import MaxoUpdate
 from maxo.transport.long_polling import LongPolling
-from maxo.types import BotInfo, MaxoType, UpdateList
+from maxo.types import MaxoType, UpdateList
 from maxo.types.updates import Updates
-from tests.factories import make_bot
+from tests.factories import make_bot, make_bot_info
 
 
 @dataclass
@@ -33,15 +32,8 @@ def mock_client() -> AsyncMock:
 
 @pytest.fixture
 def mock_bot(mock_client: AsyncMock) -> Bot:
-    bot = make_bot()
-    bot._info = BotInfo(
-        user_id=123,
-        first_name="test_bot",
-        username="test_bot",
-        is_bot=True,
-        last_activity_time=datetime.fromtimestamp(1234567890, tz=UTC),
-    )
-    bot._client = mock_client
+    bot = make_bot(client=mock_client)
+    bot._info = make_bot_info()
     return bot
 
 
