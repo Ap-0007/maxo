@@ -1,6 +1,5 @@
-from unihttp.markers import Path
-
 from maxo.bot.methods.base import MaxoStreamMethod
+from maxo.bot.methods.markers import Path
 
 
 class Download(MaxoStreamMethod):
