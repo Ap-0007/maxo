@@ -55,6 +55,26 @@ def test_invert_inlining() -> None:
     assert inverted_filter._inlined is True
 
 
+def test_invert_inlining_keeps_parity() -> None:
+    f1 = TrueF()
+    triple_inverted = InvertFilter(InvertFilter(InvertFilter(f1)))
+    assert triple_inverted._filter is f1
+    assert triple_inverted._inlined is False
+
+    quadruple_inverted = InvertFilter(triple_inverted)
+    assert quadruple_inverted._filter is f1
+    assert quadruple_inverted._inlined is True
+
+
+async def test_repeated_inversion() -> None:
+    update = BaseUpdate()
+    f1: Filter[BaseUpdate] = TrueF()
+
+    for expected in (False, True, False, True):
+        f1 = InvertFilter(f1)
+        assert await f1(update, Ctx({})) is expected
+
+
 def test_combine_filters_empty_returns_always_true() -> None:
     combined: Filter[BaseUpdate] = combine_filters()
     assert isinstance(combined, AlwaysTrueFilter)
