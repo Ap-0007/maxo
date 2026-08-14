@@ -302,3 +302,49 @@ def test_timestamp_hint_recognizes_timestamp(tmp_path: Path) -> None:
     )
 
     assert value.annotation == "datetime"
+
+
+def test_model_field_override_restores_inherited_field(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"].update(
+        {
+            "Button": {
+                "required": ["type", "text"],
+                "properties": {
+                    "type": {"type": "string"},
+                    "text": {"type": "string"},
+                },
+                "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                        "message": "#/components/schemas/MessageButton",
+                    },
+                },
+            },
+            "MessageButton": {
+                "allOf": [
+                    {"$ref": "#/components/schemas/Button"},
+                    {
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "Текст кнопки",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    )
+
+    document = _build_document(tmp_path, spec)
+    fields = {item.name: item for item in _model(document, "MessageButton").fields}
+
+    assert "text" in fields
+    assert fields["text"].annotation == "str"
+    assert fields["text"].description == (
+        "Текст кнопки, который будет отправлен в чат от лица пользователя"
+    )
+    assert fields["text"].omittable
+    assert fields["text"].comment == "type: ignore[assignment]"
+    assert fields["text"].unsafe

@@ -392,9 +392,20 @@ class _Profile:
         for mixin in mixins:
             imports.add(Import(overrides.MIXINS_MODULE, mixin))
 
+        ir_fields = list(ir_model.fields)
+        field_names = {field.name for field in ir_fields}
+        base_model = self._models.get(ir_model.base_model or "")
+        if base_model is not None:
+            ir_fields.extend(
+                field
+                for field in base_model.fields
+                if field.name not in field_names
+                and (name, field.name) in overrides.MODEL_FIELD_OVERRIDES
+            )
+
         fields = tuple(
             self._build_model_field(name, ir_field, imports, is_update=is_update)
-            for ir_field in ir_model.fields
+            for ir_field in ir_fields
         )
         self._add_field_helpers(fields, imports)
         return Model(
@@ -433,18 +444,21 @@ class _Profile:
         annotation = self._annotate(self._field_type(ir_field), imports)
         # Дефолты свагера игнорируем: необязательное поле - это `Omitted()`.
         omittable = not ir_field.required
+        description = ir_field.description
         comment: str | None = None
         override = overrides.MODEL_FIELD_OVERRIDES.get((owner, ir_field.name))
         if override is not None:
             if override.annotation is not None:
                 annotation = override.annotation
+            if override.description is not None:
+                description = override.description
             if override.omittable is not None:
                 omittable = override.omittable
             comment = override.comment
         return Field(
             name=ir_field.name,
             annotation=annotation,
-            description=ir_field.description,
+            description=description,
             omittable=omittable,
             comment=comment,
         )

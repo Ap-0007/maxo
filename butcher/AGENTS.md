@@ -12,7 +12,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 
 ```bash
 just butcher       # полная генерация в src/maxo, только по правилу ниже
-just butcher-test  # тесты butcher (50 шт.)
+just butcher-test  # тесты butcher
 ```
 
 `just butcher` принимает аргументы CLI, например
