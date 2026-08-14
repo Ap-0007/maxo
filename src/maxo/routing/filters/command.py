@@ -118,7 +118,7 @@ class Command(BaseFilter[MessageCreated]):
         )
 
     def update_handler_flags(self, flags: dict[str, Any]) -> None:
-        # Не изменяем список из входного словаря
+        # Не меняем список в переданном словаре
         flags["commands"] = [*flags.get("commands", ()), self]
 
     async def __call__(

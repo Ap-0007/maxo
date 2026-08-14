@@ -14,7 +14,6 @@ from maxo.utils.chat_action import ChatActionMiddleware
 dp = Dispatcher()
 
 
-# get_flag читает флаг в inner-мидлвари
 class RateLimitMiddleware(BaseMiddleware[MessageCreated]):
     def __init__(self) -> None:
         self._last_call: dict[int, float] = {}
@@ -39,12 +38,10 @@ class RateLimitMiddleware(BaseMiddleware[MessageCreated]):
         return await next(ctx)
 
 
-# Outer-мидлварь не видит выбранный хендлер и его флаги
 dp.message_created.middleware(RateLimitMiddleware())
 dp.message_created.middleware(ChatActionMiddleware())
 
 
-# Флаг без аргументов равен True
 @dp.message_created(Command("typing"))
 @flags.chat_action
 async def typing_handler(update: MessageCreated) -> None:
@@ -52,7 +49,6 @@ async def typing_handler(update: MessageCreated) -> None:
     await update.answer(text="Всё это время бот «набирал сообщение»")
 
 
-# Флаг с явным значением
 @dp.message_created(Command("photo"))
 @flags.chat_action(SenderAction.SENDING_PHOTO)
 async def photo_handler(update: MessageCreated) -> None:
@@ -60,7 +56,6 @@ async def photo_handler(update: MessageCreated) -> None:
     await update.answer(text="А тут бот «отправлял фото»")
 
 
-# Флаг со словарём настроек
 @dp.message_created(Command("file"))
 @flags.chat_action(action="sending_file", interval=3, initial_sleep=1)
 async def file_handler(update: MessageCreated) -> None:
@@ -68,7 +63,6 @@ async def file_handler(update: MessageCreated) -> None:
     await update.answer(text="Действие ушло не сразу и повторялось раз в 3 секунды")
 
 
-# Флаг в параметре регистрации
 @dp.message_created(Command("limited"), flags={"rate_limit": 5})
 async def limited_handler(update: MessageCreated) -> None:
     await update.answer(text="Эту команду можно звать раз в 5 секунд")

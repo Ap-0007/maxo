@@ -132,8 +132,7 @@ class InvertFilter(BaseLogicFilter[_UpdateT], Generic[_UpdateT]):
 
     def _inlining(self) -> None:
         if isinstance(self._filter, InvertFilter):
-            # Вложенный фильтр уже схлопнут, а `_inlined` хранит чётность
-            # инверсий. Внешняя инверсия меняет её на противоположную
+            # `_inlined` хранит чётность схлопнутых инверсий
             self._inlined = not self._filter._inlined
             self._filter = self._filter._filter
         else:

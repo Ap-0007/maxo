@@ -25,6 +25,7 @@
 .. code-block:: python
 
     from maxo import flags
+    from maxo.types import MessageCreated
 
 
     @flags.chat_action
@@ -94,6 +95,7 @@
     from typing import Any
 
     from maxo.routing.filters import BaseFilter
+    from maxo.types import MessageCreated
 
 
     class Command(BaseFilter[MessageCreated]):

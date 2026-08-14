@@ -18,6 +18,9 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 
 .. code-block:: python
 
+    from maxo import Bot
+    from maxo.routing.filters import Command
+    from maxo.types import MessageCreated
     from maxo.utils.chat_action import ChatActionSender
 
 
@@ -80,6 +83,8 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 .. code-block:: python
 
     from maxo import flags
+    from maxo.routing.filters import Command
+    from maxo.types import MessageCreated
 
 
     @dp.message_created(Command("photo"))

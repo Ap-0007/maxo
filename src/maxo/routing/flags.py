@@ -112,7 +112,7 @@ class FlagGenerator:
 
 
 flags = FlagGenerator()
-"""Объект для создания декораторов флагов"""
+"""Генератор декораторов флагов"""
 
 
 def extract_flags_from_object(obj: Any) -> dict[str, Any]:
@@ -135,7 +135,7 @@ def resolve_handler_flags(
         if update_handler_flags is not None:
             update_handler_flags(resolved)
 
-    # Декоратор флага может находиться до или после обёртки
+    # Поддерживаем оба порядка декораторов
     resolved.update(extract_flags_from_object(inspect.unwrap(handler_fn)))
     resolved.update(extract_flags_from_object(handler_fn))
     return resolved

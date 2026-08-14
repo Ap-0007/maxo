@@ -110,7 +110,7 @@ class ChatActionSender:
                 try:
                     await self.bot.send_action(chat_id=self.chat_id, action=self.action)
                 except Exception:  # noqa: BLE001
-                    # Ошибка фоновой отправки не должна прерывать хендлер
+                    # Сбой фоновой отправки не прерывает хендлер
                     loggers.utils.warning(
                         "Не удалось отправить действие %r в chat_id=%s",
                         self.action,
@@ -146,7 +146,7 @@ class ChatActionSender:
                     self._close_event.set()
                     await self._closed_event.wait()
             finally:
-                # Не оставляем задачу работать после отмены `_stop`
+                # При отмене `_stop` фоновая задача не остаётся работать
                 task, self._task = self._task, None
                 if task is not None and not task.done():
                     task.cancel()

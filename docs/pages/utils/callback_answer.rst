@@ -30,6 +30,7 @@
 .. code-block:: python
 
     from maxo import flags
+    from maxo.types import MessageCallback
 
 
     @dp.message_callback()
