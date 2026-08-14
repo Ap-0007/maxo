@@ -156,7 +156,7 @@ class TestChatActionSender:
 
     async def test_context_manager(self, bot: AsyncMock) -> None:
         sender = ChatActionSender.typing_on(bot=cast(Bot, bot), chat_id=CHAT_ID)
-        # Список не даёт mypy сузить `running` до `False`.
+        # Список не даёт mypy сузить `running` до `False`
         states: list[bool] = [sender.running]
 
         await sender._stop()

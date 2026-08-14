@@ -44,8 +44,6 @@ HANDLER_KEY: Final = "handler"
 
 
 class AttrDict(dict[str, Any]):
-    """Словарь с доступом к значениям как к атрибутам без `magic_filter`."""
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.__dict__ = self
@@ -57,16 +55,12 @@ class AttrDict(dict[str, Any]):
 
 @dataclass(frozen=True, slots=True)
 class Flag:
-    """Пара «имя флага - значение флага»."""
-
     name: str
     value: Any
 
 
 @dataclass(frozen=True, slots=True)
 class FlagDecorator:
-    """Декоратор, добавляющий флаг хендлеру."""
-
     flag: Flag
 
     def _with_value(self, value: Any) -> "FlagDecorator":
@@ -118,7 +112,7 @@ class FlagGenerator:
 
 
 flags = FlagGenerator()
-"""Генератор декораторов флагов."""
+"""Объект для создания декораторов флагов"""
 
 
 def extract_flags_from_object(obj: Any) -> dict[str, Any]:
@@ -134,7 +128,6 @@ def resolve_handler_flags(
     filters: Sequence[Filter[Any]] = (),
     flags: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Собирает флаги регистрации, фильтров и декораторов."""
     resolved: dict[str, Any] = dict(flags) if flags else {}
 
     for filter_ in filters:
@@ -142,7 +135,7 @@ def resolve_handler_flags(
         if update_handler_flags is not None:
             update_handler_flags(resolved)
 
-    # Декоратор флага может быть с любой стороны обёртки
+    # Декоратор флага может находиться до или после обёртки
     resolved.update(extract_flags_from_object(inspect.unwrap(handler_fn)))
     resolved.update(extract_flags_from_object(handler_fn))
     return resolved

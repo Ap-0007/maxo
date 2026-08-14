@@ -1,13 +1,14 @@
 Авто-ответ на колбэк
 ====================
 
-``CallbackAnswerMiddleware`` автоматически отвечает на ``MessageCallback`` (колбэк от нажатия инлайн-кнопки).
-Порт ``CallbackAnswerMiddleware`` из ``aiogram``.
+``CallbackAnswerMiddleware`` отвечает на ``MessageCallback`` после нажатия
+инлайн-кнопки.
 
 Подключение
 -----------
 
-Middleware - внутренний (inner), вешается на обсёрвер ``message_callback``:
+Мидлварь регистрируется как внутренняя (inner) на обсёрвере
+``message_callback``:
 
 .. code-block:: python
 
@@ -23,8 +24,8 @@ Middleware - внутренний (inner), вешается на обсёрве�
 Настройка через флаги
 ---------------------
 
-Дефолты из конструктора переопределяются для конкретного хендлера флагом
-``callback_answer`` (подробнее про флаги - :doc:`../event-handling/flags`):
+Флаг ``callback_answer`` переопределяет параметры конструктора для конкретного
+хендлера. Подробнее о флагах: :doc:`../event-handling/flags`.
 
 .. code-block:: python
 
@@ -40,21 +41,20 @@ Middleware - внутренний (inner), вешается на обсёрве�
     @flags.callback_answer(disabled=True)  # отвечаем на колбэк сами
     async def manual_handler(update: MessageCallback) -> None: ...
 
-Словарь во флаге понимает ключи ``disabled``, ``before`` и ``notification``.
-Голый ``@flags.callback_answer`` включает авто-ответ - это удобно, если мидлварь
-подключена с ``disabled=True`` и авто-ответ нужен точечно. Обратный случай -
-``@flags.callback_answer(False)``: он выключает авто-ответ для одного хендлера.
+Словарь принимает ключи ``disabled``, ``before`` и ``notification``. Декоратор
+без аргументов включает авто-ответ для мидлвари с ``disabled=True``. Значение
+``False`` отключает авто-ответ для одного хендлера.
 
 Управление из хендлера
 ----------------------
 
-Middleware кладёт в ctx мутабельный ``CallbackAnswer`` под ключом
-``callback_answer``. Хендлер, объявивший параметр ``callback_answer``, может
-поменять поведение до того, как middleware ответит:
+Мидлварь сохраняет изменяемый ``CallbackAnswer`` в ``ctx`` под ключом
+``callback_answer``. Хендлер может принять этот объект одноимённым параметром и
+изменить настройки до отправки ответа:
 
 .. code-block:: python
 
-    from maxo.routing.updates import MessageCallback
+    from maxo.types import MessageCallback
     from maxo.utils.callback_answer import CallbackAnswer
 
 
@@ -63,11 +63,11 @@ Middleware кладёт в ctx мутабельный ``CallbackAnswer`` под 
         update: MessageCallback,
         callback_answer: CallbackAnswer,
     ) -> None:
-        callback_answer.notification = "Готово!"  # текст всплывашки
+        callback_answer.notification = "Готово!"
         # callback_answer.disable()               # не отвечать вовсе
 
-После отправки ответа ``CallbackAnswer`` становится неизменяемым: запись в любое
-поле поднимает ``CallbackAnswerException``.
+После отправки ответа ``CallbackAnswer`` становится неизменяемым. Попытка
+записать любое поле вызывает ``CallbackAnswerException``.
 
 .. automodule:: maxo.utils.callback_answer
    :members:

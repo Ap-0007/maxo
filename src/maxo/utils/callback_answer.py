@@ -113,7 +113,7 @@ class CallbackAnswer:
 
 
 class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
-    """Автоматически отвечает на колбэк с учётом флага `callback_answer`."""
+    """Отвечает на колбэк с учётом флага `callback_answer`."""
 
     __slots__ = ("_before", "_disabled", "_notification")
 
@@ -146,7 +146,6 @@ class CallbackAnswerMiddleware(BaseMiddleware[MessageCallback]):
                 await self._answer(update, answer)
 
     def construct_callback_answer(self, properties: Any) -> CallbackAnswer:
-        """Объединяет настройки мидлвари со значением флага."""
         disabled, before, notification = (
             self._disabled,
             self._before,

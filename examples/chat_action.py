@@ -10,11 +10,10 @@ from maxo.utils.chat_action import ChatActionSender
 dp = Dispatcher()
 
 
-# Контекстный менеджер без мидлвари
 @dp.message_created(Command("report"))
 async def report_handler(update: MessageCreated, bot: Bot) -> None:
     async with ChatActionSender.typing_on(bot=bot, chat_id=update.chat_id):
-        await asyncio.sleep(5)  # долгая операция
+        await asyncio.sleep(5)
 
     await update.answer(text="Отчёт готов")
 
@@ -24,7 +23,7 @@ async def file_handler(update: MessageCreated, bot: Bot) -> None:
     async with ChatActionSender.sending_file(
         bot=bot,
         chat_id=update.chat_id,
-        initial_sleep=1,  # пропустить быстрые операции
+        initial_sleep=1,
     ):
         await asyncio.sleep(10)
 

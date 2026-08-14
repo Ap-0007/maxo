@@ -111,7 +111,6 @@ class BaseObserver(Observer[_UpdateT, _HandlerT, _HandlerFnT], ABC):
 
 @contextmanager
 def bind_handler(ctx: Ctx, handler: Handler[Any, Any]) -> Iterator[None]:
-    """Временно привязывает хендлер к `ctx`."""
     had_handler = HANDLER_KEY in ctx
     previous_handler = ctx.get(HANDLER_KEY)
 

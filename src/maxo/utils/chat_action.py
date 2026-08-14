@@ -84,7 +84,6 @@ class ChatActionSender:
 
     @property
     def running(self) -> bool:
-        """Запущена ли фоновая отправка."""
         return bool(self._task)
 
     async def _wait(self, interval: float) -> None:
@@ -189,7 +188,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот набирает сообщение»."""
         return cls._factory(
             SenderAction.TYPING_ON,
             chat_id,
@@ -206,7 +204,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот отправляет фото»."""
         return cls._factory(
             SenderAction.SENDING_PHOTO,
             chat_id,
@@ -223,7 +220,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот отправляет видео»."""
         return cls._factory(
             SenderAction.SENDING_VIDEO,
             chat_id,
@@ -240,7 +236,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот отправляет аудиофайл»."""
         return cls._factory(
             SenderAction.SENDING_AUDIO,
             chat_id,
@@ -257,7 +252,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот отправляет файл»."""
         return cls._factory(
             SenderAction.SENDING_FILE,
             chat_id,
@@ -274,7 +268,6 @@ class ChatActionSender:
         interval: float = DEFAULT_INTERVAL,
         initial_sleep: float = DEFAULT_INITIAL_SLEEP,
     ) -> "ChatActionSender":
-        """Отправщик действия «бот прочитал сообщения»."""
         return cls._factory(
             SenderAction.MARK_SEEN,
             chat_id,

@@ -2,20 +2,19 @@
 ====================
 
 .. meta::
-   :description: ChatActionSender и ChatActionMiddleware в maxo: автоматическая отправка действий «бот набирает сообщение» и «бот отправляет файл» во время долгих операций.
-   :keywords: maxo chat action, ChatActionSender, ChatActionMiddleware, typing_on, sending_file, бот max набирает сообщение
+   :description: ChatActionSender и ChatActionMiddleware в maxo для повторной
+      отправки действий бота во время долгих операций.
+   :keywords: maxo chat action, ChatActionSender, ChatActionMiddleware, typing_on
 
-MAX показывает действие бота (``typing_on``, ``sending_photo`` и другие)
-ограниченное время, поэтому во время долгой операции его надо переотправлять.
-``ChatActionSender`` делает это за вас в фоновой задаче.
-
-Порт ``ChatActionSender`` и ``ChatActionMiddleware`` из ``aiogram``.
+MAX показывает действие бота (``typing_on``, ``sending_photo`` и другие) только
+некоторое время. ``ChatActionSender`` повторяет его в фоновой задаче, пока идёт
+долгая операция.
 
 Отправщик
 ---------
 
-``ChatActionSender`` - асинхронный контекстный менеджер: пока выполняется код
-внутри ``async with``, в чат раз в ``interval`` секунд уходит действие.
+``ChatActionSender`` - асинхронный контекстный менеджер. Пока выполняется код
+внутри ``async with``, он отправляет действие каждые ``interval`` секунд.
 
 .. code-block:: python
 
@@ -29,9 +28,9 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 
         await update.answer(text=result)
 
-Готовые фабрики под каждое действие: ``typing_on``, ``sending_photo``,
-``sending_video``, ``sending_audio``, ``sending_file`` и ``mark_seen``. Любое
-действие можно задать и напрямую через ``action``:
+Для стандартных действий есть методы ``typing_on``, ``sending_photo``,
+``sending_video``, ``sending_audio``, ``sending_file`` и ``mark_seen``.
+Параметр ``action`` позволяет задать действие напрямую:
 
 .. code-block:: python
 
@@ -49,9 +48,9 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 Мидлварь
 --------
 
-``ChatActionMiddleware`` избавляет от ``async with`` в каждом хендлере.
-Регистрируется как **внутренняя** (inner) мидлварь - только так ей доступны
-флаги хендлера:
+``ChatActionMiddleware`` запускает отправщик для выбранного хендлера, поэтому
+писать ``async with`` в каждом хендлере не нужно. Мидлварь регистрируется как
+**внутренняя** (inner), где доступны флаги хендлера:
 
 .. code-block:: python
 
@@ -59,12 +58,12 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 
     dp.message_created.middleware(ChatActionMiddleware())
 
-После этого все хендлеры, которые работают дольше ``initial_sleep``, будут
-показывать ``typing_on``.
+После регистрации хендлеры дольше ``initial_sleep`` будут показывать
+``typing_on``.
 
-Дефолты отправщика задаются в конструкторе мидлвари. Ненулевой ``initial_sleep``
-стоит поставить сразу: иначе каждый быстрый хендлер тратит лишний запрос к API
-на действие, которое никто не успеет увидеть.
+Параметры отправщика по умолчанию задаются в конструкторе мидлвари. Ненулевой
+``initial_sleep`` не запускает отправку для быстрых хендлеров и экономит один
+запрос к API:
 
 .. code-block:: python
 
@@ -73,10 +72,10 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
 Настройка через флаги
 ---------------------
 
-Поведение конкретного хендлера настраивается флагом ``chat_action``
-(подробнее про флаги - :doc:`../event-handling/flags`).
+Флаг ``chat_action`` переопределяет настройки для конкретного хендлера.
+Подробнее о флагах: :doc:`../event-handling/flags`.
 
-Поменять только тип действия:
+Строка или ``SenderAction`` задаёт действие:
 
 .. code-block:: python
 
@@ -87,7 +86,7 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
     @flags.chat_action("sending_photo")
     async def my_handler(update: MessageCreated) -> None: ...
 
-Настроить отправщик целиком:
+Словарь задаёт несколько параметров отправщика:
 
 .. code-block:: python
 
@@ -95,7 +94,7 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
     @flags.chat_action(action="sending_file", interval=3, initial_sleep=1)
     async def my_handler(update: MessageCreated) -> None: ...
 
-Выключить отправку для конкретного хендлера:
+Значение ``False`` отключает отправку:
 
 .. code-block:: python
 
@@ -103,9 +102,8 @@ MAX показывает действие бота (``typing_on``, ``sending_pho
     @flags.chat_action(False)
     async def my_handler(update: MessageCreated) -> None: ...
 
-Мидлварь определяет чат по ``update_context`` из ``ctx``, а если его нет - по
-самому апдейту. Если ID чата определить не удалось, мидлварь просто пропускает
-апдейт дальше, ничего не отправляя.
+Мидлварь берёт ID чата из ``update_context`` в ``ctx`` или из самого апдейта.
+Если ID найти не удалось, мидлварь вызывает хендлер без отправки действия.
 
 Справочник
 ----------
