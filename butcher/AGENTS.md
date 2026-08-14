@@ -12,8 +12,7 @@ Butcher генерирует `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot
 
 ```bash
 just butcher       # полная генерация в src/maxo, только по правилу ниже
-just butcher-test  # тесты butcher (45 шт.)
-just butcher-init  # git submodule update --init, если каталог генератора пуст
+just butcher-test  # тесты butcher (50 шт.)
 ```
 
 `just butcher` принимает аргументы CLI, например
@@ -31,10 +30,10 @@ butcher, на чистом дереве и с последующим восст�
 Butcher **не разбирает свагер сам**. За `allOf`, `oneOf`/`anyOf`, `nullable` в
 обеих формах (3.0 `nullable: true` и 3.1 `type: [x, "null"]`), форматы,
 дефолты, `readOnly`, дискриминаторы, тела запросов, внешние `$ref` и коллизии
-имён отвечает `unihttp-openapi-generator` - сабмодуль
-`butcher/unihttp-openapi-generator` (форк `goduni/unihttp-openapi-generator`).
-Он строит IR - типизированное промежуточное представление, независимое от
-того, во что потом рендерится код.
+имён отвечает PyPI-пакет `unihttp-openapi-generator==0.2.0` из dependency
+group `butcher`. `uv sync --all-groups` устанавливает его вместе с остальным
+окружением. Пакет строит IR - типизированное промежуточное представление,
+независимое от того, во что потом рендерится код.
 
 За butcher остаётся только то, чем maxo отличается от голого свагера.
 
@@ -233,13 +232,12 @@ has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
 
 - Логика - в `profile.py`, данные - в `overrides.py`. Не зашивай конкретные
   имена схем в код профиля.
-- Если проблема в самом генераторе - чини её в сабмодуле и оформляй PR в
-  апстрим, а не обходи костылём в butcher. Так уже сделаны `--inheritance`,
+- Если проблема в самом генераторе - оформляй исправление в upstream, а не
+  обходи её костылём в butcher. Обновление закреплённой PyPI-версии делай
+  отдельным изменением. Так уже сделаны `--inheritance`,
   `IRBodyField.description` и отказ от суффикса у soft keywords.
-- Правки в сабмодуле подхватываются сразу: `just butcher` ставит его через
-  `uv run --with-editable`.
 - Butcher не входит в `mypy` (`files` в `pyproject.toml`), но проверяется
-  `ruff` с конфигом проекта. Сам сабмодуль из `ruff` исключён.
+  `ruff` с конфигом проекта.
 - Тесты butcher не попадают в автосбор `pytest` (`testpaths = ["tests"]`) и
   запускаются только через `just butcher-test`. Им нужен установленный
   генератор.
@@ -259,7 +257,7 @@ has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
 ### Импорты в прогоне «в сторону»
 
 `emit.write` в конце гоняет по каталогу вывода `ruff check --select I,F401
---fix` и `ruff format` (`postprocess.format_path` в сабмодуле). Конфиг проекта
+--fix` и `ruff format` (`postprocess.format_path` в PyPI-пакете). Конфиг проекта
 подхватывается по текущему каталогу, поэтому форматируется любой каталог
 вывода - и `.butcher/gen`, и путь вне репозитория, и gitignore этому не мешает.
 

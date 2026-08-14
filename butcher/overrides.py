@@ -82,7 +82,7 @@ UPDATE_TYPE_ATTR = "type"
 ROOT_BASE_CLASS = "MaxoType"
 
 #: Слова в описании, по которым int64 распознаётся как таймстемп.
-TIMESTAMP_HINTS: tuple[str, ...] = ("time", "date", "время")
+TIMESTAMP_HINTS: tuple[str, ...] = ("time", "timestamp", "date", "время")
 
 #: Тип поля метода там, где свагер неверен и генератор выводит `Any` (тело
 #: `UserIdsList` - parameters-объект; `message_ids` - массив без `items`).
@@ -323,9 +323,10 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
     ExtraExport(module="upload_media_result", names=("UploadMediaResult",)),
 )
 
-#: Что дописать в `maxo/bot/methods/__init__.py` - методы вне свагера.
+#: Что дописать в `maxo/bot/methods/__init__.py` - ручные методы и алиасы.
 METHODS_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
     ExtraExport(module="bots.edit_bot_info", names=("EditBotInfo",)),
+    ExtraExport(module="chats.delete_admin", names=("DeleteAdmin",)),
     ExtraExport(module="chats.delete_chat", names=("DeleteChat",)),
     ExtraExport(module="chats.get_chat_by_link", names=("GetChatByLink",)),
     ExtraExport(module="chats.get_chats", names=("GetChats",)),

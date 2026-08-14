@@ -29,7 +29,6 @@ aiogram, `generated_url`, `# type: ignore`, поля вне свагера - и�
 
 ```bash
 uv sync --all-groups
-just butcher-init   # если butcher/unihttp-openapi-generator пуст
 git status --porcelain -- src/maxo   # обязано быть пусто
 ```
 
@@ -375,8 +374,9 @@ def test_dump() -> None:
 | Состав union-файла или замена ссылки на базу                 | `UNION_FILES` / `BASE_TO_UNION`                  |
 | База ведётся руками, а подтипы генерируются                  | `REPLACED_BASES`                                 |
 
-Если проблема не в maxo-профиле, а в разборе OpenAPI - чини сабмодуль
-`butcher/unihttp-openapi-generator` и веди PR в апстрим, не костыль в butcher.
+Если проблема не в maxo-профиле, а в разборе OpenAPI - веди исправление в
+upstream, не костыль в butcher. Обновление закреплённой PyPI-версии
+генератора делай отдельным изменением.
 Новую трансформацию профиля закрывай тестом в `butcher/tests/test_profile.py`,
 новую форму вывода - в `butcher/tests/test_render.py`.
 

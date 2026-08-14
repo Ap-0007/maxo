@@ -43,16 +43,10 @@ docs *args:
 test-all:
     uv run nox
 
-# Генерация types/enums/bot/methods по max-swagger.json.
-# Генератор берётся из сабмодуля butcher/unihttp-openapi-generator (форк
-# goduni/unihttp-openapi-generator). Если каталог пуст - `just butcher-init`.
 butcher *args:
-    uv run --with-editable ./butcher/unihttp-openapi-generator python -m butcher {{ args }}
+    uv run --group butcher python -m butcher {{ args }}
 
 butcher-test *args:
-    uv run --with-editable ./butcher/unihttp-openapi-generator pytest butcher/tests {{ args }}
-
-butcher-init:
-    git submodule update --init butcher/unihttp-openapi-generator
+    uv run --group butcher pytest butcher/tests {{ args }}
 
 all: lint mypy test-all

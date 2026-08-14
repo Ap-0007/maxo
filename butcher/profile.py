@@ -212,7 +212,7 @@ class _Profile:
         while changed:
             changed = False
             for name, model in self._models.items():
-                if model.base in self._skipped and name not in self._skipped:
+                if model.base_model in self._skipped and name not in self._skipped:
                     self._skipped.add(name)
                     changed = True
 
@@ -245,9 +245,9 @@ class _Profile:
             model = self._models.get(current)
             if model is None:
                 return False
-            if model.base == overrides.UPDATE_BASE_SCHEMA:
+            if model.base_model == overrides.UPDATE_BASE_SCHEMA:
                 return True
-            current = model.base
+            current = model.base_model
         return False
 
     def _collect_enums(self) -> None:
@@ -377,15 +377,15 @@ class _Profile:
         is_update = self._is_update(name)
         class_name = self._class_names[name]
 
-        replaced = overrides.REPLACED_BASES.get(ir_model.base or "")
-        if ir_model.base is None:
+        replaced = overrides.REPLACED_BASES.get(ir_model.base_model or "")
+        if ir_model.base_model is None:
             base = overrides.ROOT_BASE_CLASS
             imports.add(Import(f"{naming.TYPES_PACKAGE}.base", base))
         elif replaced is not None:
             base = replaced
             imports.add(Import(f"{naming.TYPES_PACKAGE}.base", base))
         else:
-            base = self._class_names[ir_model.base]
+            base = self._class_names[ir_model.base_model]
             imports.add(Import(naming.type_module(base), base))
 
         mixins = overrides.CLASS_MIXINS.get(class_name, ())

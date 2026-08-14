@@ -32,7 +32,7 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
         limit: Максимальное количество обновлений о событиях, которое может вернуться в ответе на запрос
         marker: Чтобы получить последнее обновление событий, передайте `null` или оставьте поле пустым. Чтобы получить все обновления по событиям с момента предыдущего запроса, передайте значение `marker`, которое получили в ответ на предыдущий запрос
         timeout: Тайм-аут в секундах для долгого опроса
-        types: Список типов событий, которые вы хотите получать, например: `message_created`, `message_callback`. Полный список возможных событий смотрите в описании [объекта `Update`](https://dev.max.ru/docs-api/objects/Update)
+        types: Список типов событий, которые вы хотите получать. Полный список возможных событий смотрите в описании [объекта `Update`](https://dev.max.ru/docs-api/objects/Update)
 
     Источник: https://dev.max.ru/docs-api/methods/GET/updates
     """
@@ -47,7 +47,7 @@ class GetUpdates(MaxoMethod[UpdateList], slots=False):
     timeout: Query[Omittable[int]] = Omitted()
     """Тайм-аут в секундах для долгого опроса"""
     types: Query[Omittable[list[str] | None]] = Omitted()
-    """Список типов событий, которые вы хотите получать, например: `message_created`, `message_callback`. Полный список возможных событий смотрите в описании [объекта `Update`](https://dev.max.ru/docs-api/objects/Update)"""
+    """Список типов событий, которые вы хотите получать. Полный список возможных событий смотрите в описании [объекта `Update`](https://dev.max.ru/docs-api/objects/Update)"""
 
     def make_response(
         self,

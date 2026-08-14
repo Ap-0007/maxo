@@ -132,10 +132,12 @@ lint = [
     "slotscheck==0.19.1",
     "black==25.11.0",
 ]
+butcher = ["unihttp-openapi-generator==0.2.0"]
 dev = [
-    { include-group = "lint" },
-    { include-group = "tests" },
     { include-group = "docs" },
+    { include-group = "tests" },
+    { include-group = "lint" },
+    { include-group = "butcher" },
     "maxo[magic_filter,dishka,redis,fastapi,preview]"
 ]
 
@@ -194,8 +196,7 @@ fix = true
 line-length = 88
 indent-width = 4
 target-version = "py312"
-# Сабмодуль живёт по своим правилам и линтуется в своём репозитории.
-exclude = ["docs/conf.py", "butcher/unihttp-openapi-generator"]
+exclude = ["docs/conf.py"]
 
 [tool.ruff.lint]
 select = [

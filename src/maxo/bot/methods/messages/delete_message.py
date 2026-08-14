@@ -5,7 +5,7 @@ from maxo.types.simple_query_result import SimpleQueryResult
 
 class DeleteMessage(MaxoMethod[SimpleQueryResult]):
     """
-    Удалить сообщение
+    Удаление сообщений
 
     Удаляет сообщения в диалоге, групповом чате или канале
 

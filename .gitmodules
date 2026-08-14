@@ -1,3 +1,0 @@
-[submodule "butcher/unihttp-openapi-generator"]
-	path = butcher/unihttp-openapi-generator
-	url = https://github.com/K1rL3s/unihttp-openapi-generator.git

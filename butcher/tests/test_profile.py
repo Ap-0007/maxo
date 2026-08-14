@@ -286,3 +286,19 @@ def test_timestamp_hint_matches_whole_words(
     )
 
     assert value.annotation == "int"
+
+
+def test_timestamp_hint_recognizes_timestamp(tmp_path: Path) -> None:
+    spec = copy.deepcopy(SPEC)
+    spec["components"]["schemas"]["Message"]["properties"]["value"] = {
+        "type": "integer",
+        "format": "int64",
+        "description": "Unix timestamp в миллисекундах",
+    }
+
+    document = _build_document(tmp_path, spec)
+    value = next(
+        item for item in _model(document, "Message").fields if item.name == "value"
+    )
+
+    assert value.annotation == "datetime"
