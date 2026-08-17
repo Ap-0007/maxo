@@ -47,6 +47,15 @@ def test_inheritance_keeps_only_own_fields(document: MaxoDocument) -> None:
     assert {f.name for f in subtype.fields} == {"type", "payload"}
 
 
+def test_comment_models_override_swagger_bases(document: MaxoDocument) -> None:
+    assert _model(document, "CommentMessage").base == "Message"
+    assert _model(document, "CommentMessageBody").base == "MessageBody"
+    assert _model(document, "CommentLinkedMessage").base == "LinkedMessage"
+    assert _model(document, "CommentMessage").mixins == (
+        "CommentMethodsFacade",
+    )
+
+
 def test_discriminator_becomes_enum(document: MaxoDocument) -> None:
     enum = _enum(document, "AttachmentType")
     assert enum.description == "Вложение"

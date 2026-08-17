@@ -22,7 +22,7 @@ from maxo.enums import (
     UpdateType,
 )
 from maxo.omit import Omitted, is_omitted
-from maxo.routing.mixins import message
+from maxo.routing.mixins import comment, message
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -35,6 +35,7 @@ from maxo.types import (
     CallbackButton,
     ChatTitleChanged,
     ClipboardButton,
+    CommentMessage,
     ContactAttachment,
     ContactAttachmentRequest,
     DialogCleared,
@@ -52,6 +53,7 @@ from maxo.types import (
     LinkMarkup,
     LocationAttachment,
     LocationAttachmentRequest,
+    Message,
     MessageButton,
     MessageCallback,
     MessageCreated,
@@ -85,6 +87,12 @@ if TYPE_CHECKING:
 
 
 TAG_PROVIDERS = concat_provider(
+    has_tag_provider(
+        CommentMessage,
+        ("recipient", "post_id"),
+        lambda post_id: post_id is not None,
+        base=Message,
+    ),
     # ---> UpdateType <---
     has_tag_provider(BotAddedToChat, "update_type", UpdateType.BOT_ADDED),
     has_tag_provider(BotRemovedFromChat, "update_type", UpdateType.BOT_REMOVED),
@@ -174,6 +182,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(comment)
     exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
@@ -205,6 +214,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
+
     return typing.cast(Retort, extended)
 
 

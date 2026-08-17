@@ -46,7 +46,7 @@ class Message(MaxoType, MessageMethodsFacade):
 
     link: Omittable[LinkedMessage | None] = Omitted()
     """Пересланное или ответное сообщение"""
-    sender: Omittable[User] = Omitted()
+    sender: Omittable[User | None] = Omitted()
     """
     Отправитель сообщения: пользователь или бот
 

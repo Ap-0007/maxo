@@ -33,6 +33,14 @@ def test_update_declares_bare_type_assignment(document: MaxoDocument) -> None:
     assert "    type = UpdateType.MESSAGE_CREATED" in source
 
 
+def test_comment_declares_message_and_facade_bases(document: MaxoDocument) -> None:
+    source = types.render(_model(document, "CommentMessage"))
+
+    assert "class CommentMessage(Message, CommentMethodsFacade):" in source
+    assert "from maxo.types.message import Message" in source
+    assert "from maxo.routing.mixins import CommentMethodsFacade" in source
+
+
 def test_model_renders_unsafe_property(document: MaxoDocument) -> None:
     source = types.render(_model(document, "Message"))
     assert "    def unsafe_url(self) -> str:" in source

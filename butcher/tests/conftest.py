@@ -123,6 +123,11 @@ SPEC: dict[str, Any] = {
                     },
                 },
             },
+            "MessageBody": {"properties": {}},
+            "CommentMessageBody": {"properties": {}},
+            "LinkedMessage": {"properties": {}},
+            "CommentLinkedMessage": {"properties": {}},
+            "CommentMessage": {"properties": {}},
             "Attachment": {
                 "description": "Вложение",
                 "required": ["type"],

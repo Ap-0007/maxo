@@ -377,8 +377,12 @@ class _Profile:
         is_update = self._is_update(name)
         class_name = self._class_names[name]
 
+        base_override = overrides.MODEL_BASE_OVERRIDES.get(class_name)
         replaced = overrides.REPLACED_BASES.get(ir_model.base_model or "")
-        if ir_model.base_model is None:
+        if base_override is not None:
+            base = base_override
+            imports.add(Import(naming.type_module(base), base))
+        elif ir_model.base_model is None:
             base = overrides.ROOT_BASE_CLASS
             imports.add(Import(f"{naming.TYPES_PACKAGE}.base", base))
         elif replaced is not None:

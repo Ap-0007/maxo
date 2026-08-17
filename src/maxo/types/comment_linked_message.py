@@ -1,12 +1,12 @@
 from maxo.enums.message_link_type import MessageLinkType
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.types.base import MaxoType
 from maxo.types.comment_message_body import CommentMessageBody
+from maxo.types.linked_message import LinkedMessage
 from maxo.types.user import User
 
 
-class CommentLinkedMessage(MaxoType):
+class CommentLinkedMessage(LinkedMessage):
     """
     Args:
         chat_id: Чат или канал, в котором сообщение было изначально опубликовано. Только для пересланных сообщений с `type = forward`. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
@@ -18,7 +18,7 @@ class CommentLinkedMessage(MaxoType):
              **Для комментариев поддерживается только тип `reply`**
     """
 
-    message: CommentMessageBody
+    message: CommentMessageBody  # type: ignore[mutable-override]
     type: MessageLinkType
     """
     Тип связанного сообщения:

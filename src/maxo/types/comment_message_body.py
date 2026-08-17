@@ -1,10 +1,10 @@
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.types.base import MaxoType
 from maxo.types.markup_elements import MarkupElements
+from maxo.types.message_body import MessageBody
 
 
-class CommentMessageBody(MaxoType):
+class CommentMessageBody(MessageBody):
     """
     Информация о комментарии
 

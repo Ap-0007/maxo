@@ -2,14 +2,15 @@ from datetime import datetime
 
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_defined
-from maxo.types.base import MaxoType
+from maxo.routing.mixins import CommentMethodsFacade
 from maxo.types.comment_linked_message import CommentLinkedMessage
 from maxo.types.comment_message_body import CommentMessageBody
+from maxo.types.message import Message
 from maxo.types.recipient import Recipient
 from maxo.types.user import User
 
 
-class CommentMessage(MaxoType):
+class CommentMessage(Message, CommentMethodsFacade):
     """
     Комментарий в чате. Возвращается в ответ на запросы группы [`/comments`](https://dev.max.ru/docs-api/methods/GET/messages/-messageId-/comments). В отличие от обычного сообщения в чате или канале не содержит вложений `attachments` и не поддерживает пересылку комментариев (поле `link.type = forward`)
 
@@ -21,14 +22,14 @@ class CommentMessage(MaxoType):
         timestamp: Время создания сообщения в формате Unix timestamp в миллисекундах
     """
 
-    body: CommentMessageBody
+    body: CommentMessageBody  # type: ignore[mutable-override]
     """Информация о комментарии"""
     recipient: Recipient
     """Получатель сообщения: для комментариев - канал"""
     timestamp: datetime
     """Время создания сообщения в формате Unix timestamp в миллисекундах"""
 
-    link: Omittable[CommentLinkedMessage | None] = Omitted()
+    link: Omittable[CommentLinkedMessage | None] = Omitted()  # type: ignore[mutable-override]
     """Комментарий, на который получен ответ"""
     sender: Omittable[User | None] = Omitted()
     """Пользователь, отправивший комментарий. Может быть `null`, если сообщение было опубликовано от имени канала"""

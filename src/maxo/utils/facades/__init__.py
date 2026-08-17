@@ -34,6 +34,7 @@ from maxo.routing.mixins import (
     BaseMethodsFacade,
     BotMethodsFacade,
     ChatMethodsFacade,
+    CommentMethodsFacade,
     MessageMethodsFacade,
     SubscriptionMethodsFacade,
 )
@@ -51,6 +52,7 @@ __all__ = (
     "CallbackMethodsFacade",
     "ChatMethodsFacade",
     "ChatTitleChangedFacade",
+    "CommentMethodsFacade",
     "DialogClearedFacade",
     "DialogMutedFacade",
     "DialogRemovedFacade",

@@ -81,6 +81,13 @@ UPDATE_TYPE_ATTR = "type"
 #: Корень иерархии типов.
 ROOT_BASE_CLASS = "MaxoType"
 
+#: Базы моделей, которыми maxo намеренно уточняет плоские схемы Swagger.
+MODEL_BASE_OVERRIDES: dict[str, str] = {
+    "CommentLinkedMessage": "LinkedMessage",
+    "CommentMessage": "Message",
+    "CommentMessageBody": "MessageBody",
+}
+
 #: Слова в описании, по которым int64 распознаётся как таймстемп.
 TIMESTAMP_HINTS: tuple[str, ...] = ("time", "timestamp", "date", "время")
 
@@ -107,8 +114,21 @@ class FieldOverride:
 #: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
 #: ``(класс, поле)``.
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
+    # Wire-модель комментария сужает mutable-поле базового LinkedMessage.
+    ("CommentLinkedMessage", "message"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
+    # Wire-модель комментария сужает mutable-поля базового Message.
+    ("CommentMessage", "body"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
+    ("CommentMessage", "link"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
     # Описание допускает `null`, но в Swagger нет `nullable: true`
     ("CommentMessage", "sender"): FieldOverride(annotation="User | None"),
+    # CommentMessage является Message, поэтому общий контракт допускает `null`.
+    ("Message", "sender"): FieldOverride(annotation="User | None"),
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
         omittable=True,
@@ -284,6 +304,7 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "BotStarted": ("ChatMethodsFacade",),
     "BotStopped": ("ChatMethodsFacade",),
     "ChatTitleChanged": ("ChatMethodsFacade",),
+    "CommentMessage": ("CommentMethodsFacade",),
     "DialogCleared": ("ChatMethodsFacade",),
     "DialogMuted": ("ChatMethodsFacade",),
     "DialogRemoved": ("ChatMethodsFacade",),

@@ -51,7 +51,11 @@ class MessageMethodsFacade(ChatMethodsFacade):
         return self.unsafe_message.recipient.unsafe_chat_id
 
     async def delete_message(self) -> SimpleQueryResult:
-        message_id = self.unsafe_message.body.mid
+        message = self.unsafe_message
+        if message is not self:
+            return await message.as_(self.bot).delete_message()
+
+        message_id = message.body.mid
         return await self.bot.delete_message(message_id=message_id)
 
     async def send_message(
@@ -66,6 +70,18 @@ class MessageMethodsFacade(ChatMethodsFacade):
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> "Message":
         message = self.unsafe_message
+        if message is not self:
+            return await message.as_(self.bot).send_message(
+                text=text,
+                link=link,
+                notify=notify,
+                format=format,
+                disable_link_preview=disable_link_preview,
+                keyboard=keyboard,
+                media=media,
+                attachments=attachments,
+            )
+
         recipient = message.recipient
         sender = message.sender
         chat_id, user_id = calculate_chat_id_and_user_id(
@@ -183,6 +199,17 @@ class MessageMethodsFacade(ChatMethodsFacade):
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> SimpleQueryResult:
         message = self.unsafe_message
+        if message is not self:
+            return await message.as_(self.bot).edit_message(
+                text=text,
+                keyboard=keyboard,
+                media=media,
+                link=link,
+                notify=notify,
+                format=format,
+                attachments=attachments,
+            )
+
         message_id = message.body.mid
 
         if text is None:
@@ -217,4 +244,8 @@ class MessageMethodsFacade(ChatMethodsFacade):
         )
 
     async def get_message_by_id(self, message_id: str) -> "Message":
+        message = self.unsafe_message
+        if message is not self:
+            return await message.as_(self.bot).get_message_by_id(message_id)
+
         return await self.bot.get_message_by_id(message_id=message_id)
