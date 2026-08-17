@@ -15,7 +15,7 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
      #### Пример запроса для загрузки медиафайла
 
     ```bash
-    curl -X POST "https://platform-api.max.ru/uploads?type={type}" \
+    curl -X POST "https://platform-api2.max.ru/uploads?type={type}" \
       -H "Authorization: {access_token}"
     ```
 
@@ -89,7 +89,7 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
     Отправьте запрос:
 
     ```bash
-    curl -X POST "https://platform-api.max.ru/uploads?type={type}" \
+    curl -X POST "https://platform-api2.max.ru/uploads?type={type}" \
       -H "Authorization: {access_token}"
     ```
 
@@ -154,7 +154,7 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
 
     После успешной загрузки сервер обрабатывает файл. Файлы от нескольких мегабайт обрабатываются дольше
 
-    > Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api.max.ru - 30 rps
+    > Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api2.max.ru - 30 rps
 
     Если отправить сообщение с вложением сразу после загрузки, может возникнуть ошибка:
 

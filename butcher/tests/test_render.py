@@ -182,3 +182,12 @@ def test_collapse_removes_blank_before_list() -> None:
 def test_collapse_ignores_code_fence() -> None:
     text = "```\n- a\n\n- b\n```"
     assert docs.collapse_list_blanks(text) == text
+
+
+def test_field_docstring_strips_trailing_whitespace() -> None:
+    assert docs.render_field("строка с пробелом \nследующая") == [
+        '    """',
+        "    строка с пробелом",
+        "    следующая",
+        '    """',
+    ]

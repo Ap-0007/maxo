@@ -153,5 +153,5 @@ def render_field(
         text = reflow_lists(text)
     if "\n" not in text:
         return [f'{indent}"""{text}"""']
-    body = [f"{indent}{line}" if line else "" for line in text.split("\n")]
+    body = [f"{indent}{line}".rstrip() if line else "" for line in text.split("\n")]
     return [f'{indent}"""', *body, f'{indent}"""']

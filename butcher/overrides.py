@@ -58,7 +58,7 @@ SKIP_OPERATIONS: frozenset[str] = frozenset(
 # --- типы --------------------------------------------------------------------
 
 #: Схема `bigint` - это просто int64.
-INLINE_ALIASES: dict[str, str] = {"Bigint": "int"}
+INLINE_ALIASES: dict[str, str] = {"Bigint": "int", "MessageId": "str"}
 
 #: Схемы, чей файл не генерируется, но подтипы остаются: их предком становится
 #: указанный класс. В отличие от `SKIP_SCHEMAS`, каскада на наследников нет.
@@ -107,6 +107,8 @@ class FieldOverride:
 #: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
 #: ``(класс, поле)``.
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
+    # Описание допускает `null`, но в Swagger нет `nullable: true`
+    ("CommentMessage", "sender"): FieldOverride(annotation="User | None"),
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
         omittable=True,

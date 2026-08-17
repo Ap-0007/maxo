@@ -20,6 +20,11 @@ from .chats.remove_member import RemoveMember
 from .chats.send_action import SendAction
 from .chats.set_admins import SetAdmins
 from .chats.unpin_message import UnpinMessage
+from .comments.delete_comment import DeleteComment
+from .comments.edit_comment import EditComment
+from .comments.get_comment_by_id import GetCommentById
+from .comments.get_comments import GetComments
+from .comments.send_comment import SendComment
 from .messages.answer_on_callback import AnswerOnCallback
 from .messages.delete_message import DeleteMessage
 from .messages.edit_message import EditMessage
@@ -40,15 +45,19 @@ __all__ = (
     "DeleteAdmin",
     "DeleteAdmins",
     "DeleteChat",
+    "DeleteComment",
     "DeleteMessage",
     "EditBotInfo",
     "EditChat",
+    "EditComment",
     "EditMessage",
     "EditMyCommands",
     "GetAdmins",
     "GetChat",
     "GetChatByLink",
     "GetChats",
+    "GetCommentById",
+    "GetComments",
     "GetMembers",
     "GetMembership",
     "GetMessageById",
@@ -64,6 +73,7 @@ __all__ = (
     "PostAdmins",
     "RemoveMember",
     "SendAction",
+    "SendComment",
     "SendMessage",
     "SetAdmins",
     "Subscribe",
