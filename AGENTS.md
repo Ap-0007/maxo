@@ -17,8 +17,13 @@
 Не выноси обязательные правила в Claude-only skills или другие инструменты,
 которые не читают Codex, Cursor, Copilot, Gemini и похожие агенты. Если
 инструкции разрастутся, добавляй вложенные `AGENTS.md` ближе к области
-ответственности, например `src/maxo/bot/AGENTS.md`, `tests/AGENTS.md` или
-`docs/AGENTS.md`.
+ответственности - так уже сделано для кодогенерации (`butcher/AGENTS.md`);
+по тому же принципу можно завести `src/maxo/bot/AGENTS.md`, `tests/AGENTS.md`
+или `docs/AGENTS.md`.
+
+Вложенный `AGENTS.md` дополняет корневой, а не заменяет: общие правила проекта
+действуют и в подкаталоге. Рядом с ним держи симлинк `CLAUDE.md -> ./AGENTS.md`,
+как в корне.
 
 Специфичные файлы для отдельных инструментов допустимы только как тонкий слой
 поверх `AGENTS.md`. В них нельзя держать единственную копию знаний о проекте.
@@ -56,6 +61,8 @@ just mypy
 just test
 just test-all
 just all
+just butcher       # генерация типов/enum'ов/методов по max-swagger.json
+just butcher-test  # тесты самого генератора
 ```
 
 Полезно помнить:
@@ -588,6 +595,18 @@ TAG_PROVIDERS = concat_provider(
   update-модель, facade/mixin при пользовательском удобстве, сериализацию,
   тесты и документацию.
 
+## Кодогенерация: butcher
+
+`src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
+`max-swagger.json` в корне - это единственный источник правды по контракту API.
+Генератор живёт в `butcher/` и работает поверх PyPI-пакета
+`unihttp-openapi-generator==0.2.0` из dependency group `butcher`. Запуск -
+`just butcher`.
+
+**Правила генерации - в `butcher/AGENTS.md`.** Читай его перед любой правкой
+`butcher/`, перед синхронизацией со свагером и когда нужно понять, почему
+сгенерированный файл выглядит именно так.
+
 ## Зависимости и optional extras
 
 - Runtime-зависимости задаются в `pyproject.toml`; не добавляй новые
@@ -924,9 +943,12 @@ uv run sphinx-build -b html docs docs/_build/html
 - Используются `justfile` для локальных команд.
 - `pyproject.toml` содержит строгие правила `ruff` и `mypy`.
 - `src/maxo/types/` и `src/maxo/enums/` содержат много файлов, которые
-  фактически являются generated API surface.
+  фактически являются generated API surface. Генерирует их `just butcher` -
+  правила в `butcher/AGENTS.md`.
 - `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
   surface и требуют синхронизации с типами, enum и сериализацией.
+- Движок кодогенерации `unihttp-openapi-generator==0.2.0` устанавливается из
+  PyPI через dependency group `butcher`.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
   `aiogram_dialog` и `aiogram-webhook`, поэтому рядом с изменениями нужно
   проверять совместимость паттернов.
