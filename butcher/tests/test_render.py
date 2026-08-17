@@ -1,7 +1,9 @@
 """Тесты формы сгенерированного кода."""
 
 import re
+from pathlib import Path
 
+from butcher import emit
 from butcher.profile import Enum, Field, MaxoDocument, Method, Model
 from butcher.render import docs, enums, fields, inits, methods, types, unions
 
@@ -95,6 +97,19 @@ def test_updates_alias_is_annotated(document: MaxoDocument) -> None:
 
 def test_init_renders_empty_all_as_tuple() -> None:
     assert inits.render([]) == "\n\n__all__ = ()\n"
+
+
+def test_emit_uses_project_import_sorting(
+    document: MaxoDocument,
+    tmp_path: Path,
+) -> None:
+    emit.write(document, tmp_path)
+
+    source = (tmp_path / "types" / "__init__.py").read_text(encoding="utf-8")
+    assert (
+        "from .base import BaseMaxoType, BaseUpdate, BotMixin, MaxUpdate, MaxoType"
+        in source
+    )
 
 
 def test_links_become_absolute() -> None:

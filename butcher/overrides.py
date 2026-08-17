@@ -98,8 +98,6 @@ class FieldOverride:
 
     annotation: str | None = None
     """Заменить тип поля (импорты берутся от исходного типа)."""
-    description: str | None = None
-    """Заменить описание поля."""
     omittable: bool | None = None
     """Форсировать `Omittable`/обычное поле независимо от `required` в свагере."""
     comment: str | None = None
@@ -111,7 +109,6 @@ class FieldOverride:
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
-        description="Текст кнопки, который будет отправлен в чат от лица пользователя",
         omittable=True,
         comment="type: ignore[assignment]",
     ),

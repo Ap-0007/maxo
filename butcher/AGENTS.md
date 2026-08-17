@@ -30,7 +30,7 @@ butcher, на чистом дереве и с последующим восст�
 Butcher **не разбирает свагер сам**. За `allOf`, `oneOf`/`anyOf`, `nullable` в
 обеих формах (3.0 `nullable: true` и 3.1 `type: [x, "null"]`), форматы,
 дефолты, `readOnly`, дискриминаторы, тела запросов, внешние `$ref` и коллизии
-имён отвечает PyPI-пакет `unihttp-openapi-generator==0.2.0` из dependency
+имён отвечает PyPI-пакет `unihttp-openapi-generator==0.3.1` из dependency
 group `butcher`. `uv sync --all-groups` устанавливает его вместе с остальным
 окружением. Пакет строит IR - типизированное промежуточное представление,
 независимое от того, во что потом рендерится код.
@@ -257,9 +257,9 @@ has_tag_provider(NewAttachment, "type", AttachmentType.NEW)
 ### Импорты в прогоне «в сторону»
 
 `emit.write` в конце гоняет по каталогу вывода `ruff check --select I,F401
---fix` и `ruff format` (`postprocess.format_path` в PyPI-пакете). Конфиг проекта
-подхватывается по текущему каталогу, поэтому форматируется любой каталог
-вывода - и `.butcher/gen`, и путь вне репозитория, и gitignore этому не мешает.
+--fix` и `ruff format` (`postprocess.format_path` в PyPI-пакете). Путь к конфигу
+проекта передаётся явно, поэтому одинаково форматируется любой каталог вывода -
+и `.butcher/gen`, и путь вне репозитория, и gitignore этому не мешает.
 
 Одно исключение стоит знать, иначе оно съедает время на ровном месте. В
 `pyproject.toml` задан `src = ["src", "examples", "tests"]`, и isort считает

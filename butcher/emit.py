@@ -56,5 +56,5 @@ def write(document: MaxoDocument, output_dir: Path) -> list[Path]:
     _write(methods_init, inits.methods(document, overrides.METHODS_EXTRA_EXPORTS))
     written.append(methods_init)
 
-    format_path(output_dir)
+    format_path(output_dir, config_path=Path(__file__).parents[1] / "pyproject.toml")
     return written

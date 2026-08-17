@@ -304,7 +304,7 @@ def test_timestamp_hint_recognizes_timestamp(tmp_path: Path) -> None:
     assert value.annotation == "datetime"
 
 
-def test_model_field_override_restores_inherited_field(tmp_path: Path) -> None:
+def test_model_field_override_uses_explicit_inherited_field(tmp_path: Path) -> None:
     spec = copy.deepcopy(SPEC)
     spec["components"]["schemas"].update(
         {
@@ -342,9 +342,7 @@ def test_model_field_override_restores_inherited_field(tmp_path: Path) -> None:
 
     assert "text" in fields
     assert fields["text"].annotation == "str"
-    assert fields["text"].description == (
-        "Текст кнопки, который будет отправлен в чат от лица пользователя"
-    )
+    assert fields["text"].description == "Текст кнопки"
     assert fields["text"].omittable
     assert fields["text"].comment == "type: ignore[assignment]"
     assert fields["text"].unsafe
