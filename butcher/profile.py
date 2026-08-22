@@ -732,8 +732,7 @@ def _is_int(ir_type: IRType) -> bool:
 def _has_timestamp_hint(description: str | None) -> bool:
     text = (description or "").lower()
     return any(
-        re.search(rf"\b{re.escape(hint)}\b", text)
-        for hint in overrides.TIMESTAMP_HINTS
+        re.search(rf"\b{re.escape(hint)}\b", text) for hint in overrides.TIMESTAMP_HINTS
     )
 
 

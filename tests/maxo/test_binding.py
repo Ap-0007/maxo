@@ -1,10 +1,17 @@
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import AnswerOnCallback, EditMessage, GetMyInfo, SendMessage
-from maxo.bot.warming_up import _DUMPED_ROOTS, _LOADED_ROOTS
+from maxo.bot.warming_up import _LOADED_ROOTS, _METHOD_ROOTS
 from maxo.enums import TextFormat
 from maxo.omit import is_defined, is_omitted
 from maxo.serialization import get_retort
-from maxo.types import ChatList, MessageCreated, NewMessageBody, Updates, bind_bot
+from maxo.types import (
+    Attachments,
+    ChatList,
+    MessageCreated,
+    NewMessageBody,
+    Updates,
+    bind_bot,
+)
 from maxo.types.binding import _field_classes
 from tests.factories import make_bot
 
@@ -101,12 +108,14 @@ def test_bind_ignores_non_maxo_values() -> None:
 
 def test_warm_roots_cover_every_top_level_load() -> None:
     """
-    Сверху грузятся только `Updates` и возвращаемые типы методов -
-    unihttp делает `response_loader.load(data, method.__returning__)`
+    Сверху грузятся возвращаемые типы методов - unihttp делает
+    `response_loader.load(data, method.__returning__)`, - плюс `Updates`
+    в вебхуке и `list[Attachments]` в сторадже диалогов.
     """
-    returning = {method.__returning__ for method in _DUMPED_ROOTS}
+    returning = {method.__returning__ for method in _METHOD_ROOTS}
     assert returning <= set(_LOADED_ROOTS)
     assert Updates in _LOADED_ROOTS
+    assert list[Attachments] in _LOADED_ROOTS
 
 
 def test_defaults_land_in_dumped_request() -> None:

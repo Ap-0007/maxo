@@ -13,7 +13,7 @@ from maxo.bot.methods import (
 from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
-from maxo.serialization import create_retort
+from maxo.serialization import get_retort
 from maxo.types import NewMessageBody, UpdateList
 from maxo.types.base import MaxoType
 from maxo.types.binding import BotMixin, bind_bot
@@ -35,7 +35,7 @@ class MyType(MaxoType, BotMixin):
 )
 def test_bot_default_text_format(default: Omittable[TextFormat | None]) -> None:
     defaults = BotDefaults(text_format=default)
-    retort = create_retort()
+    retort = get_retort()
 
     data = retort.dump(apply_defaults(SendMessage(), defaults))
     if is_omitted(default):
@@ -69,7 +69,7 @@ def test_bot_default_text_format(default: Omittable[TextFormat | None]) -> None:
 )
 def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
     defaults = BotDefaults(disable_link_preview=default)
-    retort = create_retort()
+    retort = get_retort()
 
     data = retort.dump(apply_defaults(SendMessage(), defaults))
     if is_omitted(default):
@@ -88,7 +88,7 @@ def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
     ],
 )
 def test_query_none_is_omitted(method: object) -> None:
-    retort = create_retort()
+    retort = get_retort()
 
     data = retort.dump(method)
 
@@ -97,7 +97,7 @@ def test_query_none_is_omitted(method: object) -> None:
 
 def test_bind_binds_whole_tree() -> None:
     bot = make_bot(token="")
-    retort = create_retort()
+    retort = get_retort()
 
     data = {"a": "a", "sub": {"b": 1}}
     my = bind_bot(retort.load(data, MyType), bot)
@@ -109,7 +109,7 @@ def test_bind_binds_whole_tree() -> None:
 
 
 def test_retort_without_bot_no_load_bot() -> None:
-    retort = create_retort()
+    retort = get_retort()
 
     data = {"a": "a", "sub": {"b": 1}}
 
@@ -126,7 +126,7 @@ def test_retort_without_bot_no_load_bot() -> None:
 
 
 def test_retort_empty_message() -> None:
-    retort = create_retort()
+    retort = get_retort()
 
     data = {
         "marker": 1,
@@ -144,7 +144,7 @@ def test_retort_empty_message() -> None:
 
 
 def test_retort_full_message_created_loads_ok() -> None:
-    retort = create_retort()
+    retort = get_retort()
 
     # Полный валидный message_created - убеждаемся, что регрессия не сломала happy path
     data = {

@@ -39,9 +39,9 @@ from maxo.bot.methods import (
     Unsubscribe,
     UploadMedia,
 )
-from maxo.types import Updates
+from maxo.types import Attachments, Updates
 
-_DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
+_METHOD_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     AddMembers,
     AnswerOnCallback,
     DeleteAdmins,
@@ -78,9 +78,13 @@ _DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     UploadMedia,
 )
 
+# `list[Attachments]` - диалоги гоняют вложения в сторадж мимо методов
+_DUMPED_ROOTS: tuple[Any, ...] = (*_METHOD_ROOTS, list[Attachments])
+
 _LOADED_ROOTS: tuple[Any, ...] = (
     Updates,
-    *dict.fromkeys(method.__returning__ for method in _DUMPED_ROOTS),
+    list[Attachments],
+    *dict.fromkeys(method.__returning__ for method in _METHOD_ROOTS),
 )
 
 
