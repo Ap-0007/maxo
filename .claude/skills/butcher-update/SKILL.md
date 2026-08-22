@@ -137,13 +137,13 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 | Файл                                          | Что                                                          | Как падает пропуск                            |
 |-----------------------------------------------|--------------------------------------------------------------|-----------------------------------------------|
 | `butcher/overrides.py`, `CLASS_MIXINS`        | миксин-фасад в базах класса                                  | тихо: на апдейте нет методов ответа           |
-| `src/maxo/serialization.py`                   | `has_tag_provider(X, "update_type", UpdateType.X)`           | тихо: `LoadError` в рантайме                  |
+| `src/maxo/serialization.py`                   | запись `X: UpdateType.X` в `_UPDATE_TAGS`                    | тихо: `LoadError` в рантайме                  |
 | `src/maxo/routing/routers/simple.py`          | `self.x = UpdateObserver[X]()` + запись в `_observers`       | тихо: хендлер некуда зарегистрировать         |
 | `src/maxo/routing/facades/<name>.py`          | сам фасад                                                    | -                                             |
 | `src/maxo/routing/facades/__init__.py`        | импорт и `__all__`                                           | громко: `ImportError`                         |
 | `src/maxo/routing/facades/middleware.py`      | запись в `_FACADES_MAP`                                      | тихо: `ctx["facade"]` не создаётся никогда    |
 | `src/maxo/routing/middlewares/update_context.py` | ветка `isinstance`, заполняющая `chat_id`/`user`/`user_id` | тихо и хуже всего: ломаются ключи FSM, диалоги и фильтры |
-| `src/maxo/bot/warming_up.py`                  | тип в списке типов                                           | тихо: медленный первый запрос                 |
+| `src/maxo/bot/warming_up.py`                  | ничего: апдейт греется внутри `Updates`                      | -                                             |
 | `src/maxo/routing/updates/<name>.py`          | deep-модуль депрекейтед-шима                                 | тихо                                          |
 | `src/maxo/routing/updates/__init__.py`        | импорт и `__all__` шима                                      | тихо                                          |
 | `tests/maxo/routing/updates/test_deprecation.py` | новый модуль в `parametrize`                              | тихо                                          |
@@ -161,8 +161,13 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 
 | Файл                              | Что                                              | Как падает пропуск            |
 |-----------------------------------|--------------------------------------------------|-------------------------------|
-| `src/maxo/serialization.py`       | `has_tag_provider(...)` в свою секцию `TAG_PROVIDERS` | тихо: `LoadError` в рантайме |
-| `src/maxo/bot/warming_up.py`      | тип в кортеж `_types`                            | тихо: медленный первый запрос |
+| `src/maxo/serialization.py`       | запись в свой словарь тегов (`_ATTACHMENT_TAGS`, `_BUTTON_TAGS`, ...) | тихо: `LoadError` в рантайме |
+
+`TAG_PROVIDERS` собирается из `_TAG_GROUPS` автоматически - плоского списка
+`has_tag_provider(...)` больше нет, дописывать туда нечего.
+
+В `warming_up.py` полиморфный подтип добавлять **не нужно**: он компилируется
+внутри своего union-алиаса, а тот уже достижим от корней.
 
 Свойство-дискриминатор бери из `discriminator.propertyName` базы в
 `max-swagger.json`, а не по аналогии с соседями:
@@ -181,12 +186,13 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 Новое вложение тянет ещё ручной хвост: `factory()` и `to_request()` у типа и
 его пары `*Request`, свойство-хелпер и ветка `attachment_type` в `MessageBody`,
 а при заливке файлов через `UploadType` - запись в
-`MEDIA_ATTACHMENT_FACTORIES` в `routing/mixins/attachments.py`.
+`MEDIA_ATTACHMENT_FACTORIES` в `types/facades/attachments.py`.
 
 **Новый метод Bot API:** `bind_method(...)` в `src/maxo/bot/bot.py` в блок
 своего тега (без него метод недоступен с `Bot` и выглядит как
-«не сгенерировался»); импорт и запись в `warming_up.py`; метод в фасад-миксин
-`src/maxo/routing/mixins/` - только по правилу из шага 7.
+«не сгенерировался»); импорт и запись в `_METHOD_ROOTS` (`warming_up.py`) -
+возвращаемый тип подтянется сам из `__returning__`; метод в фасад-миксин
+`src/maxo/types/facades/` - только по правилу из шага 7.
 
 **Новый член enum:** проверь `ENUM_EXTRAS` в `butcher/overrides.py`. Если член
 был самодельным, а теперь есть в спеке - убери его из `ENUM_EXTRAS`, иначе в
@@ -212,7 +218,7 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 2. **Фасад заводится всегда**: `_FACADES_MAP` - единственный путь к
    `ctx["facade"]`. Поля апдейта выносятся в фасад целиком, как `@property`, по
    образцу ближайшего аналога.
-3. **Фасад-миксин `routing/mixins/` - не зеркало Bot API.** Новый метод
+3. **Фасад-миксин `types/facades/` - не зеркало Bot API.** Новый метод
    добавляется в миксин, только если у него там уже есть семья (парный метод
    того же семейства). Нет семьи - не добавляем.
 4. **Депрекейтед-слои ведут себя по-разному.** `maxo.routing.updates`
@@ -306,7 +312,7 @@ import pytest
 
 from maxo import Router
 from maxo.routing.facades.middleware import _FACADES_MAP
-from maxo.serialization import create_retort
+from maxo.serialization import get_retort
 from maxo.types import Updates
 
 UPDATE_TYPES: tuple[Any, ...] = typing.get_args(Updates)
@@ -323,7 +329,7 @@ def test_update_has_facade(update_tp: Any) -> None:
 
 
 def test_new_update_loads_from_raw_json() -> None:
-    retort = create_retort(warming_up=False)
+    retort = get_retort()
     raw = {"update_type": "...", "timestamp": 1730000000000}  # + поля апдейта
 
     update = retort.load(raw, Updates)
@@ -331,26 +337,21 @@ def test_new_update_loads_from_raw_json() -> None:
     assert isinstance(update, ...)
 ```
 
-Новый метод - wire-контракт и форма дампа. Тип результата достаётся через
-`__orig_bases__`: атрибута `__result_type__` не существует, а прямой доступ
-ловит `mypy` как `attr-defined`.
+Новый метод - wire-контракт и форма дампа. Тип результата берётся из
+`__returning__` (его же читает `warming_up._LOADED_ROOTS`).
 
 ```python
-import typing
-
-from maxo.serialization import create_retort
+from maxo.serialization import get_retort
 
 
 def test_wire_contract() -> None:
     assert NewMethod.__url__ == "chats/{chat_id}/pins"
     assert NewMethod.__method__ == "get"
-    # __orig_bases__ не описан в стабах, отсюда getattr вместо прямого доступа.
-    orig_bases = getattr(NewMethod, "__orig_bases__")  # noqa: B009
-    assert typing.get_args(orig_bases[0]) == (ExpectedResult,)
+    assert NewMethod.__returning__ is ExpectedResult
 
 
 def test_dump() -> None:
-    retort = create_retort(warming_up=False)
+    retort = get_retort()
 
     assert retort.dump(NewMethod(chat_id=-42, count=10)) == {
         "path": {"chat_id": -42},
