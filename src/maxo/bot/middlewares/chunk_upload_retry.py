@@ -13,8 +13,8 @@ class ChunkUploadRetryMiddleware(AsyncMiddleware):
     """
     Ретраит отправку чанка resumable upload: сетевые сбои и 5xx.
 
-    Регистрируется в `Bot.middleware` перед `NetworkErrorMiddleware`
-    (позже в списке = ближе к транспорту), поэтому ловит уже переведённый
+    Передаётся в `Bot.call_method(middleware=...)` и работает снаружи
+    `NetworkErrorMiddleware`, поэтому видит уже переведённый
     `MaxBotNetworkError`/`MaxBotTimeoutError`, а не сырые исключения unihttp.
     """
 

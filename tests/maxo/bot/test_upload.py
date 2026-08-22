@@ -1,10 +1,13 @@
 from collections.abc import AsyncGenerator, Iterable
+from functools import partial
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.parse import unquote
 
 import pytest
+from unihttp.exceptions import NetworkError as UnihttpNetworkError
 
+from maxo.backoff import BackoffConfig
 from maxo.bot.methods.upload.chunk_upload import UploadResponseBody
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.enums import UploadType
@@ -352,6 +355,53 @@ async def test_network_error_propagates_without_retry() -> None:
 
     assert len(client.calls) == 1
     assert isinstance(exc_info.value.__cause__, ConnectionError)
+
+
+class _ChainRunningClient:
+    """Реально прогоняет цепочку middleware (в отличие от `_ChainRunningClient`)
+    и всегда падает сетевой ошибкой транспорта."""
+
+    def __init__(self) -> None:
+        self.attempts = 0
+
+    async def call_method(
+        self,
+        method: Any,
+        *,
+        middleware: Any = None,
+    ) -> _FakeResponse:
+        async def terminal(request: Any) -> _FakeResponse:
+            self.attempts += 1
+            raise UnihttpNetworkError("boom")
+
+        handler = terminal
+        for m in reversed(list(middleware or ())):
+            handler = partial(m.handle, next_handler=handler)  # type: ignore[assignment]
+        return await handler(MagicMock())
+
+
+async def test_chunk_retries_apply_to_raw_transport_errors() -> None:
+    client = _ChainRunningClient()
+    bot = make_bot(
+        client=client,
+        upload_config=UploadConfig(
+            chunk_retries=2,
+            chunk_backoff=BackoffConfig(
+                min_delay=0.0,
+                max_delay=0.001,
+                factor=2.0,
+                jitter=0.0,
+            ),
+        ),
+    )
+
+    with pytest.raises(MaxBotNetworkError):
+        await bot.upload_media_resumable(
+            _URL,
+            BufferedInputFile.file(b"hello", "f.bin"),
+        )
+
+    assert client.attempts == 3
 
 
 async def test_network_error_is_a_maxo_error() -> None:

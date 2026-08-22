@@ -179,7 +179,9 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         method = apply_defaults(method, self._defaults)
         result = await self.client.call_method(
             method,
-            middleware=[*self.middleware, *(middleware or ())],
+            # Middleware вызова идут первыми: так они получают ошибки maxo,
+            # а не сырые исключения unihttp.
+            middleware=[*(middleware or ()), *self.middleware],
         )
         return bind_bot(result, self)
 
@@ -191,7 +193,7 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
     ) -> HTTPResponse[AsyncChunkStream]:
         return await self.client.call_method_stream(
             method,
-            middleware=[*self.middleware, *(middleware or ())],
+            middleware=[*(middleware or ()), *self.middleware],
         )
 
     async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
