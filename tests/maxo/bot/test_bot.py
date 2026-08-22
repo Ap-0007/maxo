@@ -130,14 +130,6 @@ async def test_close_twice_is_noop(mock_bot: Bot, mock_client: AsyncMock) -> Non
     mock_client.close.assert_awaited_once()
 
 
-async def test_bot_async_context_manager(bot: Bot) -> None:
-    with patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close:
-        async with bot as entered:
-            assert entered is bot
-
-    mock_close.assert_awaited_once()
-
-
 async def test_context_without_auto_close(bot: Bot) -> None:
     with patch("maxo.bot.bot.Bot.close", new_callable=AsyncMock) as mock_close:
         async with bot.context(auto_close=False, get_my_info=False):

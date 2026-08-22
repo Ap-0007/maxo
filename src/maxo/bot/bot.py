@@ -2,7 +2,6 @@ import io
 import pathlib
 from collections.abc import AsyncIterator, Sequence
 from contextlib import aclosing, asynccontextmanager
-from types import TracebackType
 from typing import BinaryIO, Self, TypeVar
 from urllib.parse import quote
 
@@ -201,17 +200,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
         except MaxBotApiError as e:
             # Webhook-ответ не позволяет вернуть ошибку вызывающему коду.
             loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
-
-    async def __aenter__(self) -> Self:
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
-    ) -> None:
-        await self.close()
 
     async def download(
         self,
