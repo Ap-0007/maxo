@@ -376,7 +376,7 @@ class _ChainRunningClient:
 
         handler = terminal
         for m in reversed(list(middleware or ())):
-            handler = partial(m.handle, next_handler=handler)  # type: ignore[assignment]
+            handler = partial(m.handle, next_handler=handler)
         return await handler(MagicMock())
 
 
