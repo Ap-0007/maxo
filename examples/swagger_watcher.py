@@ -7,6 +7,7 @@ import os
 import re
 from collections.abc import Awaitable
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -38,6 +39,14 @@ DOCS_URL = "https://dev.max.ru/docs-api"
 DIFF_FILE_NAME = "max-bot-api-openapi.diff"
 STATE_FILE_NAME = "max-bot-api-openapi.json"
 VALUE_PREVIEW_LIMIT = 160
+MAX_RETRY_DELAY = 86_400
+MAX_BACKOFF_EXPONENT = 16
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "Chrome/140.0.0.0 Safari/537.36"
+    ),
+}
 JSON_PARSE_RE = re.compile(r"JSON\.parse\('((?:\\.|[^'\\])*)'\)")
 CHUNK_RE = re.compile(
     r"(?:src|href)=[\"']([^\"']*/_next/static/chunks/[^\"']+\.js)[\"']",
@@ -55,6 +64,7 @@ class Settings:
     telegram_recipient: Recipient | None
     interval: float
     state_path: Path
+    pending_path: Path
 
 
 def load_recipient(chat_id_name: str, token_name: str) -> Recipient | None:
@@ -82,11 +92,13 @@ def load_settings() -> Settings:
     if interval <= 0:
         raise ValueError("CHECK_INTERVAL должен быть больше нуля")
 
+    state_path = Path(os.environ.get("STATE_FILE", STATE_FILE_NAME))
     return Settings(
         max_recipient=max_recipient,
         telegram_recipient=telegram_recipient,
         interval=interval,
-        state_path=Path(os.environ.get("STATE_FILE", STATE_FILE_NAME)),
+        state_path=state_path,
+        pending_path=state_path.with_name(f".{state_path.name}.delivery.json"),
     )
 
 
@@ -179,6 +191,38 @@ def save_state(path: Path, content: str) -> None:
     temporary_path.replace(path)
 
 
+def load_delivered(path: Path, digest: str) -> set[str]:
+    if not path.exists():
+        return set()
+    try:
+        data: JsonValue = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        logger.warning("Файл состояния доставки повреждён: %s", path)
+        return set()
+    if not isinstance(data, dict) or data.get("digest") != digest:
+        return set()
+
+    channels = data.get("channels")
+    if not isinstance(channels, list):
+        return set()
+    delivered: set[str] = set()
+    for channel in channels:
+        if not isinstance(channel, str):
+            return set()
+        delivered.add(channel)
+    return delivered
+
+
+def save_delivered(path: Path, digest: str, delivered: set[str]) -> None:
+    channels: list[JsonValue] = []
+    channels.extend(sorted(delivered))
+    data: JsonObject = {
+        "digest": digest,
+        "channels": channels,
+    }
+    save_state(path, serialize_json(data))
+
+
 async def fetch_openapi(session: ClientSession) -> JsonObject:
     async with session.get(DOCS_URL) as response:
         response.raise_for_status()
@@ -201,6 +245,7 @@ async def fetch_openapi(session: ClientSession) -> JsonObject:
         spec = extract_openapi_json(javascript)
         if spec is not None:
             return spec
+        logger.warning("Не удалось извлечь OpenAPI из чанка %s", url)
 
     raise RuntimeError("OpenAPI-спецификация не найдена")
 
@@ -233,26 +278,62 @@ async def publish_telegram(token: str, chat_id: int, diff: str, message: str) ->
         )
 
 
-async def publish_update(settings: Settings, diff: str, message: str) -> None:
-    deliveries: list[Awaitable[None]] = []
-    if settings.max_recipient is not None:
-        deliveries.append(publish_max(*settings.max_recipient, diff, message))
-    if settings.telegram_recipient is not None:
-        deliveries.append(publish_telegram(*settings.telegram_recipient, diff, message))
-    await asyncio.gather(*deliveries)
+async def publish_update(
+    settings: Settings,
+    diff: str,
+    message: str,
+    digest: str,
+) -> None:
+    delivered = load_delivered(settings.pending_path, digest)
+    deliveries: list[tuple[str, Awaitable[None]]] = []
+    if settings.max_recipient is not None and "MAX" not in delivered:
+        deliveries.append(
+            ("MAX", publish_max(*settings.max_recipient, diff, message)),
+        )
+    if settings.telegram_recipient is not None and "Telegram" not in delivered:
+        deliveries.append(
+            (
+                "Telegram",
+                publish_telegram(*settings.telegram_recipient, diff, message),
+            ),
+        )
+
+    results = await asyncio.gather(
+        *(delivery for _, delivery in deliveries),
+        return_exceptions=True,
+    )
+    failures: list[Exception] = []
+    for (name, _), result in zip(deliveries, results, strict=True):
+        if isinstance(result, asyncio.CancelledError):
+            raise result
+        if isinstance(result, Exception):
+            failures.append(result)
+            logger.error(
+                "Не удалось отправить уведомление в %s",
+                name,
+                exc_info=(type(result), result, result.__traceback__),
+            )
+        elif isinstance(result, BaseException):
+            raise result
+        else:
+            delivered.add(name)
+
+    save_delivered(settings.pending_path, digest, delivered)
+    if failures:
+        raise ExceptionGroup("Не все уведомления доставлены", failures)
 
 
 async def check_for_update(session: ClientSession, settings: Settings) -> None:
     current = serialize_json(await fetch_openapi(session))
     if not settings.state_path.exists():
         save_state(settings.state_path, current)
+        settings.pending_path.unlink(missing_ok=True)
         logger.info("Начальное состояние OpenAPI сохранено")
         return
 
-    previous = serialize_json(
-        json.loads(settings.state_path.read_text(encoding="utf-8")),
-    )
+    previous = settings.state_path.read_text(encoding="utf-8")
     if previous == current:
+        settings.pending_path.unlink(missing_ok=True)
         return
 
     diff, added, removed, changed = build_diff(previous, current)
@@ -260,25 +341,47 @@ async def check_for_update(session: ClientSession, settings: Settings) -> None:
     message = (
         f"OpenAPI Max Bot API обновлён\nИзменения: +{added} / -{removed} / ~{changed}"
     )
-    await publish_update(settings, diff, message)
+    digest = sha256(current.encode(), usedforsecurity=False).hexdigest()
+    await publish_update(settings, diff, message, digest)
     save_state(settings.state_path, current)
+    settings.pending_path.unlink(missing_ok=True)
     logger.info("OpenAPI обновлён: +%d / -%d / ~%d", added, removed, changed)
 
 
 async def main() -> None:
     settings = load_settings()
     settings.state_path.parent.mkdir(parents=True, exist_ok=True)
-    async with ClientSession(timeout=ClientTimeout(total=60)) as session:
+    failures = 0
+    async with ClientSession(
+        headers=REQUEST_HEADERS,
+        timeout=ClientTimeout(total=60),
+    ) as session:
         while True:
             try:
                 await check_for_update(session, settings)
             except asyncio.CancelledError:
                 raise
             except Exception:
+                failures += 1
                 logger.exception("Не удалось проверить OpenAPI")
-            await asyncio.sleep(settings.interval)
+                delay = max(
+                    settings.interval,
+                    min(
+                        settings.interval
+                        * 2 ** min(failures - 1, MAX_BACKOFF_EXPONENT),
+                        MAX_RETRY_DELAY,
+                    ),
+                )
+                logger.info("Повторная проверка через %.0f секунд", delay)
+            else:
+                failures = 0
+                delay = settings.interval
+            await asyncio.sleep(delay)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
     asyncio.run(main())
