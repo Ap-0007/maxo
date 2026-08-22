@@ -10,14 +10,14 @@ class SecurityError(MaxoWebhookError):
     log_level = logging.WARNING
 
 
-class SecretTokenError(SecurityError):
-    code = "security_secret_token_invalid"
+class SecretError(SecurityError):
+    code = "security_secret_invalid"
     status_code = 403
     public_detail = "Forbidden"
     log_level = logging.ERROR
 
     def __str__(self) -> str:
-        return "Webhook security verification failed: invalid Telegram secret token."
+        return "Webhook security verification failed: invalid secret."
 
 
 class SecurityCheckError(SecurityError):

@@ -152,7 +152,7 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
         if override_config is not None:
             kwargs.update(DEFAULT_RETORT.dump(override_config))
         if self.security is not None:
-            secret_token = await self.security.secret_token(bot)
-            if secret_token is not None:
-                kwargs["secret_token"] = secret_token
+            secret = await self.security.secret(bot)
+            if secret is not None:
+                kwargs["secret"] = secret
         return kwargs

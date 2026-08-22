@@ -52,7 +52,7 @@ Webhooks
             from maxo.transport.webhook.adapters.aiohttp.adapter import AiohttpWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
-            from maxo.transport.webhook.security import Security, StaticSecretToken
+            from maxo.transport.webhook.security import Security, StaticSecret
 
             dp = Dispatcher()
             bot = Bot(os.environ["TOKEN"])
@@ -79,7 +79,7 @@ Webhooks
                     # Укажите путь, по которому к вам будут приходить апдейты из Макса
                     routing=StaticRouting(url="https://example.com/webhook"),
                     # security можно оставить None, если не используете секретный токен
-                    security=Security(secret_token=StaticSecretToken("pepapig")),
+                    security=Security(secret=StaticSecret("pepapig")),
                 )
                 app = web.Application()
                 engine.register(app)
@@ -108,7 +108,7 @@ Webhooks
             from maxo.transport.webhook.adapters.fastapi.adapter import FastApiWebAdapter
             from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
             from maxo.transport.webhook.routing import StaticRouting
-            from maxo.transport.webhook.security import Security, StaticSecretToken
+            from maxo.transport.webhook.security import Security, StaticSecret
 
             dp = Dispatcher()
             bot = Bot(os.environ["TOKEN"])
@@ -135,7 +135,7 @@ Webhooks
                     # Укажите путь, по которому к вам будут приходить апдейты из Макса
                     routing=StaticRouting(url="https://example.com/webhook"),
                     # security можно оставить None, если не используете секретный токен
-                    security=Security(secret_token=StaticSecretToken("pepapig")),
+                    security=Security(secret=StaticSecret("pepapig")),
                 )
 
                 # В реализации FastApiWebAdapter в register игнорируются переданные
@@ -172,13 +172,13 @@ Webhooks
 3.  При каждом запросе сервер Max.ru будет добавлять заголовок ``X-Max-Bot-Api-Secret`` с этим токеном.
 4.  **maxo** автоматически проверяет совпадение токена.
 
-В **maxo** за это отвечает компонент ``Security``. Реализация ``StaticSecretToken`` позволяет задать один и тот же токен для всех ботов.
+В **maxo** за это отвечает компонент ``Security``. Реализация ``StaticSecret`` позволяет задать один и тот же токен для всех ботов.
 
 .. code-block:: python
 
-    from maxo.transport.webhook.security import Security, StaticSecretToken
+    from maxo.transport.webhook.security import Security, StaticSecret
 
-    security = Security(secret_token=StaticSecretToken("your-super-secret-token"))
+    security = Security(secret=StaticSecret("your-super-secret-token"))
 
 Если не передать ``security`` в движок, проверка токена производиться не будет.
 

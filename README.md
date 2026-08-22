@@ -218,7 +218,7 @@ from maxo.routing.utils import collect_used_updates
 from maxo.transport.webhook.adapters.aiohttp import AiohttpWebAdapter
 from maxo.transport.webhook.engines import SimpleEngine, WebhookEngine
 from maxo.transport.webhook.routing import StaticRouting
-from maxo.transport.webhook.security import Security, StaticSecretToken
+from maxo.transport.webhook.security import Security, StaticSecret
 from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")
@@ -250,7 +250,7 @@ def main() -> None:
         bot,
         web_adapter=AiohttpWebAdapter(),
         routing=StaticRouting(url="https://example.com/webhook"),
-        security=Security(secret_token=StaticSecretToken("pepa_pig")),
+        security=Security(secret=StaticSecret("pepa_pig")),
     )
     app = web.Application()
     engine.register(app)

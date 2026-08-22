@@ -3,8 +3,8 @@ from typing import Any
 from maxo import Bot
 from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.security.checks.check import SecurityCheck
-from maxo.transport.webhook.security.errors import SecretTokenError, SecurityCheckError
-from maxo.transport.webhook.security.secret_token import SecretToken
+from maxo.transport.webhook.security.errors import SecretError, SecurityCheckError
+from maxo.transport.webhook.security.secret import BaseSecret
 from maxo.transport.webhook.web.base import WebRequest
 
 
@@ -12,9 +12,9 @@ class Security:
     def __init__(
         self,
         *checks: SecurityCheck,
-        secret_token: SecretToken | None = None,
+        secret: BaseSecret | None = None,
     ) -> None:
-        self._secret_token = secret_token
+        self._secret = secret
         self._checks: tuple[SecurityCheck, ...] = checks
 
     async def verify(
@@ -23,13 +23,13 @@ class Security:
         request: WebRequest[Any],
         route_params: RouteParams,
     ) -> None:
-        if self._secret_token is not None:
-            ok = await self._secret_token.verify(
+        if self._secret is not None:
+            ok = await self._secret.verify(
                 request=request,
                 route_params=route_params,
             )
             if not ok:
-                raise SecretTokenError
+                raise SecretError
 
         for check in self._checks:
             ok = await check.verify(
@@ -44,14 +44,14 @@ class Security:
                     else None,
                 )
 
-    async def secret_token(self, bot: Bot) -> str | None:
+    async def secret(self, bot: Bot) -> str | None:
         """
-        Get the secret token for a specific bot.
+        Get the secret for a specific bot.
 
-        :param bot: The resolved bot to get the token for.
-        :return: The secret token string, or None if no token is configured.
+        :param bot: The resolved bot to get the secret for.
+        :return: The secret string, or None if no secret is configured.
         """
-        if self._secret_token is None:
+        if self._secret is None:
             return None
 
-        return await self._secret_token.secret_token(bot_token=bot.token)
+        return await self._secret.secret(bot_token=bot.token)

@@ -1,17 +1,14 @@
 import pytest
 
-from maxo.transport.webhook.security.errors import SecretTokenError, SecurityCheckError
-from maxo.transport.webhook.security.secret_token import (
-    SECRET_TOKEN_HEADER,
-    StaticSecretToken,
-)
+from maxo.transport.webhook.security.errors import SecretError, SecurityCheckError
+from maxo.transport.webhook.security.secret import SECRET_HEADER, StaticSecret
 from maxo.transport.webhook.security.security import Security
 from tests.maxo_webhook.fixtures.security_checks import RecordingCheck
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
 
 
 @pytest.mark.asyncio
-async def test_security_verify_noop_without_checks_or_secret_token() -> None:
+async def test_security_verify_noop_without_checks_or_secret() -> None:
     security = Security()
 
     await security.verify(request=DummyWebRequest(), route_params={})
@@ -36,15 +33,15 @@ async def test_security_pipeline_stops_at_first_failed_check() -> None:
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_allows_request_when_secret_token_and_checks_pass() -> (
+async def test_security_pipeline_allows_request_when_secret_and_checks_pass() -> (
     None
 ):
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=True, calls=calls),
-        secret_token=StaticSecretToken("secret"),
+        secret=StaticSecret("secret"),
     )
-    request = DummyWebRequest(DummyRequest(headers={SECRET_TOKEN_HEADER: "secret"}))
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "secret"}))
 
     await security.verify(request=request, route_params={})
 
@@ -52,13 +49,13 @@ async def test_security_pipeline_allows_request_when_secret_token_and_checks_pas
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_runs_checks_after_valid_secret_token() -> None:
+async def test_security_pipeline_runs_checks_after_valid_secret() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=False, calls=calls),
-        secret_token=StaticSecretToken("secret"),
+        secret=StaticSecret("secret"),
     )
-    request = DummyWebRequest(DummyRequest(headers={SECRET_TOKEN_HEADER: "secret"}))
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "secret"}))
 
     with pytest.raises(SecurityCheckError):
         await security.verify(request=request, route_params={})
@@ -67,15 +64,15 @@ async def test_security_pipeline_runs_checks_after_valid_secret_token() -> None:
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_rejects_bad_secret_token_before_checks() -> None:
+async def test_security_pipeline_rejects_bad_secret_before_checks() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=True, calls=calls),
-        secret_token=StaticSecretToken("secret"),
+        secret=StaticSecret("secret"),
     )
-    request = DummyWebRequest(DummyRequest(headers={SECRET_TOKEN_HEADER: "wrong"}))
+    request = DummyWebRequest(DummyRequest(headers={SECRET_HEADER: "wrong"}))
 
-    with pytest.raises(SecretTokenError):
+    with pytest.raises(SecretError):
         await security.verify(request=request, route_params={})
 
     assert calls == []
