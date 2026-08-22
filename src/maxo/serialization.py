@@ -11,7 +11,7 @@ from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.methods import EditComment, EditMessage, SendComment, SendMessage
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
@@ -60,6 +60,7 @@ from maxo.types import (
     MessageEdited,
     MessageRemoved,
     MonospacedMarkup,
+    NewCommentBody,
     NewMessageBody,
     OpenAppButton,
     PhotoAttachment,
@@ -159,7 +160,14 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     if defaults is None:
         defaults = BotDefaults()
 
-    types_with_defaults = SendMessage | EditMessage | NewMessageBody
+    types_with_defaults = (
+        SendMessage
+        | EditMessage
+        | SendComment
+        | EditComment
+        | NewMessageBody
+        | NewCommentBody
+    )
 
     def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
         if hasattr(method, "format") and is_omitted(method.format):
@@ -200,6 +208,10 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             dumper(
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
                 lambda seq: ",".join(str(el) for el in seq),
+            ),
+            dumper(
+                P[datetime],
+                lambda time: int(time.timestamp() * 1000),
             ),
             dumper(
                 P[*typing.get_args(types_with_defaults)],
