@@ -88,6 +88,8 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
             except LoadError as exc:
                 raise InvalidJsonError(original_error=exc) from exc
 
+            webhook.debug("New update: %s", update.update)
+
             self._get_task_tracker(bot).spawn(  # type: ignore[unused-awaitable]
                 self.dispatcher.feed_update(bot=bot, update=update),
             )
