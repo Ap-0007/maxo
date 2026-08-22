@@ -7,7 +7,7 @@ from unihttp.method import BaseMethod
 from maxo.bot.methods import (
     AddMembers,
     AnswerOnCallback,
-    DeleteAdmin,
+    DeleteAdmins,
     DeleteChat,
     DeleteMessage,
     EditBotInfo,
@@ -45,7 +45,7 @@ from maxo.types import Updates
 _DUMPED_ROOTS: tuple[type[BaseMethod[Any]], ...] = (
     AddMembers,
     AnswerOnCallback,
-    DeleteAdmin,
+    DeleteAdmins,
     DeleteChat,
     DeleteMessage,
     EditBotInfo,

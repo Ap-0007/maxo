@@ -1,3 +1,4 @@
+import dataclasses
 import typing
 from collections.abc import Mapping
 from datetime import UTC, datetime
@@ -10,7 +11,8 @@ from unihttp.markers import QueryMarker
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
-from maxo._internal.adaptix import concat_provider, has_tag_provider
+from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
+from maxo.bot.methods.base import MaxoMethod
 from maxo.enums import (
     AttachmentRequestType,
     AttachmentType,
@@ -18,6 +20,7 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
+from maxo.omit import Omitted
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -177,8 +180,9 @@ def create_retort() -> Retort:
         recipe=[
             TAG_PROVIDERS,
             dumper(
-                for_marker(QueryMarker, P[None]),
-                lambda _: "null",
+                is_subclass(MaxoMethod),
+                _omit_none_query_values,
+                chain=Chain.FIRST,
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
@@ -202,3 +206,20 @@ def create_retort() -> Retort:
 @cache
 def get_retort() -> Retort:
     return create_retort()
+
+
+def _omit_none_query_values(method: MaxoMethod[object]) -> MaxoMethod[object]:
+    replacements = {
+        field.name: Omitted()
+        for field in dataclasses.fields(method)
+        if any(
+            isinstance(argument, QueryMarker)
+            for argument in typing.get_args(field.type)
+        )
+        and getattr(method, field.name) is None
+    }
+
+    if not replacements:
+        return method
+
+    return dataclasses.replace(method, **replacements)

@@ -5,6 +5,7 @@ from maxo.bot.client import BASE_URL, build_ssl_context, default_client
 from maxo.bot.warming_up import warm_up
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
+from maxo.routing.flags import flags
 from maxo.routing.interfaces.middleware import BaseMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.serialization import get_retort
@@ -24,6 +25,7 @@ __all__ = (
     "build_ssl_context",
     "default_client",
     "enums",
+    "flags",
     "get_retort",
     "html",
     "md",

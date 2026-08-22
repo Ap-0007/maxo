@@ -10,6 +10,7 @@ from maxo.fsm.storages.memory import MemoryStorage, SimpleEventIsolation
 from maxo.omit import Omittable, Omitted
 from maxo.routing.ctx import Ctx
 from maxo.routing.facades.middleware import FacadeMiddleware
+from maxo.routing.flags import HANDLER_KEY
 from maxo.routing.middlewares.error import ErrorMiddleware
 from maxo.routing.middlewares.fsm_context import FSMContextMiddleware
 from maxo.routing.middlewares.update_context import UpdateContextMiddleware
@@ -181,6 +182,7 @@ class Dispatcher(Router):
         ctx_copy = Ctx(dict(ctx))
         ctx_copy["ctx"] = ctx_copy
         ctx_copy["update"] = update.update
+        ctx_copy.pop(HANDLER_KEY, None)
 
         result = await self.trigger(ctx_copy)
         if result is UNHANDLED:

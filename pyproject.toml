@@ -2,10 +2,13 @@
 requires = ["uv_build==0.11.23"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+source-exclude = ["graphify-out"]
+
 [project]
 name = "maxo"
 description = "Асинхронный Python-фреймворк для разработки ботов мессенджера MAX (max.ru) с поддержкой long-polling, вебхуков, FSM, диалогов, фильтров и DI"
-version = "0.8.0"
+version = "0.8.1"
 readme = "README.md"
 license = { file = "LICENSE" }
 keywords = [
@@ -76,7 +79,7 @@ dependencies = [
     "cachetools>=4.0.0,<7.0.0",
     "jinja2>=3.0.0,<4.0.0",
     "adaptix==3.0.0b12",
-    "typing-extensions>=4.12.0,<5.0.0",
+    "typing-extensions>=4.12.0,<5.0.0"
 ]
 
 [project.optional-dependencies]
@@ -134,11 +137,13 @@ lint = [
     "slotscheck==0.19.1",
     "black==25.11.0",
 ]
+butcher = ["unihttp-openapi-generator==0.3.1"]
 dev = [
-    { include-group = "lint" },
-    { include-group = "tests" },
     { include-group = "docs" },
-    "maxo[magic_filter,dishka,redis,webhook,webhook_fastapi,preview]"
+    { include-group = "tests" },
+    { include-group = "lint" },
+    { include-group = "butcher" },
+    "maxo[magic_filter,dishka,redis,fastapi,preview]"
 ]
 
 [project.urls]
@@ -272,6 +277,14 @@ ignore = [
     "SLF001",
 ]
 "examples/**/*.py" = ["T201", "D", "TID252"]
+"butcher/tests/**/*.py" = [
+    "S101", # assert
+    "ANN", # type annotations
+    "D", # docstrings
+    "E501", # длинные строки
+    "PLR", # complexity
+]
+"butcher/__main__.py" = ["T201"] # CLI печатает итог генерации
 "src/maxo/types/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/enums/*.py" = ["E501", "D", "W291", "W293"]
 "src/maxo/bot/methods/*.py" = ["E501", "D", "W291", "W293"]
@@ -298,6 +311,9 @@ include = 'src/.*\.py$|tests/.*\.py$|examples/.*\.py$'
 # log_cli печатал DEBUG-лог на каждый тест и раздувал вывод в несколько раз.
 # Для отладки включай точечно: `uv run pytest --log-cli-level=DEBUG`.
 asyncio_mode = "auto"
+# Тесты butcher (butcher/tests) требуют unihttp-openapi-generator и запускаются
+# отдельно через `just butcher-test`, поэтому в автосбор не попадают.
+testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
