@@ -20,6 +20,9 @@ class DummyRoute(Route):
     async def match(self, request: WebRequest[Any]) -> RouteParams:
         return self.route_params
 
+    async def build_url(self, bot: Bot) -> str:
+        return f"https://example.test/webhook/{bot.token}"
+
 
 class CapturingAdapter(WebAdapter[Any, Any, Any]):
     def __init__(self) -> None:

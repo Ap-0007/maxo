@@ -52,17 +52,18 @@ class TokenEngine(
         bot = self._build_bot(token)
         await bot.get_my_info()
 
-        if (existing := self._bots.get(bot.info.id)) is not None:
-            self._token_ids.pop(existing.token, None)
-
-        self._bots[bot.info.id] = bot
-        self._token_ids[token] = bot.info.id
-
         kwargs = await self._build_webhook_kwargs(
             bot=bot,
             base_config=webhook_config or self.webhook_config,
         )
         await bot.subscribe(url=await self.route.build_url(bot=bot), **kwargs)
+
+        if (existing := self._bots.get(bot.info.id)) is not None:
+            # URL contains the token: same token = same URL, already subscribed
+            await self.remove_bot(bot.info.id, unsubscribe=existing.token != token)
+
+        self._bots[bot.info.id] = bot
+        self._token_ids[token] = bot.info.id
 
         webhook.info("Added bot %s to token engine and set webhook", bot.info.id)
         return bot
