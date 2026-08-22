@@ -2,7 +2,8 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from maxo.enums import TextFormat
+from maxo import loggers
+from maxo.enums import MessageLinkType, TextFormat
 from maxo.omit import Omittable, Omitted, is_defined
 from maxo.routing.mixins.attachments import MediaInput
 from maxo.routing.mixins.message import MessageMethodsFacade
@@ -46,13 +47,13 @@ class CommentMethodsFacade(MessageMethodsFacade):
         media: Sequence[MediaInput] | None = None,
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> "CommentMessage":
-        if (
-            keyboard is not None
-            or media is not None
-            or attachments is not None
-            or (is_defined(notify) and not notify)
-        ):
-            raise ValueError("Комментарии не поддерживают вложения и notify=False")
+        link = self._ignore_unsupported_parameters(
+            link=link,
+            notify=notify,
+            keyboard=keyboard,
+            media=media,
+            attachments=attachments,
+        )
 
         result = await self.bot.send_comment(
             message_id=self.unsafe_message.recipient.unsafe_post_id,
@@ -77,13 +78,13 @@ class CommentMethodsFacade(MessageMethodsFacade):
         attachments: Sequence[AttachmentsRequests] | None = None,
     ) -> SimpleQueryResult:
         comment = self.unsafe_message
-        if (
-            keyboard is not None
-            or media is not None
-            or attachments is not None
-            or not notify
-        ):
-            raise ValueError("Комментарии не поддерживают вложения и notify=False")
+        link = self._ignore_unsupported_parameters(
+            link=link,
+            notify=notify,
+            keyboard=keyboard,
+            media=media,
+            attachments=attachments,
+        )
 
         if text is None:
             text = comment.body.text
@@ -101,3 +102,36 @@ class CommentMethodsFacade(MessageMethodsFacade):
             message_id=self.unsafe_message.recipient.unsafe_post_id,
             comment_id=message_id,
         )
+
+    def _ignore_unsupported_parameters(
+        self,
+        link: NewMessageLink | None,
+        notify: Omittable[bool],
+        keyboard: Sequence[Sequence[InlineButtons]] | None,
+        media: Sequence[MediaInput] | None,
+        attachments: Sequence[AttachmentsRequests] | None,
+    ) -> NewMessageLink | None:
+        unsupported: list[str] = []
+        if keyboard is not None:
+            unsupported.append("keyboard")
+        if media is not None:
+            unsupported.append("media")
+        if attachments is not None:
+            unsupported.append("attachments")
+        if is_defined(notify) and not notify:
+            unsupported.append("notify=False")
+        if link is not None and link.type is MessageLinkType.FORWARD:
+            unsupported.append("link.type=forward")
+            link = None
+
+        if unsupported:
+            loggers.methods.warning(
+                "Параметры комментария не поддерживаются и будут проигнорированы: %s",
+                ", ".join(unsupported),
+            )
+        return link
+
+    delete_comment = delete_message
+    send_comment = send_message
+    edit_comment = edit_message
+    get_comment_by_id = get_message_by_id

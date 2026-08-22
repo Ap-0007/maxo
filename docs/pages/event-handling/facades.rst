@@ -112,6 +112,32 @@ Resumable-загрузка читает файл по кускам и отпра
     ]
     await facade.send_message(text="Микс медиа", media=media)
 
+Комментарии к постам
+--------------------
+
+Методы ``Bot.send_comment``, ``Bot.edit_comment``, ``Bot.delete_comment``,
+``Bot.get_comment_by_id`` и ``Bot.get_comments`` работают с комментариями к
+постам каналов. Объект комментария имеет тип ``CommentMessage`` и поддерживает
+как привычные методы ``send_message``, ``edit_message``, ``delete_message`` и
+``get_message_by_id``, так и их явные алиасы с ``comment`` в названии.
+
+.. code-block:: python
+
+    from maxo.types import CommentMessage
+
+    if isinstance(update.message, CommentMessage):
+        await update.send_comment("Ответ в той же ветке")
+
+В комментариях не поддерживаются вложения, ``notify=False`` и ссылки с типом
+``forward``. Фасад пишет warning и игнорирует такие параметры. Если комментарии
+в канале отключены, MAX API может вернуть ``500 internal.error``.
+
+Webhook может доставить комментарий внутри события ``message_created``. В этом
+случае ``update.message`` автоматически загружается как ``CommentMessage``, а
+методы общего фасада вызывают API комментариев. Long polling сейчас не
+доставляет такие события даже при явном запросе типа ``message_created`` - это
+ограничение MAX API, а не маршрутизации maxo.
+
 Список доступных фасадов
 ------------------------
 
