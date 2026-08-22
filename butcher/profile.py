@@ -601,18 +601,22 @@ class _Profile:
     ) -> tuple[Field, ...]:
         fields: list[Field] = []
         for parameter in operation.parameters:
+            description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
+                (operation.class_name, parameter.name),
+                parameter.description,
+            )
             annotation = self._method_field_type(
                 operation.class_name,
                 parameter.name,
                 parameter.type,
-                parameter.description,
+                description,
                 imports,
             )
             fields.append(
                 Field(
                     name=parameter.name,
                     annotation=annotation,
-                    description=parameter.description,
+                    description=description,
                     # Дефолты свагера игнорируем: необязательный параметр - `Omitted()`.
                     omittable=not parameter.required,
                     marker=_MARKER_BY_LOCATION[parameter.location],
@@ -630,11 +634,15 @@ class _Profile:
             )
 
         for body_field in body.fields:
+            description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
+                (operation.class_name, body_field.name),
+                body_field.description,
+            )
             annotation = self._method_field_type(
                 operation.class_name,
                 body_field.name,
                 body_field.type,
-                body_field.description,
+                description,
                 imports,
             )
             if body_field.is_file:
@@ -646,7 +654,7 @@ class _Profile:
                 Field(
                     name=body_field.name,
                     annotation=annotation,
-                    description=body_field.description,
+                    description=description,
                     omittable=not body_field.required,
                     marker=marker,
                 ),

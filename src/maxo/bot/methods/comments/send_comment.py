@@ -22,8 +22,10 @@ class SendComment(MaxoMethod[SendCommentResult]):
 
     **Пример запроса**:
     ```bash
-    curl -X GET "https://platform-api2.max.ru/messages/{messageId}/comments" \
-      -H "Authorization: {access_token}"
+    curl -X POST "https://platform-api2.max.ru/messages/{messageId}/comments" \
+      -H "Authorization: {access_token}" \
+      -H "Content-Type: application/json" \
+      -d '{"text": "Новый комментарий"}'
     ```
 
     Args:

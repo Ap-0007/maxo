@@ -176,6 +176,35 @@ def test_reflow_detached_list_stays_aligned() -> None:
     assert docs.reflow_lists(text) == text
 
 
+def test_reflow_normalizes_source_indentation() -> None:
+    text = "Тип:\n  - reply\n- forward\n\n **Только reply**"
+
+    assert docs.reflow_lists(text) == (
+        "Тип:\n    - reply\n    - forward\n\n**Только reply**"
+    )
+
+
+def test_args_normalize_source_indentation() -> None:
+    parts = docs.build_parts(
+        summary=None,
+        description=None,
+        parameters=[
+            ("type", "Тип:\n  - reply\n- forward\n\n **Только reply**"),
+        ],
+        reflow=True,
+    )
+
+    assert docs.render(parts) == [
+        '    """',
+        "    Args:",
+        "        type: Тип:",
+        "            - reply",
+        "            - forward",
+        "            **Только reply**",
+        '    """',
+    ]
+
+
 def test_collapse_removes_blank_between_items() -> None:
     text = "- a\n\n- b\n\n- c"
     assert docs.collapse_list_blanks(text) == "- a\n- b\n- c"

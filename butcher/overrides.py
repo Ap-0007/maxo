@@ -98,6 +98,18 @@ METHOD_FIELD_TYPES: dict[tuple[str, str], str] = {
     ("GetMessages", "message_ids"): "list[str] | None",
 }
 
+#: Описания полей методов там, где одна wire-модель используется операциями
+#: с разной семантикой
+METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
+    (
+        "SendMessage",
+        "attachments",
+    ): (
+        "Вложения отправляемого сообщения. Пустое значение означает, "
+        "что вложений нет"
+    ),
+}
+
 
 @dataclass(slots=True, frozen=True)
 class FieldOverride:

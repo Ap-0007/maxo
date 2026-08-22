@@ -24,7 +24,7 @@ class GetComments(MaxoMethod[CommentMessageList]):
 
     **Пример запроса конкретных комментариев к посту по их ID**:
     ```bash
-    curl -X GET "https://platform-api2.max.ru/messages/{messageId}/comment_ids={comment_ids1},{comment_ids2},{comment_ids3}" \
+    curl -X GET "https://platform-api2.max.ru/messages/{messageId}/comments?comment_ids={comment_ids1},{comment_ids2},{comment_ids3}" \
       -H "Authorization: {access_token}"
     ```
 

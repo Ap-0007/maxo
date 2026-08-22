@@ -241,6 +241,23 @@ def test_method_field_type_override(
     assert text.annotation == "list[int]"
 
 
+def test_method_field_description_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setitem(
+        overrides.METHOD_FIELD_DESCRIPTIONS,
+        ("SendMessage", "text"),
+        "Описание только для отправки",
+    )
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(SPEC), encoding="utf-8")
+    document = build_profile(load(str(path)))
+    text = next(f for f in _method(document, "SendMessage").fields if f.name == "text")
+
+    assert text.description == "Описание только для отправки"
+
+
 def test_unhandled_alias_is_rejected(tmp_path: Path) -> None:
     spec = copy.deepcopy(SPEC)
     spec["components"]["schemas"]["UserIds"] = {

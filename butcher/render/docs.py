@@ -77,7 +77,9 @@ def reflow_lists(text: str) -> str:
         elif not in_fence and _LIST_ITEM.match(stripped):
             if not _is_item(prev):
                 indent = bool(prev.strip())
-            line = f"    {line}" if indent else line
+            line = f"    {stripped}" if indent else stripped
+        elif not in_fence and stripped and not prev.strip():
+            line = stripped
         out.append(line)
         prev = line
     return "\n".join(out)
@@ -109,7 +111,13 @@ def build_parts(
             parts.append("")
         parts.append("Args:")
         for name, raw in parameters:
-            text = clean(raw).replace("\n\n", "\n") if raw else ""
+            text = clean(raw) if raw else ""
+            if reflow:
+                text = reflow_lists(text)
+                text = "\n".join(
+                    line.removeprefix("    ") for line in text.split("\n")
+                )
+            text = text.replace("\n\n", "\n")
             text = text.replace("\n", "\n        ")
             parts.append(f"    {name}: {text}")
 

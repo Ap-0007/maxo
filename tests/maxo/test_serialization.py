@@ -1,6 +1,8 @@
 import pytest
+from adaptix import P
 from adaptix.load_error import LoadError
 
+from maxo._internal.adaptix import has_tag_provider
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     EditMessage,
@@ -13,7 +15,13 @@ from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort, create_retort_with_bot
-from maxo.types import NewMessageBody, UpdateList
+from maxo.types import (
+    CommentMessage,
+    Message,
+    MessageCreated,
+    NewMessageBody,
+    UpdateList,
+)
 from maxo.types.base import MaxoType
 from tests.factories import make_bot
 
@@ -169,3 +177,65 @@ def test_retort_full_message_created_loads_ok() -> None:
 
     result = retort.load(data, UpdateList)
     assert len(result.updates) == 1
+
+
+def test_retort_selects_comment_message_inside_update() -> None:
+    retort = create_retort(warming_up=False)
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "message": {
+                    "body": {"seq": 1, "mid": "comment", "text": "hello"},
+                    "recipient": {
+                        "chat_id": 1,
+                        "chat_type": "channel",
+                        "post_id": "post",
+                    },
+                    "timestamp": 1234567890,
+                },
+            },
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "message": {
+                    "body": {"seq": 2, "mid": "message", "text": "hello"},
+                    "recipient": {
+                        "chat_id": 1,
+                        "chat_type": "channel",
+                    },
+                    "timestamp": 1234567890,
+                },
+            },
+        ],
+    }
+
+    result = retort.load(data, UpdateList)
+    comment_update, message_update = result.updates
+
+    assert isinstance(comment_update, MessageCreated)
+    assert isinstance(message_update, MessageCreated)
+    assert isinstance(comment_update.message, CommentMessage)
+    assert type(message_update.message) is Message
+
+
+def test_tagged_subclass_requires_class_predicate() -> None:
+    with pytest.raises(TypeError, match="pred должен быть классом"):
+        has_tag_provider(
+            P[Message],
+            ("recipient", "post_id"),
+            None,
+            base=Message,
+        )
+
+
+def test_nested_tag_requires_base() -> None:
+    with pytest.raises(TypeError, match="только для подтипа"):
+        has_tag_provider(Message, ("recipient", "post_id"), None)
+
+
+def test_computed_tag_requires_base() -> None:
+    with pytest.raises(TypeError, match="только для подтипа"):
+        has_tag_provider(Message, "type", lambda actual: actual is None)
