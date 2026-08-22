@@ -50,6 +50,13 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
             self.route.path,
             self.web.__class__.__name__,
         )
+        if self.security is None:
+            webhook.warning(
+                "Webhook is registered without security: "
+                "anyone who knows path %s can feed updates to the bot. "
+                "Pass Security(...) to verify the secret token.",
+                self.route.path,
+            )
         self.web.register(
             app=app,
             path=self.route.path,
