@@ -34,7 +34,7 @@ from maxo.types.facades import (
 def test_deprecation_warning() -> None:
     with pytest.warns(
         DeprecationWarning,
-        match="Фасады были перенесены из `maxo.utils.facades`",
+        match="Вместо фасадов используйте сам апдейт",
     ):
         import maxo.utils.facades  # noqa: PLC0415
 
