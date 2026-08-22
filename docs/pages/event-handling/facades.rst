@@ -126,7 +126,8 @@ Resumable-загрузка читает файл по кускам и отпра
     from maxo.types import CommentMessage
 
     if isinstance(update.message, CommentMessage):
-        await update.send_comment("Ответ в той же ветке")
+        await update.send_message("Ответ в той же ветке")
+        # Или: await update.message.send_comment("Ответ в той же ветке")
 
 В комментариях не поддерживаются вложения, ``notify=False`` и ссылки с типом
 ``forward``. Фасад пишет warning и игнорирует такие параметры. Если комментарии

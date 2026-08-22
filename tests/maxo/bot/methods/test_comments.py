@@ -1,6 +1,10 @@
+from datetime import UTC, datetime
+
+import pytest
 from unihttp.bind_method import MethodBinder
 
 from maxo import Bot
+from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     DeleteComment,
     EditComment,
@@ -8,10 +12,12 @@ from maxo.bot.methods import (
     GetComments,
     SendComment,
 )
+from maxo.enums import TextFormat
 from maxo.serialization import create_retort
 from maxo.types import (
     CommentMessage,
     CommentMessageList,
+    NewCommentBody,
     SendCommentResult,
     SimpleQueryResult,
 )
@@ -53,12 +59,12 @@ def test_dump() -> None:
     assert retort.dump(SendComment(message_id="post", text="Текст")) == {
         "path": {"message_id": "post"},
         "query": {},
-        "body": {"link": None, "text": "Текст"},
+        "body": {"format": None, "link": None, "text": "Текст"},
     }
     assert retort.dump(EditComment(message_id="post", comment_id="comment")) == {
         "path": {"message_id": "post"},
         "query": {"comment_id": "comment"},
-        "body": {"link": None, "text": None},
+        "body": {"format": None, "link": None, "text": None},
     }
     assert retort.dump(DeleteComment(message_id="post", comment_id="comment")) == {
         "path": {"message_id": "post"},
@@ -67,6 +73,40 @@ def test_dump() -> None:
     assert retort.dump(GetCommentById(message_id="post", comment_id="comment")) == {
         "path": {"message_id": "post", "comment_id": "comment"},
     }
+
+
+def test_dump_datetime_query_as_milliseconds() -> None:
+    retort = create_retort(warming_up=False)
+
+    assert retort.dump(
+        GetComments(
+            message_id="post",
+            after=datetime(2026, 8, 17, 17, 25, 6, 123000, tzinfo=UTC),
+        ),
+    )["query"]["after"] == 1_786_987_506_123
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        SendComment(message_id="post"),
+        EditComment(message_id="post", comment_id="comment"),
+        NewCommentBody(),
+    ],
+)
+def test_comment_body_uses_bot_defaults(method: object) -> None:
+    defaults = BotDefaults(
+        text_format=TextFormat.MARKDOWN,
+        disable_link_preview=True,
+    )
+    retort = create_retort(defaults=defaults, warming_up=False)
+
+    data = retort.dump(method)
+    body = data.get("body", data)
+
+    assert body["format"] == "markdown"
+    if isinstance(method, SendComment):
+        assert data["query"]["disable_link_preview"] == 1
 
 
 def test_comment_message_loads_null_sender() -> None:

@@ -3,13 +3,14 @@ import asyncio
 import difflib
 import json
 import logging
+import math
 import os
 import re
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from aiohttp import ClientSession, ClientTimeout
 
@@ -89,7 +90,7 @@ def load_settings() -> Settings:
         raise RuntimeError("Для отправки в Telegram установите aiogram")
 
     interval = float(os.environ.get("CHECK_INTERVAL", "3600"))
-    if interval <= 0:
+    if not math.isfinite(interval) or interval <= 0:
         raise ValueError("CHECK_INTERVAL должен быть больше нуля")
 
     state_path = Path(os.environ.get("STATE_FILE", STATE_FILE_NAME))
@@ -236,6 +237,10 @@ async def fetch_openapi(session: ClientSession) -> JsonObject:
         urljoin(DOCS_URL, path) for path in CHUNK_RE.findall(html)
     )
     for url in chunk_urls:
+        parsed_url = urlsplit(url)
+        if parsed_url.scheme != "https" or parsed_url.hostname != "dev.max.ru":
+            logger.warning("Пропущен чанк с недоверенного URL: %s", url)
+            continue
         async with session.get(url) as response:
             response.raise_for_status()
             javascript = await response.text()
@@ -285,6 +290,22 @@ async def publish_update(
     digest: str,
 ) -> None:
     delivered = load_delivered(settings.pending_path, digest)
+
+    async def publish(name: str, delivery: Awaitable[None]) -> Exception | None:
+        try:
+            await delivery
+        # Каналы используют разные клиенты с разными иерархиями ошибок
+        except Exception as error:
+            logger.exception(
+                "Не удалось отправить уведомление в %s",
+                name,
+            )
+            return error
+
+        delivered.add(name)
+        save_delivered(settings.pending_path, digest, delivered)
+        return None
+
     deliveries: list[tuple[str, Awaitable[None]]] = []
     if settings.max_recipient is not None and "MAX" not in delivered:
         deliveries.append(
@@ -299,26 +320,9 @@ async def publish_update(
         )
 
     results = await asyncio.gather(
-        *(delivery for _, delivery in deliveries),
-        return_exceptions=True,
+        *(publish(name, delivery) for name, delivery in deliveries),
     )
-    failures: list[Exception] = []
-    for (name, _), result in zip(deliveries, results, strict=True):
-        if isinstance(result, asyncio.CancelledError):
-            raise result
-        if isinstance(result, Exception):
-            failures.append(result)
-            logger.error(
-                "Не удалось отправить уведомление в %s",
-                name,
-                exc_info=(type(result), result, result.__traceback__),
-            )
-        elif isinstance(result, BaseException):
-            raise result
-        else:
-            delivered.add(name)
-
-    save_delivered(settings.pending_path, digest, delivered)
+    failures = [result for result in results if result is not None]
     if failures:
         raise ExceptionGroup("Не все уведомления доставлены", failures)
 

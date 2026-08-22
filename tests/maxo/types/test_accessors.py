@@ -1455,6 +1455,34 @@ def test_comment_accessors() -> None:
     with pytest.raises(AttributeIsEmptyError):
         _ = new_body.unsafe_text
     with pytest.raises(AttributeIsEmptyError):
+        _ = NewCommentBody().unsafe_format
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_markup
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_chat_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
         _ = MessageRemoved(
             chat_id=10,
             message_id="comment",

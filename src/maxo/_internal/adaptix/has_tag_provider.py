@@ -22,12 +22,10 @@ def _get_tag(data: object, tag: Tag) -> Any:
     return value
 
 
-def _has_tag(
-    data: object,
-    tag: Tag,
+def _matches_tag(
+    actual: Any,
     value: Any | Callable[[Any], bool],
 ) -> bool:
-    actual = _get_tag(data, tag)
     return value(actual) if callable(value) else actual == value
 
 
@@ -38,7 +36,7 @@ def _loader_has_tag(
 ) -> Provider:
     def loader_fn(data: dict[str, Any]) -> Any:
         actual = _get_tag(data, tag)
-        if _has_tag(data, tag, value):
+        if _matches_tag(actual, value):
             return data
         raise LoadError(tag, actual, value)
 
@@ -79,7 +77,8 @@ class _TaggedSubclassLoaderProvider(LoaderProvider):  # type: ignore[no-untyped-
         )
 
         def load_tagged_subclass(data: Any) -> Any:
-            if _has_tag(data, self._tag, self._value):
+            actual = _get_tag(data, self._tag)
+            if _matches_tag(actual, self._value):
                 return subtype_loader(data)
             return base_loader(data)
 
