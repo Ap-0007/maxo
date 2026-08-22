@@ -1,13 +1,11 @@
-from dataclasses import dataclass
-
 from unihttp.clients.base import BaseAsyncClient
 
 from maxo.bot import UploadConfig
 from maxo.bot.defaults import BotDefaults
+from maxo.types import MaxoType
 
 
-@dataclass(slots=True)
-class BotConfig:
+class BotConfig(MaxoType):
     client: BaseAsyncClient
 
     defaults: BotDefaults | None = None
