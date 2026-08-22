@@ -216,12 +216,12 @@ from maxo import Bot, Dispatcher, Router
 from maxo.enums import TextFormat
 from maxo.routing.utils import collect_used_updates
 from maxo.transport.webhook import (
-    AiohttpAdapter,
     Route,
     SingleBotEngine,
     WebhookConfig,
 )
 from maxo.transport.webhook.security import Security, StaticSecret
+from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
 from maxo.types import BotStarted, MessageCreated
 
 bot = Bot("TOKEN")

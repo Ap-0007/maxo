@@ -1,9 +1,14 @@
+try:
+    from fastapi import APIRouter, FastAPI, Request, Response
+    from fastapi.responses import JSONResponse
+except ImportError as e:
+    e.add_note("* Please run `pip install maxo[fastapi]`")
+    raise
+
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, Request, Response
-from fastapi.responses import JSONResponse
 from multidict import CIMultiDict, CIMultiDictProxy, MultiDict, MultiDictProxy
 
 from maxo.transport.webhook.web.base import (

@@ -33,9 +33,7 @@ async def test_security_pipeline_stops_at_first_failed_check() -> None:
 
 
 @pytest.mark.asyncio
-async def test_security_pipeline_allows_request_when_secret_and_checks_pass() -> (
-    None
-):
+async def test_security_pipeline_allows_request_when_secret_and_checks_pass() -> None:
     calls: list[str] = []
     security = Security(
         RecordingCheck("check", result=True, calls=calls),

@@ -29,22 +29,11 @@ from maxo.transport.webhook.configs.webhook import WebhookConfig
 from maxo.transport.webhook.engines.single import SingleBotEngine
 from maxo.transport.webhook.engines.token import TokenEngine
 from maxo.transport.webhook.route.route import Route
-from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
 
-__all__ = [
-    "AiohttpAdapter",
+__all__ = (
     "BotConfig",
     "Route",
     "SingleBotEngine",
     "TokenEngine",
     "WebhookConfig",
-]
-
-
-try:
-    from maxo.transport.webhook.web.fastapi import FastAPIAdapter  # noqa: F401
-
-    __all__.insert(2, "FastAPIAdapter")
-except ModuleNotFoundError as exc:
-    if exc.name != "fastapi":
-        raise
+)

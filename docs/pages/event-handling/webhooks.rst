@@ -31,7 +31,7 @@ Webhooks
 
 .. note::
 
-    Движки, ``Route``, конфиги и адаптеры импортируются из корня пакета: ``from maxo.transport.webhook import SingleBotEngine, Route, WebhookConfig, AiohttpAdapter``. ``FastAPIAdapter`` тоже лежит там, но появляется только если установлен ``fastapi`` (``maxo[fastapi]``) - без него корень импортируется как обычно. ``Security`` и ``StaticSecret`` берутся из ``maxo.transport.webhook.security``.
+    Движки, ``Route`` и конфиги импортируются из корня пакета: ``from maxo.transport.webhook import SingleBotEngine, Route, WebhookConfig``. Адаптеры лежат каждый в своём модуле - ``maxo.transport.webhook.web.aiohttp`` и ``maxo.transport.webhook.web.fastapi`` (последний требует ``maxo[fastapi]``). ``Security`` и ``StaticSecret`` берутся из ``maxo.transport.webhook.security``.
 
 Примеры использования
 ---------------------
@@ -53,12 +53,12 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.routing.utils import collect_used_updates
             from maxo.transport.webhook import (
-                AiohttpAdapter,
                 Route,
                 SingleBotEngine,
                 WebhookConfig,
             )
             from maxo.transport.webhook.security import Security, StaticSecret
+            from maxo.transport.webhook.web.aiohttp import AiohttpAdapter
             from maxo.types import MessageCreated
 
             dp = Dispatcher()
@@ -116,12 +116,12 @@ Webhooks
             from maxo.enums import TextFormat
             from maxo.routing.utils import collect_used_updates
             from maxo.transport.webhook import (
-                FastAPIAdapter,
                 Route,
                 SingleBotEngine,
                 WebhookConfig,
             )
             from maxo.transport.webhook.security import Security, StaticSecret
+            from maxo.transport.webhook.web.fastapi import FastAPIAdapter
             from maxo.types import MessageCreated
 
             dp = Dispatcher()

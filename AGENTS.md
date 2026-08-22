@@ -897,11 +897,14 @@ uv run pytest tests/ --cov=src --cov-report=html  # для детального 
 - Для webhook показывай `SingleBotEngine`, `AiohttpAdapter` или
   `FastAPIAdapter`, `Route`, `Security`, `StaticSecret`, `collect_used_updates`
   (в `WebhookConfig(update_types=...)` для `engine.subscribe(...)`).
-- Импортируй из корня пакета: `maxo.transport.webhook` реэкспортирует
-  `SingleBotEngine`, `TokenEngine`, `Route`, `WebhookConfig`, `BotConfig`,
-  `AiohttpAdapter` и `FastAPIAdapter`. Последний - под `try/except
-  ModuleNotFoundError`, чтобы корень не требовал установленного `fastapi`;
-  добавляешь туда что-то с опциональной зависимостью - делай так же.
+- Из корня пакета `maxo.transport.webhook` реэкспортируются только
+  `SingleBotEngine`, `TokenEngine`, `Route`, `WebhookConfig` и `BotConfig`.
+  Адаптеры в корень не вынесены - каждый берётся из своего модуля:
+  `maxo.transport.webhook.web.aiohttp` и `maxo.transport.webhook.web.fastapi`.
+  Всё, что тянет опциональную зависимость, реэкспорту не подлежит: модуль
+  импортирует её сверху и вешает
+  `e.add_note("* Please run \`pip install maxo[...]\`")` (как
+  `fsm/storages/redis.py` и `integrations/magic_filter.py`).
 - `Security` и `StaticSecret` живут в `maxo.transport.webhook.security` и в
   корень не вынесены. Промежуточные `engines/__init__.py`, `configs/__init__.py`
   и `web/__init__.py` публичной поверхностью не являются: `web/__init__` отдаёт
