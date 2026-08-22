@@ -1,10 +1,8 @@
-from dataclasses import dataclass
-
 from maxo.omit import Omittable, Omitted
+from maxo.types import MaxoType
 
 
-@dataclass(frozen=True, slots=True)
-class WebhookConfig:
+class WebhookConfig(MaxoType):
     """Webhook configuration for setWebhook API parameters."""
 
-    update_types: Omittable[list[str]] = Omitted()  # noqa: RUF009
+    update_types: Omittable[list[str]] = Omitted()

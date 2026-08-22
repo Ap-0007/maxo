@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 from typing import Any
 
-from adaptix import Retort
 from unihttp.method import BaseMethod
 
 from maxo.bot.methods import (
@@ -89,12 +88,10 @@ def warm_up(
     *,
     loaded: Iterable[type] | None = None,
     dumped: Iterable[type] | None = None,
-    retort: Retort | None = None,
 ) -> None:
     from maxo.serialization import get_retort  # noqa: PLC0415 - avoids import cycle
 
-    if retort is None:
-        retort = get_retort()
+    retort = get_retort()
 
     for type_ in _LOADED_ROOTS if loaded is None else loaded:
         retort.get_loader(type_)

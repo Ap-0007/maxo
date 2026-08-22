@@ -10,7 +10,7 @@ def test_wire_contract() -> None:
 
 
 def test_dump() -> None:
-    retort = create_retort(warming_up=False)
+    retort = create_retort()
 
     assert retort.dump(DeleteAdmins(chat_id=-42, user_id=7)) == {
         "path": {"chat_id": -42, "user_id": 7},
