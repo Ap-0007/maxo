@@ -72,15 +72,15 @@ class TokenEngine(
         if bot is None:
             return False
 
-        if unsubscribe:
-            await bot.unsubscribe(url=await self.route.build_url(bot=bot))
-
         self._token_ids.pop(bot.token, None)
 
-        if (tracker := self._task_trackers.pop(bot_id, None)) is not None:
-            await tracker.close(timeout=self.shutdown_timeout)
-
-        await bot.close()
+        try:
+            if unsubscribe:
+                await bot.unsubscribe(url=await self.route.build_url(bot=bot))
+        finally:
+            if (tracker := self._task_trackers.pop(bot_id, None)) is not None:
+                await tracker.close(timeout=self.shutdown_timeout)
+            await bot.close()
 
         webhook.info("Removed bot %s from token engine", bot_id)
         return True
