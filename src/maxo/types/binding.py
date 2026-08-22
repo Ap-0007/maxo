@@ -4,7 +4,6 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Optional, Self
 
 from maxo.errors import AttributeIsEmptyError
-from maxo.omit import is_defined
 
 if TYPE_CHECKING:
     from maxo.bot.bot import Bot
@@ -19,7 +18,7 @@ class BotMixin:
 
     @property
     def bot(self) -> "Bot":
-        if is_defined(self._bot):
+        if self._bot is not None:
             return self._bot
 
         raise AttributeIsEmptyError(
@@ -36,21 +35,13 @@ class BotMixin:
         return self
 
 
-def _flatten(hint: Any) -> list[Any]:
-    """Развернуть хинт: `list[Message] | None` -> он сам, `list[Message]`, `Message`."""
-    if isinstance(hint, type):
-        return [hint]
-
-    found = []
-    for arg in typing.get_args(hint):
-        found.extend(_flatten(arg))
-
-    return found
-
-
 @cache
 def _field_classes(class_: Any) -> dict[str, tuple[Any, ...]]:
-    """Для каждого поля - модели BaseMaxoType, спрятанные в хинте на любой глубине."""
+    """
+    Для каждого поля - модели BaseMaxoType, спрятанные в хинте на любой глубине.
+
+    Хинт разворачивается по аргументам: `list[Message] | None` -> `(Message,)`.
+    """
     if not dataclasses.is_dataclass(class_):
         return {}
 
@@ -61,10 +52,19 @@ def _field_classes(class_: Any) -> dict[str, tuple[Any, ...]]:
         else {}
     )
 
-    return {
-        field.name: tuple(_flatten(hints.get(field.name, field.type)))
-        for field in fields
-    }
+    classes: dict[str, tuple[Any, ...]] = {}
+    for field in fields:
+        found: list[Any] = []
+        stack = [hints.get(field.name, field.type)]
+        while stack:
+            hint = stack.pop()
+            if isinstance(hint, type):
+                found.append(hint)
+            else:
+                stack.extend(typing.get_args(hint))
+        classes[field.name] = tuple(found)
+
+    return classes
 
 
 @cache
