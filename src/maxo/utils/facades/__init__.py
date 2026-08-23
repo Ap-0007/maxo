@@ -31,11 +31,11 @@ from maxo.types.facades import (
     AttachmentsFacade,
     BaseMethodsFacade,
     BotMethodsFacade,
+    CallbackMethodsFacade,
     ChatMethodsFacade,
     MessageMethodsFacade,
     SubscriptionMethodsFacade,
 )
-from maxo.types.facades.callback import CallbackMethodsFacade
 
 __all__ = (
     "AttachmentsFacade",
