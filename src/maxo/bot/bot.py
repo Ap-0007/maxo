@@ -1,8 +1,7 @@
-import io
 import pathlib
 from collections.abc import AsyncIterator, Sequence
 from contextlib import aclosing, asynccontextmanager
-from typing import BinaryIO, Self, TypeVar
+from typing import Self
 from urllib.parse import quote
 
 from anyio import open_file
@@ -13,7 +12,6 @@ from unihttp.http.stream import AsyncChunkStream
 from unihttp.method import BaseMethod, ResponseType, StreamMethod
 from unihttp.middlewares import AsyncMiddleware
 
-from maxo import loggers
 from maxo.bot.client import default_client
 from maxo.bot.defaults import BotDefaults, apply_defaults
 from maxo.bot.methods import (
@@ -51,7 +49,6 @@ from maxo.bot.methods import (
     Unsubscribe,
     UploadMedia,
 )
-from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.download import Download
 from maxo.bot.methods.upload.chunk_upload import UploadResponseBody, _ChunkUpload
 from maxo.bot.middlewares import (
@@ -66,13 +63,13 @@ from maxo.errors import MaxBotApiError
 from maxo.errors.api import raise_api_error
 from maxo.errors.state import StateError
 from maxo.serialization import get_retort
-from maxo.types import AttachmentPayload, BotInfo, MaxoType
+from maxo.types import AttachmentPayload, BotInfo
 from maxo.types.binding import bind_bot
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import InputFile
 
-_MethodResultT = TypeVar("_MethodResultT", bound=MaxoType)
 _CLIENT_ERROR_STATUS = 400
+_DEFAULT_CHUNK_SIZE = 65536
 
 
 class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
@@ -196,14 +193,18 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
             middleware=[*(middleware or ()), *self.middleware],
         )
 
-    async def download(
+    @asynccontextmanager
+    async def download_stream(
         self,
         url: str | AttachmentPayload,
-        destination: BinaryIO | pathlib.Path | str | None = None,
-        chunk_size: int = 65536,
-        seek: bool = True,
-    ) -> BinaryIO | None:
-        """Скачивает вложение чанками, без буферизации ответа в память."""
+        chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    ) -> AsyncIterator[AsyncIterator[bytes]]:
+        """
+        Отдаёт вложение чанками.
+
+        Соединение освобождается на выходе из `async with`, в том числе
+        при прерванном цикле.
+        """
         if isinstance(url, AttachmentPayload):
             url = url.url
 
@@ -211,18 +212,37 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
             Download(url=url, __chunk_size__=chunk_size),
         )
         async with response.data as stream:
-            if isinstance(destination, (str, pathlib.Path)):
-                async with await open_file(destination, "wb") as file:
-                    async for chunk in stream:
-                        await file.write(chunk)
-                return None
+            yield stream
 
-            binary_io = destination if destination is not None else io.BytesIO()
-            async for chunk in stream:
-                binary_io.write(chunk)
-            if seek:
-                binary_io.seek(0)
-            return binary_io
+    async def download(
+        self,
+        url: str | AttachmentPayload,
+        chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    ) -> bytes:
+        """
+        Скачивает вложение целиком в память.
+
+        Для больших файлов: `download_to()` или `download_stream()`.
+        """
+        buffer = bytearray()
+        async with self.download_stream(url, chunk_size=chunk_size) as chunks:
+            async for chunk in chunks:
+                buffer += chunk
+        return bytes(buffer)
+
+    async def download_to(
+        self,
+        url: str | AttachmentPayload,
+        path: pathlib.Path | str,
+        chunk_size: int = _DEFAULT_CHUNK_SIZE,
+    ) -> None:
+        """Скачивает вложение в файл. Каталог должен существовать."""
+        async with (
+            self.download_stream(url, chunk_size=chunk_size) as chunks,
+            await open_file(path, "wb") as file,
+        ):
+            async for chunk in chunks:
+                await file.write(chunk)
 
     async def upload_media_resumable(
         self,

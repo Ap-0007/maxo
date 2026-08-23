@@ -19,11 +19,6 @@ class MockMaxBotApiError(MaxBotApiError):
 
 
 @pytest.fixture
-def bot() -> Bot:
-    return make_bot()
-
-
-@pytest.fixture
 def mock_client() -> AsyncMock:
     return AsyncMock()
 
