@@ -103,18 +103,6 @@ async def test_bot_call_method(mock_bot: Bot, mock_client: AsyncMock) -> None:
         _ = mock_bot.info
 
 
-async def test_bot_silent_call_method(
-    mock_bot: Bot,
-    mock_client: AsyncMock,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    mock_client.call_method.side_effect = MockMaxBotApiError("test error")
-
-    await mock_bot.silent_call_method(MagicMock())
-
-    assert "Failed to make answer" in caplog.text
-
-
 async def test_close_on_empty_state_is_noop(bot: Bot) -> None:
     await bot.close()
 

@@ -196,13 +196,6 @@ class Bot(BaseAsyncClient):  # BaseAsyncClient for mypy
             middleware=[*(middleware or ()), *self.middleware],
         )
 
-    async def silent_call_method(self, method: MaxoMethod[_MethodResultT]) -> None:
-        try:
-            await self.call_method(method)
-        except MaxBotApiError as e:
-            # Webhook-ответ не позволяет вернуть ошибку вызывающему коду.
-            loggers.bot.error("Failed to make answer: %s: %s", e.__class__.__name__, e)
-
     async def download(
         self,
         url: str | AttachmentPayload,
