@@ -81,9 +81,11 @@ class SingleBotEngine(
         webhook.info("Starting single-bot webhook engine for bot %s", info.id)
 
     async def _on_shutdown(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        token = self.bot.token
+        bot_id = self.bot.info.id if self.bot.started else f"{token[:6]}***{token[-4:]}"
         webhook.info(
             "Stopping single-bot webhook engine for bot %s",
-            self.bot.token,
+            bot_id,
         )
         await self._task_tracker.close(timeout=self.shutdown_timeout)
 
