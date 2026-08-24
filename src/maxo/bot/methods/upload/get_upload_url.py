@@ -96,7 +96,8 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
     где `{type}` - тип загружаемого файла:
     - `file` - произвольный файл
     - `image` - изображение
-    - `video` / `audio` - видео или аудио
+    - `video` - видео
+    - `audio` - аудио
 
     Ответ:
     ```json
@@ -108,7 +109,8 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
      > Обратите внимание:  домен в `url` зависит от типа файла. Это ожидаемое поведение:
     `file` → `https://fu.oneme.ru`
     `image` → `https://iu.oneme.ru`
-    `video` / `audio` → `https://vu.okcdn.ru`
+    `video` → `https://omub.okcdn.ru`
+     `audio` → `https://omu.okcdn.ru`
 
     #### 2. Загрузка медиафайла
 
