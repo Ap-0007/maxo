@@ -5,9 +5,11 @@ import pytest
 from maxo import Bot
 from maxo.routing.signals import MaxoUpdate
 from maxo.transport.webhook.engines.single import SingleBotEngine
+from maxo.transport.webhook.route import BotIdParam, Route
 from tests.maxo_webhook.fixtures.shutdown import (
     BlockingDispatcher,
     BlockingShutdownDispatcher,
+    SubscribingClient,
     TrackableClient,
 )
 from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
@@ -196,3 +198,26 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
     assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
     assert dispatcher.foreground_updates == []
     assert dispatcher.foreground_session_closed == []
+
+
+@pytest.mark.asyncio
+async def test_single_bot_engine_subscribes_before_startup_with_bot_id_route(
+    adapter: CapturingAdapter,
+    bot_token: str,
+) -> None:
+    client = SubscribingClient(bot_id=42)
+    bot = Bot(bot_token, client=client, warming_up=False)
+    engine = SingleBotEngine(
+        DummyDispatcher(),
+        bot,
+        web=adapter,
+        route=Route(
+            base_url="https://example.test",
+            path="/webhook/{bot_id}",
+            params={"bot_id": BotIdParam()},
+        ),
+    )
+
+    await engine.subscribe()
+
+    assert client.subscribed == ["https://example.test/webhook/42"]
