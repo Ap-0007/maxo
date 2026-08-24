@@ -53,6 +53,12 @@ class BaseMultiBotEngine(
     def bots(self) -> Mapping[int, Bot]:
         return MappingProxyType(self._bots)
 
+    def _register_bot(self, bot: Bot) -> None:
+        self._bots[bot.info.id] = bot
+
+    def _unregister_bot(self, bot: Bot) -> None:
+        self._bots.pop(bot.info.id, None)
+
     async def _on_startup(
         self,
         app: AppT,
@@ -75,7 +81,7 @@ class BaseMultiBotEngine(
 
             await self.dispatcher.feed_signal(BeforeStartup(), bot)
             await bot.get_my_info()
-            self._bots[bot.info.id] = bot
+            self._register_bot(bot)
             await self.dispatcher.feed_signal(AfterStartup(), bot)
 
     def _get_task_tracker(self, bot: Bot) -> TaskTracker:
@@ -88,24 +94,25 @@ class BaseMultiBotEngine(
         return tracker
 
     async def _on_shutdown(self, app: AppT, *args: Any, **kwargs: Any) -> None:
+        bots = tuple(self._bots.values())
         webhook.info(
             "Stopping %s with %s bot(s)",
             self.__class__.__name__,
-            len(self._bots),
+            len(bots),
         )
 
         lifecycle_data = self._build_lifecycle_data(
             app=app,
-            bots=set(self._bots.values()),
+            bots=set(bots),
             **kwargs,
         )
         self.dispatcher.workflow_data.update(lifecycle_data)
         await self.dispatcher.feed_signal(BeforeShutdown())
 
-        for bot in self._bots.values():
+        for bot in bots:
             if (tracker := self._task_trackers.pop(bot.info.id, None)) is not None:
                 await tracker.close(timeout=self.shutdown_timeout)
+            self._unregister_bot(bot)
             await bot.close()
 
-        self._bots.clear()
         await self.dispatcher.feed_signal(AfterShutdown())
