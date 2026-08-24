@@ -70,8 +70,7 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
         request: WebRequest[RawRequestT],
     ) -> FrameworkResponseT:
         try:
-            if self._is_shutting_down:
-                raise RequestHandlingStoppedError
+            self._ensure_accepting_requests()
 
             route_params = await self.route.match(request)
 
@@ -96,6 +95,8 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
                 raise InvalidJsonError(original_error=exc) from exc
 
             webhook.debug("New update: %s", update.update)
+
+            self._ensure_accepting_requests(bot)
 
             self._get_task_tracker(bot).spawn(  # type: ignore[unused-awaitable]
                 self.dispatcher.feed_update(bot=bot, update=update),
@@ -165,3 +166,7 @@ class BaseWebhookEngine(ABC, Generic[AppT, RawRequestT, FrameworkResponseT]):
             if secret is not None:
                 kwargs["secret"] = secret
         return kwargs
+
+    def _ensure_accepting_requests(self, bot: Bot | None = None) -> None:
+        if self._is_shutting_down or (bot is not None and bot.closed):
+            raise RequestHandlingStoppedError
