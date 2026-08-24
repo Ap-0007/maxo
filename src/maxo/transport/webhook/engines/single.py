@@ -1,7 +1,6 @@
 from typing import Any, Generic
 
 from maxo import Bot, Dispatcher
-from maxo.errors.state import StateError
 from maxo.loggers import webhook
 from maxo.routing.signals import (
     AfterShutdown,
@@ -58,6 +57,9 @@ class SingleBotEngine(
         self,
         webhook_config: WebhookConfig | None = None,
     ) -> SimpleQueryResult:
+        if not self.bot.started: # for route.build_url
+            await self.bot.get_my_info()
+
         kwargs = await self._build_webhook_kwargs(
             bot=self.bot,
             base_config=webhook_config or WebhookConfig(),
@@ -72,10 +74,9 @@ class SingleBotEngine(
         self.dispatcher.workflow_data.update(lifecycle_data)
 
         await self.dispatcher.feed_signal(BeforeStartup(), self.bot)
-        try:
-            info = self.bot.info
-        except StateError:
-            info = await self.bot.get_my_info()
+        if not self.bot.started:
+            await self.bot.get_my_info()
+        info = self.bot.info
         await self.dispatcher.feed_signal(AfterStartup(), self.bot)
 
         webhook.info("Starting single-bot webhook engine for bot %s", info.id)
