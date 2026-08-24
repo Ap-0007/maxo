@@ -125,7 +125,7 @@ Butcher не создаёт и при генерации затрёт, если 
 - `factory()` и `to_request()` у attachment-типов, `generated_url` у
   `Message`, `keyboard`/`content_type` у `MessageBody` и подобные хелперы.
 - Методы вне свагера: `GetChatByLink`, `DeleteChat`, `UploadMedia`,
-  `EditBotInfo`, `GetChats`, `SetAdmins`.
+  `EditBotInfo`, `GetChats`, `SetAdmins`, `Download`.
 - Кастомные хвосты методов: `GetUpdates.make_response`,
   `UploadMedia.validate_response`.
 - `serialization.py` (словари тегов, из которых собирается `TAG_PROVIDERS`) и
