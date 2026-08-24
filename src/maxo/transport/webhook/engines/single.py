@@ -57,7 +57,7 @@ class SingleBotEngine(
         self,
         webhook_config: WebhookConfig | None = None,
     ) -> SimpleQueryResult:
-        if not self.bot.started: # for route.build_url
+        if not self.bot.started:  # for route.build_url
             await self.bot.get_my_info()
 
         kwargs = await self._build_webhook_kwargs(

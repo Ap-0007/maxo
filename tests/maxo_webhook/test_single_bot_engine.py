@@ -32,13 +32,13 @@ async def test_single_bot_engine_uses_configured_bot_instead_of_route_params(
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": "100:OTHER"}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": "100:OTHER"}),
     )
 
     response = await engine.handle_request(update_request)
     await asyncio.sleep(0)
 
-    assert response["status_code"] == 200  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 200
     assert dispatcher.webhook_bot is bot
     assert dispatcher.webhook_bot.token == bot_token
     assert isinstance(dispatcher.webhook_update, MaxoUpdate)
@@ -57,14 +57,14 @@ async def test_single_bot_engine_rejects_new_requests_once_shutdown_has_started(
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": "100:OTHER"}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": "100:OTHER"}),
     )
 
     await engine.handle_request(update_request)
     await asyncio.sleep(0)
     assert dispatcher.started_updates == 1
 
-    shutdown_task = asyncio.create_task(engine.on_shutdown(app=None))  # ty:ignore[invalid-argument-type]
+    shutdown_task = asyncio.create_task(engine.on_shutdown(app=None))
     await asyncio.sleep(0)
 
     response = await engine.handle_request(
@@ -74,7 +74,7 @@ async def test_single_bot_engine_rejects_new_requests_once_shutdown_has_started(
     dispatcher.release_updates.set()
     await shutdown_task
 
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.started_updates == 1
 
 
@@ -89,10 +89,10 @@ async def test_background_engine_rejects_request_during_shutdown(
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot.token}),
     )
 
-    shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]
+    shutdown_task = asyncio.create_task(engine.on_shutdown(None))
     await asyncio.wait_for(dispatcher.shutdown_started.wait(), timeout=1)
 
     try:
@@ -108,7 +108,7 @@ async def test_background_engine_rejects_request_during_shutdown(
                 timeout=1,
             )
 
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.background_updates == []
     assert len(engine._task_tracker._tasks) == 0
 
@@ -124,10 +124,10 @@ async def test_foreground_engine_rejects_request_during_shutdown(
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot.token}),
     )
 
-    shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]
+    shutdown_task = asyncio.create_task(engine.on_shutdown(None))
     await asyncio.wait_for(dispatcher.shutdown_started.wait(), timeout=1)
 
     try:
@@ -136,7 +136,7 @@ async def test_foreground_engine_rejects_request_during_shutdown(
         dispatcher.release_shutdown.set()
         await asyncio.wait_for(shutdown_task, timeout=1)
 
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.foreground_updates == []
 
 
@@ -152,11 +152,11 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot.token}),
     )
 
     dispatcher.release_shutdown.set()
-    await engine.on_shutdown(None)  # ty:ignore[invalid-argument-type]
+    await engine.on_shutdown(None)
 
     response = await engine.handle_request(update_request)
     await asyncio.sleep(0)
@@ -167,7 +167,7 @@ async def test_background_engine_rejects_request_after_shutdown_with_closed_bot_
     # Клиент создали снаружи - бот его не закрывает, даже при shutdown
     assert client.closed is False
     assert bot.closed is True
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.background_updates == []
     assert dispatcher.background_session_closed == []
 
@@ -184,18 +184,18 @@ async def test_foreground_engine_rejects_request_after_shutdown_with_closed_bot_
         dispatcher,
         bot,
         web=adapter,
-        route=DummyRoute({"bot_token": bot.token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot.token}),
     )
 
     dispatcher.release_shutdown.set()
-    await engine.on_shutdown(None)  # ty:ignore[invalid-argument-type]
+    await engine.on_shutdown(None)
 
     response = await engine.handle_request(update_request)
 
     # Клиент создали снаружи - бот его не закрывает, даже при shutdown.
     assert client.closed is False
     assert bot.closed is True
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.foreground_updates == []
     assert dispatcher.foreground_session_closed == []
 

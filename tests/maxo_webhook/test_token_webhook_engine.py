@@ -59,7 +59,7 @@ async def test_token_webhook_engine_does_not_register_bot_when_subscribe_fails(
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute(),
         bot_config=BotConfig(client=TrackableClient()),
     )
 
@@ -80,7 +80,7 @@ async def test_token_webhook_engine_replaces_bot_with_same_token_without_unsubsc
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute(),
         bot_config=BotConfig(client=client),
     )
 
@@ -106,7 +106,7 @@ async def test_token_webhook_engine_keeps_working_bot_when_re_add_fails(
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute(),
         bot_config=BotConfig(client=client),
     )
 
@@ -133,7 +133,7 @@ async def test_token_webhook_engine_unsubscribes_old_url_when_token_changes(
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute(),
         bot_config=BotConfig(client=client),
     )
 
@@ -160,14 +160,14 @@ async def test_token_webhook_engine_dispatches_to_bot_resolved_from_route_token(
     engine = TokenEngine(
         dispatcher,
         web=adapter,
-        route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot_token}),
         bot_config=BotConfig(client=client),
     )
 
     response = await engine.handle_request(update_request)
     await asyncio.sleep(0)
 
-    assert response["status_code"] == 200  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 200
     assert dispatcher.webhook_bot is engine.bots[bot_id]
     assert dispatcher.webhook_bot.token == bot_token
     assert dispatcher.webhook_update is not None
@@ -191,7 +191,7 @@ async def test_token_webhook_engine_returns_not_found_when_route_token_is_missin
     engine = TokenEngine(
         dispatcher,
         web=adapter,
-        route=DummyRoute(route_params),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute(route_params),
         bot_config=BotConfig(client=TrackableClient()),
     )
 
@@ -219,11 +219,11 @@ async def test_token_background_engine_rejects_request_during_shutdown_without_c
     engine = TokenEngine(
         dispatcher,
         web=adapter,
-        route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot_token}),
         bot_config=BotConfig(client=client),
     )
 
-    shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]
+    shutdown_task = asyncio.create_task(engine.on_shutdown(None))
     await asyncio.wait_for(dispatcher.shutdown_started.wait(), timeout=1)
 
     try:
@@ -237,7 +237,7 @@ async def test_token_background_engine_rejects_request_during_shutdown_without_c
             if tracker._tasks:
                 await asyncio.wait_for(asyncio.gather(*tracker._tasks), timeout=1)
 
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.background_updates == []
     assert bot_id not in engine.bots
     assert bot_id not in engine._task_trackers
@@ -255,11 +255,11 @@ async def test_token_foreground_engine_rejects_request_during_shutdown_without_c
     engine = TokenEngine(
         dispatcher,
         web=adapter,
-        route=DummyRoute({"bot_token": bot_token}),  # ty:ignore[invalid-argument-type]
+        route=DummyRoute({"bot_token": bot_token}),
         bot_config=BotConfig(client=client),
     )
 
-    shutdown_task = asyncio.create_task(engine.on_shutdown(None))  # ty:ignore[invalid-argument-type]
+    shutdown_task = asyncio.create_task(engine.on_shutdown(None))
     await asyncio.wait_for(dispatcher.shutdown_started.wait(), timeout=1)
 
     try:
@@ -268,6 +268,6 @@ async def test_token_foreground_engine_rejects_request_during_shutdown_without_c
         dispatcher.release_shutdown.set()
         await asyncio.wait_for(shutdown_task, timeout=1)
 
-    assert response["status_code"] == 503  # ty:ignore[not-subscriptable]
+    assert response["status_code"] == 503
     assert dispatcher.foreground_updates == []
     assert bot_id not in engine.bots
