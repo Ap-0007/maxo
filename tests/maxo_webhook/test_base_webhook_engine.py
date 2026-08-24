@@ -11,7 +11,11 @@ from maxo.transport.webhook.route.params import RouteParams
 from maxo.transport.webhook.tasks import TaskTracker
 from maxo.types import Updates
 from maxo.types.binding import bind_bot
-from tests.maxo_webhook.fixtures.web_request import DummyRequest, DummyWebRequest
+from tests.maxo_webhook.fixtures.web_request import (
+    BlockingJsonWebRequest,
+    DummyRequest,
+    DummyWebRequest,
+)
 from tests.maxo_webhook.fixtures.webhook_engine import (
     CapturingAdapter,
     DummyDispatcher,
@@ -163,3 +167,52 @@ async def test_engine_lifespan_runs_startup_then_shutdown(
     assert engine._is_shutting_down
     response = await engine.handle_request(update_request)  # type: ignore[unreachable]
     assert response["status_code"] == 503
+
+
+@pytest.mark.asyncio
+async def test_engine_rejects_inflight_request_after_shutdown(
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+    update_request: DummyWebRequest,
+) -> None:
+    engine = EngineProbe(dispatcher, bot, web=adapter)
+    request = BlockingJsonWebRequest(update_request.raw)
+    request_task = asyncio.create_task(engine.handle_request(request))
+    await request.json_started.wait()
+
+    await engine.on_shutdown(None)
+    request.json_continue.set()
+    response = await request_task
+    await asyncio.sleep(0)
+
+    assert response["status_code"] == 503
+    assert dispatcher.webhook_update is None
+    assert engine.task_tracker._tasks == set()
+
+
+@pytest.mark.asyncio
+async def test_engine_returns_bad_request_for_schema_invalid_update(
+    bot: Bot,
+    adapter: CapturingAdapter,
+    dispatcher: DummyDispatcher,
+) -> None:
+    engine = EngineProbe(dispatcher, bot, web=adapter)
+    request = DummyWebRequest(
+        DummyRequest(
+            json_data={
+                "update_type": "message_created",
+                "message": "not-an-object",
+            },
+        ),
+    )
+
+    response = await engine.handle_request(request)
+
+    assert response == {
+        "kind": "json",
+        "status_code": 400,
+        "data": {"detail": "Bad request"},
+        "headers": None,
+    }
+    assert dispatcher.webhook_update is None

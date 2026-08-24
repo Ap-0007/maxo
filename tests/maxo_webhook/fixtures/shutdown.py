@@ -85,3 +85,22 @@ class TrackableClient(BaseAsyncClient):
 
     async def close(self) -> None:
         self.closed = True
+
+
+class SubscribingClient(TrackableClient):
+    def __init__(self, bot_id: int = 42) -> None:
+        super().__init__(bot_id=bot_id)
+        self.subscribed: list[str] = []
+
+    async def make_request(self, request: HTTPRequest) -> HTTPResponse[Any]:
+        if request.url != "subscriptions":
+            return await super().make_request(request)
+
+        self.subscribed.append(request.body["url"])
+        return HTTPResponse(
+            status_code=200,
+            headers={},
+            data={"success": True},
+            cookies={},
+            raw_response=None,
+        )

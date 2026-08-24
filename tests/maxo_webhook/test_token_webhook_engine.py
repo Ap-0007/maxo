@@ -5,6 +5,7 @@ import pytest
 from unihttp.http.request import HTTPRequest
 from unihttp.http.response import HTTPResponse
 
+from maxo import Bot
 from maxo.transport.webhook.configs.bot import BotConfig
 from maxo.transport.webhook.engines.token import TokenEngine
 from tests.maxo_webhook.fixtures.shutdown import (
@@ -28,6 +29,7 @@ class SubscriptionsClient(TrackableClient):
         self.unsubscribed: list[str] = []
 
     fail_subscribe = False
+    fail_unsubscribe = False
 
     async def make_request(self, request: HTTPRequest) -> HTTPResponse[Any]:
         if request.url != "subscriptions":
@@ -37,6 +39,8 @@ class SubscriptionsClient(TrackableClient):
             raise ConnectionError("subscribe failed")
 
         if request.method.lower() == "delete":
+            if self.fail_unsubscribe:
+                raise ConnectionError("unsubscribe failed")
             self.unsubscribed.append(request.query["url"])
         else:
             self.subscribed.append(request.body["url"])
@@ -59,7 +63,7 @@ async def test_token_webhook_engine_does_not_register_bot_when_subscribe_fails(
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),
+        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
         bot_config=BotConfig(client=TrackableClient()),
     )
 
@@ -80,7 +84,7 @@ async def test_token_webhook_engine_replaces_bot_with_same_token_without_unsubsc
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),
+        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
         bot_config=BotConfig(client=client),
     )
 
@@ -106,7 +110,7 @@ async def test_token_webhook_engine_keeps_working_bot_when_re_add_fails(
     engine = TokenEngine(
         DummyDispatcher(),
         web=adapter,
-        route=DummyRoute(),
+        route=DummyRoute(),  # ty:ignore[invalid-argument-type]
         bot_config=BotConfig(client=client),
     )
 
@@ -119,6 +123,31 @@ async def test_token_webhook_engine_keeps_working_bot_when_re_add_fails(
     assert engine.bots == {bot_id: first}
     assert engine._token_ids == {old_token: bot_id}
     assert client.unsubscribed == []
+
+
+@pytest.mark.asyncio
+async def test_token_engine_keeps_old_bot_when_unsubscribe_fails(
+    bot_id: int,
+    adapter: CapturingAdapter,
+) -> None:
+    old_token, new_token = f"{bot_id}:OLD", f"{bot_id}:NEW"
+    client = SubscriptionsClient(bot_id=bot_id)
+    engine = TokenEngine(
+        DummyDispatcher(),
+        web=adapter,
+        route=DummyRoute(),
+        bot_config=BotConfig(client=client),
+    )
+
+    old = await engine.add_bot(old_token)
+    client.fail_unsubscribe = True
+
+    with pytest.raises(ConnectionError):
+        await engine.add_bot(new_token)
+
+    assert engine.bots == {bot_id: old}
+    assert engine._token_ids == {old_token: bot_id}
+    assert not old.closed
 
 
 @pytest.mark.asyncio
@@ -271,3 +300,102 @@ async def test_token_foreground_engine_rejects_request_during_shutdown_without_c
     assert response["status_code"] == 503
     assert dispatcher.foreground_updates == []
     assert bot_id not in engine.bots
+
+
+class SignalCallbackDispatcher(DummyDispatcher):
+    """Runs an async callback when a signal of the given type fires."""
+
+    def __init__(self, callbacks: dict[str, Any]) -> None:
+        super().__init__()
+        self._callbacks = callbacks
+
+    async def feed_signal(self, signal: Any, bot: Bot | None = None) -> None:
+        callback = self._callbacks.get(type(signal).__name__)
+        if callback is not None:
+            await callback()
+
+
+@pytest.mark.asyncio
+async def test_token_webhook_engine_keeps_bot_added_during_after_shutdown(
+    bot_id: int,
+    adapter: CapturingAdapter,
+) -> None:
+    late_id = bot_id + 1
+    late_token = f"{late_id}:LATE"
+    client = SubscriptionsClient(bot_id=late_id)
+
+    async def add_bot_from_after_shutdown() -> None:
+        await engine.add_bot(late_token)
+
+    dispatcher = SignalCallbackDispatcher(
+        {"AfterShutdown": add_bot_from_after_shutdown},
+    )
+    engine = TokenEngine(
+        dispatcher,
+        web=adapter,
+        route=DummyRoute(),
+        bot_config=BotConfig(client=client),
+    )
+
+    await engine.on_shutdown(None)
+
+    assert late_id in engine.bots
+    assert engine._token_ids.get(late_token) == late_id
+
+
+class BlockingFirstInfoClient(SubscriptionsClient):
+    """Blocks the FIRST `get_my_info()` call so a second, faster resolution
+    of a different token for the same bot can race ahead of it."""
+
+    def __init__(self, bot_id: int) -> None:
+        super().__init__(bot_id=bot_id)
+        self.info_calls = 0
+        self.first_info_started = asyncio.Event()
+        self.release_first_info = asyncio.Event()
+
+    async def make_request(self, request: HTTPRequest) -> HTTPResponse[Any]:
+        if request.url == "me":
+            self.info_calls += 1
+            if self.info_calls == 1:
+                self.first_info_started.set()
+                await self.release_first_info.wait()
+        return await super().make_request(request)
+
+
+@pytest.mark.asyncio
+async def test_token_engine_serializes_concurrent_bot_resolution(
+    bot_id: int,
+    adapter: CapturingAdapter,
+) -> None:
+    """
+    Без `_bots_lock` более медленная резолюция токена побеждает и вытесняет более свежую.
+    `_bots_lock` сериализует `_resolve_bot`, так что вторая резолюция ждёт первую целиком
+    """
+
+    client = BlockingFirstInfoClient(bot_id)
+    engine = TokenEngine(
+        DummyDispatcher(),
+        web=adapter,
+        route=DummyRoute(),
+        bot_config=BotConfig(client=client),
+    )
+    first_task = asyncio.create_task(
+        engine._resolve_bot({"bot_token": f"{bot_id}:OLD"}),
+    )
+    await client.first_info_started.wait()
+    second_task = asyncio.create_task(
+        engine._resolve_bot({"bot_token": f"{bot_id}:NEW"}),
+    )
+    await asyncio.sleep(0)
+
+    # лок держит второй resolve перед стартом, пока первый не отпустят
+    assert client.info_calls == 1
+    client.release_first_info.set()
+    first, second = await asyncio.gather(first_task, second_task)
+
+    assert first is not None
+    assert second is not None
+    assert first.closed
+    assert engine.bots == {bot_id: second}
+    await engine.on_shutdown(None)
+    assert second.closed
