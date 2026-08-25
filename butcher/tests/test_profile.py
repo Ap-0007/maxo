@@ -51,26 +51,20 @@ def test_comment_models_override_swagger_bases(document: MaxoDocument) -> None:
     assert _model(document, "CommentMessage").base == "Message"
     assert _model(document, "CommentMessageBody").base == "MessageBody"
     assert _model(document, "CommentLinkedMessage").base == "LinkedMessage"
-    assert _model(document, "CommentMessage").mixins == (
-        "CommentMethodsFacade",
-    )
+    assert _model(document, "CommentMessage").mixins == ("CommentMethodsFacade",)
 
 
 def test_comment_updates_get_facade_mixins(document: MaxoDocument) -> None:
-    assert _model(document, "CommentCreated").mixins == (
-        "CommentMethodsFacade",
-    )
-    assert _model(document, "CommentEdited").mixins == (
-        "CommentMethodsFacade",
-    )
-    assert _model(document, "CommentRemoved").mixins == (
-        "ChatMethodsFacade",
-    )
+    assert _model(document, "CommentCreated").mixins == ("CommentMethodsFacade",)
+    assert _model(document, "CommentEdited").mixins == ("CommentMethodsFacade",)
+    assert _model(document, "CommentRemoved").mixins == ("ChatMethodsFacade",)
 
 
 def test_comment_updates_use_comment_message(document: MaxoDocument) -> None:
     for name in ("CommentCreated", "CommentEdited"):
-        message = next(field for field in _model(document, name).fields if field.name == "message")
+        message = next(
+            field for field in _model(document, name).fields if field.name == "message"
+        )
 
         assert message.annotation == "CommentMessage"
 

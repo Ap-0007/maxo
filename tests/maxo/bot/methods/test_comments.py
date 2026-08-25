@@ -78,12 +78,15 @@ def test_dump() -> None:
 def test_dump_datetime_query_as_milliseconds() -> None:
     retort = create_retort(warming_up=False)
 
-    assert retort.dump(
-        GetComments(
-            message_id="post",
-            after=datetime(2026, 8, 17, 17, 25, 6, 123000, tzinfo=UTC),
-        ),
-    )["query"]["after"] == 1_786_987_506_123
+    assert (
+        retort.dump(
+            GetComments(
+                message_id="post",
+                after=datetime(2026, 8, 17, 17, 25, 6, 123000, tzinfo=UTC),
+            ),
+        )["query"]["after"]
+        == 1_786_987_506_123
+    )
 
 
 @pytest.mark.parametrize(

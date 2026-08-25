@@ -144,6 +144,5 @@ def test_comment_method_aliases() -> None:
     assert CommentMethodsFacade.edit_comment is CommentMethodsFacade.edit_message
     assert CommentMethodsFacade.delete_comment is CommentMethodsFacade.delete_message
     assert (
-        CommentMethodsFacade.get_comment_by_id
-        is CommentMethodsFacade.get_message_by_id
+        CommentMethodsFacade.get_comment_by_id is CommentMethodsFacade.get_message_by_id
     )

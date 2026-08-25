@@ -113,9 +113,7 @@ class BotClient:
                 LinkedMessage(
                     type=MessageLinkType.REPLY,
                     sender=(
-                        reply_to.sender
-                        if is_defined(reply_to.sender)
-                        else Omitted()
+                        reply_to.sender if is_defined(reply_to.sender) else Omitted()
                     ),
                     chat_id=(
                         Omitted()

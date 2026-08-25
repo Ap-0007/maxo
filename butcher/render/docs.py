@@ -114,9 +114,7 @@ def build_parts(
             text = clean(raw) if raw else ""
             if reflow:
                 text = reflow_lists(text)
-                text = "\n".join(
-                    line.removeprefix("    ") for line in text.split("\n")
-                )
+                text = "\n".join(line.removeprefix("    ") for line in text.split("\n"))
             text = text.replace("\n\n", "\n")
             text = text.replace("\n", "\n        ")
             parts.append(f"    {name}: {text}")

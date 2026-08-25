@@ -108,7 +108,7 @@ def test_comment_method_examples_match_endpoints() -> None:
 
     assert "/comments?comment_ids=" in get_comments
     assert 'curl -X POST "https://platform-api2.max.ru/messages/' in send_comment
-    assert "-d '{\"text\": \"Новый комментарий\"}'" in send_comment
+    assert '-d \'{"text": "Новый комментарий"}\'' in send_comment
     assert "/comments?comment_id={commentId}" in edit_comment
     assert "/messages?message_id=message_id" in edit_message
     assert "/comments?comment_id=" not in edit_message
