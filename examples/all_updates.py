@@ -161,11 +161,6 @@ async def dialog_unmuted_handler(dialog_unmuted: DialogUnmuted) -> None:
     )
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.DEBUG)
-    dp.run_polling(bot)
-
-
 @dp.comment_created()
 async def comment_created_handler(comment_created: CommentCreated) -> None:
     await comment_created.reply_text(
@@ -189,6 +184,11 @@ async def comment_removed_handler(comment_removed: CommentRemoved) -> None:
         comment_removed.message_id,
         comment_removed.user_id,
     )
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.DEBUG)
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":
