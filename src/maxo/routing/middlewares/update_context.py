@@ -12,6 +12,9 @@ from maxo.types.bot_removed_from_chat import BotRemovedFromChat
 from maxo.types.bot_started import BotStarted
 from maxo.types.bot_stopped import BotStopped
 from maxo.types.chat_title_changed import ChatTitleChanged
+from maxo.types.comment_created import CommentCreated
+from maxo.types.comment_edited import CommentEdited
+from maxo.types.comment_removed import CommentRemoved
 from maxo.types.dialog_cleared import DialogCleared
 from maxo.types.dialog_muted import DialogMuted
 from maxo.types.dialog_removed import DialogRemoved
@@ -165,13 +168,16 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
             if (_message := update.message) is not None:
                 chat_id = _message.recipient.chat_id
                 chat_type = _message.recipient.chat_type
-        elif isinstance(update, (MessageEdited, MessageCreated)):
+        elif isinstance(
+            update,
+            (CommentCreated, CommentEdited, MessageCreated, MessageEdited),
+        ):
             user = update.message.sender if is_defined(update.message.sender) else None
             user_id = user.id if user is not None else None
             _recipient = update.message.recipient
             chat_id = _recipient.chat_id
             chat_type = _recipient.chat_type
-        elif isinstance(update, MessageRemoved):
+        elif isinstance(update, (CommentRemoved, MessageRemoved)):
             chat_id = update.chat_id
             user_id = update.user_id
         elif isinstance(update, DialogUpdateEvent):

@@ -6,9 +6,13 @@ import pytest
 from maxo.enums import ChatType, MessageLinkType
 from maxo.omit import is_omitted
 from maxo.routing.mixins.comment import CommentMethodsFacade
+from maxo.routing.mixins.message import MessageMethodsFacade
 from maxo.types import (
+    CommentCreated,
+    CommentEdited,
     CommentMessage,
     CommentMessageBody,
+    Message,
     MessageCreated,
     NewMessageLink,
     Recipient,
@@ -117,7 +121,25 @@ async def test_message_facade_redispatches_to_comment() -> None:
     assert result is comment
 
 
+@pytest.mark.parametrize("update_type", [CommentCreated, CommentEdited])
+async def test_comment_update_answer_uses_comment_api(
+    update_type: type[CommentCreated | CommentEdited],
+) -> None:
+    comment = make_comment()
+    bot = make_bot(comment)
+    comment.as_(bot)
+    update = update_type(message=comment, timestamp=NOW).as_(bot)
+
+    result = await update.message.answer("new")
+
+    bot.send_comment.assert_awaited_once()
+    bot.send_message.assert_not_called()
+    assert result is comment
+
+
 def test_comment_method_aliases() -> None:
+    assert issubclass(CommentMessage, Message)
+    assert issubclass(CommentMessage, MessageMethodsFacade)
     assert CommentMethodsFacade.send_comment is CommentMethodsFacade.send_message
     assert CommentMethodsFacade.edit_comment is CommentMethodsFacade.edit_message
     assert CommentMethodsFacade.delete_comment is CommentMethodsFacade.delete_message

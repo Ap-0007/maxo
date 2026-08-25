@@ -1313,7 +1313,7 @@
                     "comments"
                 ],
                 "operationId": "getComments",
-                "description": "> **Функциональность временно недоступна** \n\nВозвращает все комментарии к посту в канале по его ID: страницу результата и маркер на следующую страницу. Вы можете отфильтровать комментарии: указать промежуток времени, за который хотите их получить, и/или запросить N последних\n\nДля получения комментариев к посту бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правом `read_all_messages`\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса с фильтрацией по времени и количеству последних комментариев за этот промежуток**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments?after={after}&before={before}&count={count}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n**Пример запроса конкретных комментариев к посту по их ID**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_ids={comment_ids1},{comment_ids2},{comment_ids3}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Возвращает все комментарии к посту в канале по его ID: страницу результата и маркер на следующую страницу. Вы можете отфильтровать комментарии: указать промежуток времени, за который хотите их получить, и/или запросить N последних\n\nДля получения комментариев к посту бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правом `read_all_messages`\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса с фильтрацией по времени и количеству последних комментариев за этот промежуток**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments?after={after}&before={before}&count={count}\" \\\n  -H \"Authorization: {access_token}\"\n```\n\n**Пример запроса конкретных комментариев к посту по их ID**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_ids={comment_ids1},{comment_ids2},{comment_ids3}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "summary": "Получение всех комментариев к посту",
                 "parameters": [
                     {
@@ -1396,7 +1396,7 @@
                     "comments"
                 ],
                 "operationId": "sendComment",
-                "description": ">**Функциональность временно недоступна** \n\nОтправляет комментарий к посту в канале\n\n Для этого: \n\n• В настройках канала должны быть [включены комментарии](/docs/channels/manage#Как%20включить%20комментарии%20в%20канале)<br/>• Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала c правами `read_all_messages` и `write`<br/>\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`GET /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/messages/{messageId}/comments\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"text\": \"Новый комментарий\"}'\n```",
+                "description": "Отправляет комментарий к посту в канале\n\n Для этого: \n\n• В настройках канала должны быть [включены комментарии](/docs/channels/manage#Как%20включить%20комментарии%20в%20канале)<br/>• Бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала c правами `read_all_messages` и `write`<br/>\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`GET /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X POST \"https://platform-api2.max.ru/messages/{messageId}/comments\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"text\": \"Новый комментарий\"}'\n```",
                 "summary": "Отправка комментария",
                 "parameters": [
                     {
@@ -1454,7 +1454,7 @@
                     "comments"
                 ],
                 "operationId": "editComment",
-                "description": ">**Функциональность временно недоступна** \n\nРедактирует комментарий бота к посту в канале \n\nДля редактирования комментария бот, чей токен `access_token` используется для авторизации, должен быть участником этого канала \n\nС помощью метода можно редактировать: <br/>• Комментарии, которые опубликованы от имени канала,  — если боту назначено право администратора `edit`<br/>• Только свои комментарии — если у бота нет права администратора `edit`\n\nЕсли канал архивирован или в нём [отключены комментарии](/docs/channels/manage#Как%20отключить%20комментарии%20в%20канале), бот может редактировать старые комментарии\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\n#### Пример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_id={commentId}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Изменённый текст\"\n}'\n```",
+                "description": "Редактирует комментарий бота к посту в канале \n\nДля редактирования комментария бот, чей токен `access_token` используется для авторизации, должен быть участником этого канала \n\nС помощью метода можно редактировать: <br/>• Комментарии, которые опубликованы от имени канала,  — если боту назначено право администратора `edit`<br/>• Только свои комментарии — если у бота нет права администратора `edit`\n\nЕсли канал архивирован или в нём [отключены комментарии](/docs/channels/manage#Как%20отключить%20комментарии%20в%20канале), бот может редактировать старые комментарии\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора)\n\n#### Пример запроса:\n```bash\ncurl -X PUT \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_id={commentId}\" \\\n  -H \"Authorization: {access_token}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n  \"text\": \"Изменённый текст\"\n}'\n```",
                 "summary": "Редактирование комментария",
                 "parameters": [
                     {
@@ -1506,7 +1506,7 @@
                 ],
                 "operationId": "deleteComment",
                 "summary": "Удаление комментария",
-                "description": ">**Функциональность временно недоступна** \n\nУдаляет комментарий пользователя или бота к посту в канале \n\n• С помощью метода можно удалять как чужие комментарии, так и свои<br/>• Если канал архивирован или в нём [отключены комментарии](/docs/channels/manage#Как%20отключить%20комментарии%20в%20канале), по-прежнему можно удалять старые комментарии<br/>• Если комментарий удалён ошибочно, восстановить его нельзя \n\n Для удаления комментария бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правами `read_all_messages` и `delete`\n\nЧтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_id={comment_id}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Удаляет комментарий пользователя или бота к посту в канале \n\n• С помощью метода можно удалять как чужие комментарии, так и свои<br/>• Если канал архивирован или в нём [отключены комментарии](/docs/channels/manage#Как%20отключить%20комментарии%20в%20канале), по-прежнему можно удалять старые комментарии<br/>• Если комментарий удалён ошибочно, восстановить его нельзя \n\n Для удаления комментария бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правами `read_all_messages` и `delete`\n\nЧтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X DELETE \"https://platform-api2.max.ru/messages/{messageId}/comments?comment_id={comment_id}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "parameters": [
                     {
                         "description": "Идентификатор поста (`mid`), комментарий к которому надо удалить",
@@ -1552,7 +1552,7 @@
                 ],
                 "operationId": "getCommentById",
                 "summary": "Получение комментария по его ID",
-                "description": ">**Функциональность временно недоступна** \n\nВозвращает информацию о комментарии к посту в канале по его идентификатору (`mid`)\n\nДля этого бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правом `read_all_messages`\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments/{commentId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
+                "description": "Возвращает информацию о комментарии к посту в канале по его идентификатору (`mid`)\n\nДля этого бот, чей токен `access_token` используется для авторизации, должен быть администратором этого канала с правом `read_all_messages`\n\n Чтобы получить информацию о правах бота, используйте [`GET /chats/-chatId-/members/admins`](/docs-api/methods/GET/chats/-chatId-/members/admins). Подробнее о правах — в описании [`POST /chats/{chatId}/members/admins`](/docs-api/methods/POST/chats/-chatId-/members/admins#Доступные%20права%20администратора) \n\n**Пример запроса**:\n```bash\ncurl -X GET \"https://platform-api2.max.ru/messages/{messageId}/comments/{commentId}\" \\\n  -H \"Authorization: {access_token}\"\n```",
                 "parameters": [
                     {
                         "description": "Идентификатор поста (`mid`), к которому относится комментарий",
@@ -2639,7 +2639,7 @@
                         "nullable": true
                     },
                     "attachments": {
-                        "description": "Вложения сообщения, возвращенные в ответе API",
+                        "description": "Вложения сообщения. Могут быть одним из типов `attachment`, описанных в схеме ниже<br/>Если поле пустое или равно `null`, изменений не произойдет. Если массив пуст, все вложения будут удалены",
                         "type": "array",
                         "nullable": true,
                         "required": false,
@@ -4509,12 +4509,6 @@
                                 "$ref": "#/components/schemas/NewMessageBody"
                             }
                         ]
-                    },
-                    "notification": {
-                        "description": "Заполните это, если хотите просто отправить одноразовое уведомление пользователю\n\nПримечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой",
-                        "nullable": true,
-                        "readOnly": false,
-                        "type": "string"
                     }
                 }
             },
@@ -4621,7 +4615,7 @@
                 ]
             },
             "Update": {
-                "description": "Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:  \n\n - Вы подписались на обновления через Webhook — при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](/docs-api/methods/POST/subscriptions), который содержит объект `Update` \n\n - Вы отправили [GET-запрос /updates](/docs-api/methods/GET/updates) для получения обновлений через  Long Polling — в ответ вернётся объект `Update` \n\n  >! Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Типы событий\n\n- `bot_added` — бот добавлен в чат или канал\n\n- `bot_started` — пользователь впервые начал общение с ботом или возобновил после остановки — нажал соответствующую кнопку в настройках бота в МАКС\n\n- `bot_stopped` — пользователь остановил или удалил бота через настройки бота в МАКС. Во втором случае одновременно с `bot_stopped` возвращается событие `dialog_removed`\n\n- `bot_removed` — бот удалён из чата или канала \n\n- `chat_title_changed` — пользователь изменил название чата или канала\n\n- `dialog_cleared` — пользователь очистил историю диалога с ботом\n\n- `dialog_muted` — пользователь отключил уведомления в диалоге с ботом \n\n- `dialog_unmuted` — пользователь включил уведомления в диалоге с ботом \n\n- `dialog_removed` — пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` — при удалении диалога бот останавливается автоматически \n\n- `message_callback` — пользователь нажал на кнопку в чате или канале\n\n - `message_created` — пользователь или бот отправил новое сообщение, опубликовал пост или комментарий\n\n- `message_edited` — пользователь или бот отредактировал сообщение в чате, пост в канале или комментарий к посту. Обратите внимание, боты могут изменять только свои комментарии \n\n- `message_removed` — пользователь или бот удалил сообщение из чата, пост из канала или комментарий к посту\n\n- `user_added` — в чат или канал добавлен или перешёл по ссылке новый пользователь\n\n- `user_removed` — пользователь удалён или покинул чат или канал \n\n ## Свойства объекта Update",
+                "description": "Объект `Update` описывает возможные события в чате или канале. Может возвращаться в следующих случаях:  \n\n - Вы подписались на обновления через Webhook — при наступлении события МАКС пришлёт [POST-запрос `/subscriptions`](/docs-api/methods/POST/subscriptions), который содержит объект `Update` \n\n - Вы отправили [GET-запрос /updates](/docs-api/methods/GET/updates) для получения обновлений через  Long Polling — в ответ вернётся объект `Update` \n\n  >! Получение обновлений с помощью [Long Polling](/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий — этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](/docs-api/methods/POST/subscriptions)\n\n ## Типы событий\n\n- `bot_added` — бот добавлен в чат или канал\n\n- `bot_started` — пользователь впервые начал общение с ботом или возобновил после остановки — нажал соответствующую кнопку в настройках бота в МАКС\n\n- `bot_stopped` — пользователь остановил или удалил бота через настройки бота в МАКС. Во втором случае одновременно с `bot_stopped` возвращается событие `dialog_removed`\n\n- `bot_removed` — бот удалён из чата или канала \n\n- `chat_title_changed` — пользователь изменил название чата или канала\n\n- `dialog_cleared` — пользователь очистил историю диалога с ботом\n\n- `dialog_muted` — пользователь отключил уведомления в диалоге с ботом \n\n- `dialog_unmuted` — пользователь включил уведомления в диалоге с ботом \n\n- `dialog_removed` — пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` — при удалении диалога бот останавливается автоматически \n\n- `message_callback` — пользователь нажал на кнопку в чате или канале\n\n - `message_created` — пользователь отправил новое сообщение или опубликовал пост\n\n- `message_edited` — пользователь отредактировал сообщение в чате, пост в канале \n\n- `message_removed` — пользователь удалил сообщение из чата или канала\n\n - `comment_created` — пользователь или бот опубликовал новый комментарий. Для бота на свои действия события не приходят\n\n - `comment_edited` — пользователь или бот изменил комментарий в канале. Обратите внимание, боты могут изменять только свои комментарии. Для бота на свои действия события не приходят \n\n- `comment_removed` — пользователь или бот удалил комментарий. Для бота на свои действия события не приходят\n\n- `user_added` — в чат или канал добавлен или перешёл по ссылке новый пользователь\n\n- `user_removed` — пользователь удалён или покинул чат или канал \n\n ## Свойства объекта Update",
                 "discriminator": {
                     "propertyName": "update_type",
                     "mapping": {
@@ -4663,6 +4657,15 @@
                         },
                         "message_removed": {
                             "$ref": "#/components/schemas/MessageRemovedUpdate"
+                        },
+                        "comment_created": {
+                            "$ref": "#/components/schemas/CommentCreatedUpdate"
+                        },
+                        "comment_edited": {
+                            "$ref": "#/components/schemas/CommentEditedUpdate"
+                        },
+                        "comment_removed": {
+                            "$ref": "#/components/schemas/CommentRemovedUpdate"
                         },
                         "user_added": {
                             "$ref": "#/components/schemas/UserAddedToChatUpdate"
@@ -4811,6 +4814,89 @@
                         },
                         "required": [
                             "message"
+                        ]
+                    }
+                ]
+            },
+            "CommentEditedUpdate": {
+                "description": "Вы получите это событие, как только пользователь отредактирует комментарий",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Update"
+                    },
+                    {
+                        "properties": {
+                            "message": {
+                                "description": "Отредактированный комментарий",
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Message"
+                                    }
+                                ]
+                            }
+                        },
+                        "required": [
+                            "message"
+                        ]
+                    }
+                ]
+            },
+            "CommentCreatedUpdate": {
+                "description": "Вы получите это событие, как только комментарий будет создан",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Update"
+                    },
+                    {
+                        "properties": {
+                            "message": {
+                                "description": "Новый созданный комментарий",
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Message"
+                                    }
+                                ]
+                            }
+                        },
+                        "required": [
+                            "message"
+                        ]
+                    }
+                ]
+            },
+            "CommentRemovedUpdate": {
+                "description": "Вы получите это событие, как только комментарий будет удалён",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Update"
+                    },
+                    {
+                        "properties": {
+                            "message_id": {
+                                "description": "ID удалённого комментария",
+                                "type": "string"
+                            },
+                            "chat_id": {
+                                "description": "ID чата, где комментарий был удалён",
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "user_id": {
+                                "description": "Пользователь, удаливший комментарий",
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            "post_id": {
+                                "description": "Идентификатор поста в канале",
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "required": [
+                            "message_id",
+                            "chat_id",
+                            "user_id",
+                            "post_id"
                         ]
                     }
                 ]

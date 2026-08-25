@@ -56,6 +56,25 @@ def test_comment_models_override_swagger_bases(document: MaxoDocument) -> None:
     )
 
 
+def test_comment_updates_get_facade_mixins(document: MaxoDocument) -> None:
+    assert _model(document, "CommentCreated").mixins == (
+        "CommentMethodsFacade",
+    )
+    assert _model(document, "CommentEdited").mixins == (
+        "CommentMethodsFacade",
+    )
+    assert _model(document, "CommentRemoved").mixins == (
+        "ChatMethodsFacade",
+    )
+
+
+def test_comment_updates_use_comment_message(document: MaxoDocument) -> None:
+    for name in ("CommentCreated", "CommentEdited"):
+        message = next(field for field in _model(document, name).fields if field.name == "message")
+
+        assert message.annotation == "CommentMessage"
+
+
 def test_discriminator_becomes_enum(document: MaxoDocument) -> None:
     enum = _enum(document, "AttachmentType")
     assert enum.description == "Вложение"
@@ -116,7 +135,12 @@ def test_union_files_are_built_from_discriminator(document: MaxoDocument) -> Non
     assert names["MediaAttachments"] == ("PhotoAttachment", "VideoAttachment")
     assert names["Attachments"] == ("MediaAttachments",)
     updates = next(item for item in document.unions if item.module == "updates")
-    assert updates.aliases[0].members == ("MessageCreated",)
+    assert updates.aliases[0].members == (
+        "CommentCreated",
+        "CommentEdited",
+        "CommentRemoved",
+        "MessageCreated",
+    )
     assert updates.aliases[0].annotate
 
 
@@ -213,13 +237,18 @@ def test_model_field_override(
     monkeypatch.setitem(
         overrides.MODEL_FIELD_OVERRIDES,
         ("Message", "url"),
-        overrides.FieldOverride(omittable=True, comment="type: ignore[assignment]"),
+        overrides.FieldOverride(
+            ref="CommentMessage",
+            omittable=True,
+            comment="type: ignore[assignment]",
+        ),
     )
     path = tmp_path / "spec.json"
     path.write_text(json.dumps(SPEC), encoding="utf-8")
     document = build_profile(load(str(path)))
     url = next(f for f in _model(document, "Message").fields if f.name == "url")
     assert url.omittable
+    assert url.annotation == "CommentMessage"
     assert url.comment == "type: ignore[assignment]"
 
 

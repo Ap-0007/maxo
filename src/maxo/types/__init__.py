@@ -29,10 +29,13 @@ from .chat_member import ChatMember
 from .chat_members_list import ChatMembersList
 from .chat_title_changed import ChatTitleChanged
 from .clipboard_button import ClipboardButton
+from .comment_created import CommentCreated
+from .comment_edited import CommentEdited
 from .comment_linked_message import CommentLinkedMessage
 from .comment_message import CommentMessage
 from .comment_message_body import CommentMessageBody
 from .comment_message_list import CommentMessageList
+from .comment_removed import CommentRemoved
 from .contact_attachment import ContactAttachment
 from .contact_attachment_payload import ContactAttachmentPayload
 from .contact_attachment_request import ContactAttachmentRequest
@@ -151,10 +154,13 @@ __all__ = (
     "ChatMembersList",
     "ChatTitleChanged",
     "ClipboardButton",
+    "CommentCreated",
+    "CommentEdited",
     "CommentLinkedMessage",
     "CommentMessage",
     "CommentMessageBody",
     "CommentMessageList",
+    "CommentRemoved",
     "ContactAttachment",
     "ContactAttachmentPayload",
     "ContactAttachmentRequest",

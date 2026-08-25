@@ -182,6 +182,15 @@
    * - ``@router.message_removed``
      - :class:`~maxo.types.message_removed.MessageRemoved`
      - Пользователь удалил сообщение.
+   * - ``@router.comment_created``
+     - :class:`~maxo.types.comment_created.CommentCreated`
+     - Пользователь или бот опубликовал комментарий.
+   * - ``@router.comment_edited``
+     - :class:`~maxo.types.comment_edited.CommentEdited`
+     - Пользователь или бот изменил комментарий.
+   * - ``@router.comment_removed``
+     - :class:`~maxo.types.comment_removed.CommentRemoved`
+     - Пользователь или бот удалил комментарий.
    * - ``@router.bot_started``
      - :class:`~maxo.types.bot_started.BotStarted`
      - Пользователь нажал кнопку «Запустить» или впервые начал диалог с ботом.

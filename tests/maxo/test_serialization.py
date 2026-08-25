@@ -16,7 +16,10 @@ from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort, create_retort_with_bot
 from maxo.types import (
+    CommentCreated,
+    CommentEdited,
     CommentMessage,
+    CommentRemoved,
     Message,
     MessageCreated,
     NewMessageBody,
@@ -239,3 +242,47 @@ def test_nested_tag_requires_base() -> None:
 def test_computed_tag_requires_base() -> None:
     with pytest.raises(TypeError, match="только для подтипа"):
         has_tag_provider(Message, "type", lambda actual: actual is None)
+
+
+def test_retort_loads_comment_updates_from_raw_json() -> None:
+    retort = create_retort(warming_up=False)
+    comment = {
+        "body": {"seq": 1, "mid": "comment", "text": "hello"},
+        "recipient": {
+            "chat_id": 1,
+            "chat_type": "channel",
+            "post_id": "post",
+        },
+        "timestamp": 1234567890,
+    }
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "comment_created",
+                "timestamp": 1234567890,
+                "message": comment,
+            },
+            {
+                "update_type": "comment_edited",
+                "timestamp": 1234567890,
+                "message": comment,
+            },
+            {
+                "update_type": "comment_removed",
+                "timestamp": 1234567890,
+                "chat_id": 1,
+                "message_id": "comment",
+                "post_id": "post",
+                "user_id": 2,
+            },
+        ],
+    }
+
+    result = retort.load(data, UpdateList)
+
+    assert isinstance(result.updates[0], CommentCreated)
+    assert isinstance(result.updates[0].message, CommentMessage)
+    assert isinstance(result.updates[1], CommentEdited)
+    assert isinstance(result.updates[1].message, CommentMessage)
+    assert isinstance(result.updates[2], CommentRemoved)

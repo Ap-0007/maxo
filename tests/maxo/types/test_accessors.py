@@ -29,6 +29,7 @@ from maxo.types import (
     CommentLinkedMessage,
     CommentMessage,
     CommentMessageBody,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentPayload,
     ContactAttachmentRequest,
@@ -1431,6 +1432,13 @@ def test_comment_accessors() -> None:
         timestamp=NOW,
         user_id=20,
     )
+    comment_removed = CommentRemoved(
+        chat_id=10,
+        message_id="comment",
+        post_id="post",
+        timestamp=NOW,
+        user_id=20,
+    )
     comment = CommentMessage(
         body=body,
         recipient=recipient,
@@ -1446,6 +1454,7 @@ def test_comment_accessors() -> None:
     assert link.unsafe_sender is sender
     assert recipient.unsafe_post_id == "post"
     assert removed.unsafe_post_id == "post"
+    assert comment_removed.unsafe_post_id == "post"
     assert comment.unsafe_link is link
     assert comment.unsafe_sender is sender
     assert new_body.unsafe_format is TextFormat.HTML
@@ -1484,6 +1493,14 @@ def test_comment_accessors() -> None:
         ).unsafe_sender
     with pytest.raises(AttributeIsEmptyError):
         _ = MessageRemoved(
+            chat_id=10,
+            message_id="comment",
+            post_id=None,
+            timestamp=NOW,
+            user_id=20,
+        ).unsafe_post_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentRemoved(
             chat_id=10,
             message_id="comment",
             post_id=None,

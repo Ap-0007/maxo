@@ -115,6 +115,8 @@ METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
 class FieldOverride:
     """Ручная правка поля модели поверх того, что дал генератор."""
 
+    ref: str | None = None
+    """Заменить ссылочный тип поля и его импорт."""
     annotation: str | None = None
     """Заменить тип поля (импорты берутся от исходного типа)."""
     omittable: bool | None = None
@@ -126,6 +128,9 @@ class FieldOverride:
 #: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
 #: ``(класс, поле)``.
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
+    # Swagger ссылается на Message, хотя comment update несет CommentMessage.
+    ("CommentCreated", "message"): FieldOverride(ref="CommentMessage"),
+    ("CommentEdited", "message"): FieldOverride(ref="CommentMessage"),
     # Wire-модель комментария сужает mutable-поле базового LinkedMessage.
     ("CommentLinkedMessage", "message"): FieldOverride(
         comment="type: ignore[mutable-override]",
@@ -316,7 +321,10 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "BotStarted": ("ChatMethodsFacade",),
     "BotStopped": ("ChatMethodsFacade",),
     "ChatTitleChanged": ("ChatMethodsFacade",),
+    "CommentCreated": ("CommentMethodsFacade",),
+    "CommentEdited": ("CommentMethodsFacade",),
     "CommentMessage": ("CommentMethodsFacade",),
+    "CommentRemoved": ("ChatMethodsFacade",),
     "DialogCleared": ("ChatMethodsFacade",),
     "DialogMuted": ("ChatMethodsFacade",),
     "DialogRemoved": ("ChatMethodsFacade",),

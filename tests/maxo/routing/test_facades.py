@@ -13,6 +13,9 @@ from maxo.routing.facades import (
     BotStartedFacade,
     BotStoppedFacade,
     ChatTitleChangedFacade,
+    CommentCreatedFacade,
+    CommentEditedFacade,
+    CommentRemovedFacade,
     DialogClearedFacade,
     DialogMutedFacade,
     DialogRemovedFacade,
@@ -33,6 +36,11 @@ from maxo.types import (
     BotStopped,
     Callback,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentMessage,
+    CommentMessageBody,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -61,6 +69,18 @@ def message() -> Message:
         timestamp=NOW,
         recipient=Recipient(chat_type=ChatType.DIALOG, chat_id=10, user_id=1),
         body=MessageBody(mid="m", seq=1, text="t"),
+    )
+
+
+def comment() -> CommentMessage:
+    return CommentMessage(
+        timestamp=NOW,
+        recipient=Recipient(
+            chat_type=ChatType.CHANNEL,
+            chat_id=10,
+            post_id="post",
+        ),
+        body=CommentMessageBody(mid="comment", seq=1, text="t"),
     )
 
 
@@ -103,6 +123,27 @@ CASES: list[tuple[Any, Any, tuple[str, ...]]] = [
         ChatTitleChangedFacade,
         ChatTitleChanged(timestamp=NOW, chat_id=10, user=user(), title="T"),
         ("chat_id", "user", "title"),
+    ),
+    (
+        CommentCreatedFacade,
+        CommentCreated(timestamp=NOW, message=comment()),
+        ("message",),
+    ),
+    (
+        CommentEditedFacade,
+        CommentEdited(timestamp=NOW, message=comment()),
+        ("message",),
+    ),
+    (
+        CommentRemovedFacade,
+        CommentRemoved(
+            timestamp=NOW,
+            chat_id=10,
+            message_id="comment",
+            post_id="post",
+            user_id=1,
+        ),
+        ("chat_id", "message_id", "post_id", "user_id"),
     ),
     (
         DialogClearedFacade,

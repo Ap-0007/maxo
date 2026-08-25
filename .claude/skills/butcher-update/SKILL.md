@@ -200,12 +200,19 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 `bind_method`, `warming_up`, `serialization`, фасады, реестры и тесты; если
 символ был публичным - оставить deprecated-алиас.
 
+После переноса обязательно сравни множества схем, операций и enum между
+`spec-before.json` и новой спекой. Для каждого исчезнувшего имени проверь `rg`
+по `src/`, `tests/`, `docs/`, `examples/` и `butcher/`: butcher не удаляет
+старые файлы и реэкспорты сам. Ручной совместимый символ удалять нельзя только
+из-за отсутствия в Swagger - сначала сверить `references/manual-layer.md`.
+
 ### 7. Правила по умолчанию
 
 Решения, которые иначе переоткрываются каждый раз. Если мейнтейнер решит
 иначе - поменяй правило здесь, а не рассуждай заново в следующий заход.
 
-1. **Миксин в `CLASS_MIXINS`** выбирается по полям апдейта: есть `message` ->
+1. **Миксин в `CLASS_MIXINS`** выбирается по полям апдейта: comment update с
+   `message: CommentMessage` -> `CommentMethodsFacade`; прочий `message` ->
    `MessageMethodsFacade`; есть `callback` -> `CallbackMethodsFacade`
    (и `MessageMethodsFacade` следом); иначе есть `chat_id` ->
    `ChatMethodsFacade`.
@@ -218,13 +225,18 @@ grep -rn "MessageRemoved\|message_removed" src/ docs/pages/ examples/ tests/
 4. **Депрекейтед-слои ведут себя по-разному.** `maxo.routing.updates`
    **пополняется**: новый апдейт идёт и в `__init__.py` шима, и отдельным
    deep-модулем `routing/updates/<name>.py`, и в `parametrize` в
-   `tests/maxo/routing/updates/test_deprecation.py`. А `maxo.utils.facades`
-   **заморожен**: новый фасад живёт только в `maxo.routing.facades`.
+   `tests/maxo/routing/updates/test_deprecation.py`. `maxo.utils.facades`
+   сохраняет фасадные алиасы до удаления всего слоя в 0.9.0.
 5. **Дрейф вне дельты не чиним.** Если генератор расходится с `src/maxo` в
    файле, которого изменение контракта не касалось (известный случай -
    `Chat.participants`), это отдельная задача и отдельный коммит.
 6. **Ветка в `update_context.py`** выбирается по полям апдейта: message-scoped
    (есть `message`) или chat-scoped (есть `chat_id` и `user`).
+7. **Comment update уточняет ошибочный Swagger.** Для `CommentCreated` и
+   `CommentEdited` поле `message` задаётся через `MODEL_FIELD_OVERRIDES` как
+   ссылка на `CommentMessage`. Простой `annotation` недостаточен: нужен `ref`,
+   чтобы генератор заменил и импорт. Так `update.message.answer()` вызывает
+   `send_comment`, а не `send_message`.
 
 ### 8. Тесты, документация и примеры
 
@@ -269,9 +281,9 @@ count_generated_diff src/maxo/bot/methods .butcher/check/bot/methods
 `set -e` и `pipefail`.
 
 Расходиться должны **только** файлы ручного слоя, и их набор обязан совпасть с
-тем, что был до изменения контракта. Ориентир на момент написания: 33 типа,
-0 enum'ов, 13 методов = 46 файлов. Появился 47-й - ты перенёс дельту неточно;
-пропал - затёр ручной слой.
+тем, что был до изменения контракта. Ориентир после обновления comment updates:
+39 типов, 2 enum'а, 11 методов. Сравнивать нужно и число, и конкретный список:
+новое расхождение допустимо только для явно сохраненного ручного API.
 
 ### 10. Проверки и уборка
 
@@ -380,12 +392,14 @@ upstream, не костыль в butcher. Обновление закреплё�
 Новую трансформацию профиля закрывай тестом в `butcher/tests/test_profile.py`,
 новую форму вывода - в `butcher/tests/test_render.py`.
 
-Отдельный случай - дефекты самой спеки, которые видны только в докстрингах
-(незакрытые ```` ``` ````, забор из двух или четырёх бэктиков). Сейчас в
-`max-swagger.json` их четыре: `editMyCommands`, `getAdmins`, `sendMessage`,
-`getVideoAttachmentDetails`; в `src/maxo` они уже исправлены руками и любая
-генерация возвращает их обратно. Чини такое **в `max-swagger.json`** - файл
-уже правился так же (коммит `e5732c7`), и он единственный источник правды.
+Отдельный случай - дефекты исходной спеки, которые видны только в докстрингах.
+В чанке сломаны markdown-заборы `editMyCommands`, `getAdmins`, `sendMessage` и
+`getVideoAttachmentDetails`, а также curl-примеры `getComments`, `sendComment`
+и `editComment`. Последние должны показывать соответственно query
+`?comment_ids=`, `POST` с JSON-телом и `PUT` на
+`/messages/{messageId}/comments?comment_id={commentId}`. После скачивания
+новой спеки восстанавливай эти исправления в `max-swagger.json` - он остается
+единственным источником правды.
 
 ## Red flags - остановись
 

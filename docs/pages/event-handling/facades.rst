@@ -123,21 +123,20 @@ Resumable-загрузка читает файл по кускам и отпра
 
 .. code-block:: python
 
-    from maxo.types import CommentMessage
+    from maxo.types import CommentCreated
 
-    if isinstance(update.message, CommentMessage):
-        await update.send_message("Ответ в той же ветке")
-        # Или: await update.message.send_comment("Ответ в той же ветке")
+    @router.comment_created()
+    async def on_comment(update: CommentCreated) -> None:
+        await update.reply_text("Ответ в той же ветке")
 
 В комментариях не поддерживаются вложения, ``notify=False`` и ссылки с типом
 ``forward``. Фасад пишет warning и игнорирует такие параметры. Если комментарии
 в канале отключены, MAX API может вернуть ``500 internal.error``.
 
-Webhook может доставить комментарий внутри события ``message_created``. В этом
-случае ``update.message`` автоматически загружается как ``CommentMessage``, а
-методы общего фасада вызывают API комментариев. Long polling сейчас не
-доставляет такие события даже при явном запросе типа ``message_created`` - это
-ограничение MAX API, а не маршрутизации maxo.
+Создание, изменение и удаление комментария приходят отдельными событиями
+``comment_created``, ``comment_edited`` и ``comment_removed``. В первых двух
+``update.message`` автоматически загружается как ``CommentMessage``, а методы
+общего фасада вызывают API комментариев.
 
 Список доступных фасадов
 ------------------------
