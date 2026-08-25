@@ -77,18 +77,27 @@
 `MessageButton.text` и `PhotoAttachmentRequestPayload.photos` руками уже **не**
 правятся - они генерируются через `MODEL_FIELD_OVERRIDES`.
 
+`CommentCreated.message` и `CommentEdited.message` сужаются с ошибочного
+`Message` в Swagger до `CommentMessage` через `FieldOverride(ref=...)`.
+`CommentMessage` наследует `Message` и `CommentMethodsFacade`, который сам
+наследует `MessageMethodsFacade`: поэтому общий API сообщения сохраняется, а
+`answer()` использует методы комментариев.
+
 ## Хвосты методов
 
+- `AnswerOnCallback.notification` - поле отсутствует в актуальном Swagger,
+  но поддерживается библиотекой.
 - `GetUpdates` - объявление класса с `slots=False` и метод `make_response`
   (терпимость к незагружаемым апдейтам).
 - `UploadMedia.validate_response` - в ручном файле, генерацией не затирается.
 
 ## Докстринги, испорченные спекой
 
-`max-swagger.json` содержит незакрытые или неправильные markdown-заборы в
+Исходный чанк содержит незакрытые или неправильные markdown-заборы в
 описаниях: `editMyCommands`, `getAdmins` (два бэктика), `sendMessage` (четыре
-бэктика), `getVideoAttachmentDetails`. В `src/maxo` они исправлены руками.
-Правильное место лечения - сам `max-swagger.json`.
+бэктика), `getVideoAttachmentDetails`. Также сломаны curl-примеры
+`getComments`, `sendComment` и `editComment`. В `max-swagger.json` они
+исправлены, чтобы генерация сразу давала корректные docstring.
 
 ## Реестры и compat-слои, о которых легко не узнать
 
@@ -107,8 +116,8 @@
 - `src/maxo/routing/updates/` - депрекейтед-шим: `__init__.py` плюс
   deep-модули на каждый апдейт. **Пополняется**: новый апдейт заводится и там.
 - `src/maxo/utils/facades/` - второй депрекейтед-шим (`updates/`, `methods/`,
-  `middleware.py`), переехавший в `maxo.routing`. **Заморожен**: новые фасады
-  туда не добавляются.
+  `middleware.py`), переехавший в `maxo.routing`. Сохраняет фасадные алиасы до
+  удаления всего слоя в 0.9.0.
 - `tests/maxo/routing/updates/test_deprecation.py` - ручной `parametrize` по
   модулям шима.
 - `tests/maxo/routing/test_facades.py` - ручной список `CASES`.

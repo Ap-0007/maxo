@@ -112,6 +112,32 @@ Resumable-загрузка читает файл по кускам и отпра
     ]
     await facade.send_message(text="Микс медиа", media=media)
 
+Комментарии к постам
+--------------------
+
+Методы ``Bot.send_comment``, ``Bot.edit_comment``, ``Bot.delete_comment``,
+``Bot.get_comment_by_id`` и ``Bot.get_comments`` работают с комментариями к
+постам каналов. Объект комментария имеет тип ``CommentMessage`` и поддерживает
+как привычные методы ``send_message``, ``edit_message``, ``delete_message`` и
+``get_message_by_id``, так и их явные алиасы с ``comment`` в названии.
+
+.. code-block:: python
+
+    from maxo.types import CommentCreated
+
+    @router.comment_created()
+    async def on_comment(update: CommentCreated) -> None:
+        await update.reply_text("Ответ в той же ветке")
+
+В комментариях не поддерживаются вложения, клавиатуры, ``notify=False`` и ссылки с типом ``forward``.
+Фасад пишет warning и игнорирует такие параметры.
+Если комментарии в канале отключены, MAX API может вернуть ``500 internal.error``.
+
+Создание, изменение и удаление комментария приходят отдельными событиями
+``comment_created``, ``comment_edited`` и ``comment_removed``. В первых двух
+``update.message`` автоматически загружается как ``CommentMessage``, а методы
+общего фасада вызывают API комментариев.
+
 Список доступных фасадов
 ------------------------
 

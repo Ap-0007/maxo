@@ -13,7 +13,16 @@ from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
 from maxo.serialization import create_retort, create_retort_with_bot
-from maxo.types import NewMessageBody, UpdateList
+from maxo.types import (
+    CommentCreated,
+    CommentEdited,
+    CommentMessage,
+    CommentRemoved,
+    Message,
+    MessageCreated,
+    NewMessageBody,
+    UpdateList,
+)
 from maxo.types.base import MaxoType
 from tests.factories import make_bot
 
@@ -169,3 +178,89 @@ def test_retort_full_message_created_loads_ok() -> None:
 
     result = retort.load(data, UpdateList)
     assert len(result.updates) == 1
+
+
+def test_retort_keeps_message_created_with_post_id_as_message() -> None:
+    retort = create_retort(warming_up=False)
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "message": {
+                    "body": {"seq": 1, "mid": "comment", "text": "hello"},
+                    "recipient": {
+                        "chat_id": 1,
+                        "chat_type": "channel",
+                        "post_id": "post",
+                    },
+                    "timestamp": 1234567890,
+                },
+            },
+            {
+                "update_type": "message_created",
+                "timestamp": 1234567890,
+                "message": {
+                    "body": {"seq": 2, "mid": "message", "text": "hello"},
+                    "recipient": {
+                        "chat_id": 1,
+                        "chat_type": "channel",
+                    },
+                    "timestamp": 1234567890,
+                },
+            },
+        ],
+    }
+
+    result = retort.load(data, UpdateList)
+    comment_update, message_update = result.updates
+
+    assert isinstance(comment_update, MessageCreated)
+    assert isinstance(message_update, MessageCreated)
+    assert type(comment_update.message) is Message
+    assert type(message_update.message) is Message
+
+
+def test_retort_loads_comment_updates_from_raw_json() -> None:
+    retort = create_retort(warming_up=False)
+    comment = {
+        "body": {"seq": 1, "mid": "comment", "text": "hello"},
+        "recipient": {
+            "chat_id": 1,
+            "chat_type": "channel",
+            "post_id": "post",
+        },
+        "timestamp": 1234567890,
+    }
+    data = {
+        "marker": 1,
+        "updates": [
+            {
+                "update_type": "comment_created",
+                "timestamp": 1234567890,
+                "message": comment,
+            },
+            {
+                "update_type": "comment_edited",
+                "timestamp": 1234567890,
+                "message": comment,
+            },
+            {
+                "update_type": "comment_removed",
+                "timestamp": 1234567890,
+                "chat_id": 1,
+                "message_id": "comment",
+                "post_id": "post",
+                "user_id": 2,
+            },
+        ],
+    }
+
+    result = retort.load(data, UpdateList)
+
+    assert isinstance(result.updates[0], CommentCreated)
+    assert isinstance(result.updates[0].message, CommentMessage)
+    assert isinstance(result.updates[1], CommentEdited)
+    assert isinstance(result.updates[1].message, CommentMessage)
+    assert isinstance(result.updates[2], CommentRemoved)

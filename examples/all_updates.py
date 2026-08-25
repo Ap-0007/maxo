@@ -10,6 +10,9 @@ from maxo.types import (
     BotStarted,
     BotStopped,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -155,6 +158,31 @@ async def dialog_unmuted_handler(dialog_unmuted: DialogUnmuted) -> None:
     await dialog_unmuted.send_message(
         f"Диалог с пользователем (ID: {dialog_unmuted.user.user_id}) в чате "
         f"(ID: {dialog_unmuted.chat_id}) был разглушен",
+    )
+
+
+@dp.comment_created()
+async def comment_created_handler(comment_created: CommentCreated) -> None:
+    await comment_created.reply_text(
+        f"Получен комментарий: {comment_created.message.body.text or 'без текста'}",
+    )
+
+
+@dp.comment_edited()
+async def comment_edited_handler(comment_edited: CommentEdited) -> None:
+    logger.info(
+        "Комментарий %s изменён: %s",
+        comment_edited.message.body.mid,
+        comment_edited.message.body.text,
+    )
+
+
+@dp.comment_removed()
+async def comment_removed_handler(comment_removed: CommentRemoved) -> None:
+    logger.info(
+        "Комментарий %s удалён пользователем %s",
+        comment_removed.message_id,
+        comment_removed.user_id,
     )
 
 

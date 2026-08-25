@@ -22,6 +22,9 @@ from maxo.types import (
     BotStarted,
     BotStopped,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -43,6 +46,9 @@ class Router(BaseRouter):
         self.bot_started = UpdateObserver[BotStarted]()
         self.bot_stopped = UpdateObserver[BotStopped]()
         self.chat_title_changed = UpdateObserver[ChatTitleChanged]()
+        self.comment_created = UpdateObserver[CommentCreated]()
+        self.comment_edited = UpdateObserver[CommentEdited]()
+        self.comment_removed = UpdateObserver[CommentRemoved]()
         self.dialog_cleared = UpdateObserver[DialogCleared]()
         self.dialog_muted = UpdateObserver[DialogMuted]()
         self.dialog_removed = UpdateObserver[DialogRemoved]()
@@ -78,6 +84,9 @@ class Router(BaseRouter):
             BotStarted: self.bot_started,
             BotStopped: self.bot_stopped,
             ChatTitleChanged: self.chat_title_changed,
+            CommentCreated: self.comment_created,
+            CommentEdited: self.comment_edited,
+            CommentRemoved: self.comment_removed,
             DialogCleared: self.dialog_cleared,
             DialogMuted: self.dialog_muted,
             DialogRemoved: self.dialog_removed,

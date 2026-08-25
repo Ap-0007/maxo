@@ -20,15 +20,19 @@ from maxo.bot.methods import (
     AnswerOnCallback,
     DeleteAdmins,
     DeleteChat,
+    DeleteComment,
     DeleteMessage,
     EditBotInfo,
     EditChat,
+    EditComment,
     EditMessage,
     EditMyCommands,
     GetAdmins,
     GetChat,
     GetChatByLink,
     GetChats,
+    GetCommentById,
+    GetComments,
     GetMembers,
     GetMembership,
     GetMessageById,
@@ -43,6 +47,7 @@ from maxo.bot.methods import (
     PinMessage,
     RemoveMember,
     SendAction,
+    SendComment,
     SendMessage,
     SetAdmins,
     Subscribe,
@@ -244,6 +249,14 @@ class Bot(BaseAsyncClient):
     send_action = bind_method(SendAction)
     set_admins = bind_method(SetAdmins)
     unpin_message = bind_method(UnpinMessage)
+
+    # Comments
+
+    delete_comment = bind_method(DeleteComment)
+    edit_comment = bind_method(EditComment)
+    get_comment_by_id = bind_method(GetCommentById)
+    get_comments = bind_method(GetComments)
+    send_comment = bind_method(SendComment)
 
     # Messages
 

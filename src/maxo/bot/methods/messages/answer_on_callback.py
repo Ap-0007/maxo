@@ -50,6 +50,7 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
              Когда пользователь нажмёт на кнопку, МАКС отправит событие, содержащее объект [Update](https://dev.max.ru/docs-api/objects/Update) с типом `message_callback` и идентификатором кнопки в поле `updates[i].callback.callback_id`
         message: Заполните это, если хотите изменить текущее сообщение
         notification: Заполните это, если хотите просто отправить одноразовое уведомление пользователю
+            Примечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой
 
     Источник: https://dev.max.ru/docs-api/methods/POST/answers
     """
@@ -71,4 +72,8 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
     message: Body[Omittable[NewMessageBody | None]] = Omitted()
     """Заполните это, если хотите изменить текущее сообщение"""
     notification: Body[Omittable[str | None]] = Omitted()
-    """Заполните это, если хотите просто отправить одноразовое уведомление пользователю"""
+    """
+    Заполните это, если хотите просто отправить одноразовое уведомление пользователю
+
+    Примечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой
+    """

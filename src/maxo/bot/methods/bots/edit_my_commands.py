@@ -9,7 +9,7 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
     """
     Редактирование команд бота
 
-    Метод добавляет, изменяет или удаляет команды бота
+    Метод добавляет, изменяет или удаляет команды бота, отображаемые пользователю в качестве подсказок при вводе « `/` »
 
      Для удаления команд передайте пустой массив `commands`
 
@@ -29,7 +29,7 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
     ```
 
     Args:
-        commands: Команды, которые поддерживает бот
+        commands: Список команд и их описаний, отображаемых пользователю в подсказках при вводе « `/` »
 
     Источник: https://dev.max.ru/docs-api/methods/PATCH/me/commands
     """
@@ -38,4 +38,4 @@ class EditMyCommands(MaxoMethod[BotCommandsInfo]):
     __method__ = "patch"
 
     commands: Body[Omittable[list[BotCommand]]] = Omitted()
-    """Команды, которые поддерживает бот"""
+    """Список команд и их описаний, отображаемых пользователю в подсказках при вводе « `/` »"""

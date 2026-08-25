@@ -600,7 +600,7 @@ TAG_PROVIDERS = concat_provider(
 `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
 `max-swagger.json` в корне - это единственный источник правды по контракту API.
 Генератор живёт в `butcher/` и работает поверх PyPI-пакета
-`unihttp-openapi-generator==0.2.0` из dependency group `butcher`. Запуск -
+`unihttp-openapi-generator==0.3.1` из dependency group `butcher`. Запуск -
 `just butcher`.
 
 **Правила генерации - в `butcher/AGENTS.md`.** Читай его перед любой правкой
@@ -947,7 +947,7 @@ uv run sphinx-build -b html docs docs/_build/html
   правила в `butcher/AGENTS.md`.
 - `src/maxo/bot/methods/` и `src/maxo/routing/updates/` тоже относятся к API
   surface и требуют синхронизации с типами, enum и сериализацией.
-- Движок кодогенерации `unihttp-openapi-generator==0.2.0` устанавливается из
+- Движок кодогенерации `unihttp-openapi-generator==0.3.1` устанавливается из
   PyPI через dependency group `butcher`.
 - `maxo.dialogs` и `maxo.transport.webhook` исторически портированы из
   `aiogram_dialog` и `aiogram-webhook`, поэтому рядом с изменениями нужно

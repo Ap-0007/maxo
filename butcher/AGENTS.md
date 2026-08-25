@@ -190,8 +190,8 @@ Butcher не создаёт и при генерации затрёт, если 
   `__init__.py` шима, и отдельным deep-модулем `routing/updates/<name>.py`, а
   сам модуль дописывается в `parametrize` в
   `tests/maxo/routing/updates/test_deprecation.py`.
-- **`maxo.utils.facades` не пополняется.** Этот шим заморожен: новый фасад
-  живёт только в `maxo.routing.facades`.
+- **`maxo.utils.facades` сохраняет фасадные алиасы до 0.9.0.** В 0.9.0 этот
+  устаревший слой удаляется целиком.
 
 ### Новый полиморфный тип: `TAG_PROVIDERS`
 

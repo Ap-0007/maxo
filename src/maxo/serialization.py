@@ -11,7 +11,7 @@ from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditMessage, SendMessage
+from maxo.bot.methods import EditComment, EditMessage, SendComment, SendMessage
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
@@ -22,7 +22,7 @@ from maxo.enums import (
     UpdateType,
 )
 from maxo.omit import Omitted, is_omitted
-from maxo.routing.mixins import message
+from maxo.routing.mixins import comment, message
 from maxo.types import (
     Attachments,
     AttachmentsRequests,
@@ -35,6 +35,9 @@ from maxo.types import (
     CallbackButton,
     ChatTitleChanged,
     ClipboardButton,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentRequest,
     DialogCleared,
@@ -58,6 +61,7 @@ from maxo.types import (
     MessageEdited,
     MessageRemoved,
     MonospacedMarkup,
+    NewCommentBody,
     NewMessageBody,
     OpenAppButton,
     PhotoAttachment,
@@ -91,6 +95,9 @@ TAG_PROVIDERS = concat_provider(
     has_tag_provider(BotStarted, "update_type", UpdateType.BOT_STARTED),
     has_tag_provider(BotStopped, "update_type", UpdateType.BOT_STOPPED),
     has_tag_provider(ChatTitleChanged, "update_type", UpdateType.CHAT_TITLE_CHANGED),
+    has_tag_provider(CommentCreated, "update_type", UpdateType.COMMENT_CREATED),
+    has_tag_provider(CommentEdited, "update_type", UpdateType.COMMENT_EDITED),
+    has_tag_provider(CommentRemoved, "update_type", UpdateType.COMMENT_REMOVED),
     has_tag_provider(DialogCleared, "update_type", UpdateType.DIALOG_CLEARED),
     has_tag_provider(DialogMuted, "update_type", UpdateType.DIALOG_MUTED),
     has_tag_provider(DialogRemoved, "update_type", UpdateType.DIALOG_REMOVED),
@@ -151,7 +158,14 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     if defaults is None:
         defaults = BotDefaults()
 
-    types_with_defaults = SendMessage | EditMessage | NewMessageBody
+    types_with_defaults = (
+        SendMessage
+        | EditMessage
+        | SendComment
+        | EditComment
+        | NewMessageBody
+        | NewCommentBody
+    )
 
     def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
         if hasattr(method, "format") and is_omitted(method.format):
@@ -174,6 +188,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(comment)
     exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
@@ -193,6 +208,10 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 lambda seq: ",".join(str(el) for el in seq),
             ),
             dumper(
+                P[datetime],
+                lambda time: int(time.timestamp() * 1000),
+            ),
+            dumper(
                 P[*typing.get_args(types_with_defaults)],
                 _set_method_defaults,
                 chain=Chain.FIRST,
@@ -205,6 +224,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
+
     return typing.cast(Retort, extended)
 
 

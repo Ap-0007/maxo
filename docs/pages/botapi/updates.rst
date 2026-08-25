@@ -34,6 +34,21 @@ Updates
    :undoc-members:
    :show-inheritance:
 
+.. autoclass:: maxo.types.CommentCreated
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: maxo.types.CommentEdited
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: maxo.types.CommentRemoved
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. autoclass:: maxo.types.BotStarted
    :members:
    :undoc-members:

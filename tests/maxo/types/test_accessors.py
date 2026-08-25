@@ -26,6 +26,10 @@ from maxo.types import (
     ChatAdminsList,
     ChatList,
     ChatMember,
+    CommentLinkedMessage,
+    CommentMessage,
+    CommentMessageBody,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentPayload,
     ContactAttachmentRequest,
@@ -49,8 +53,10 @@ from maxo.types import (
     MessageButton,
     MessageCallback,
     MessageEdited,
+    MessageRemoved,
     MessageStat,
     ModifyMembersResult,
+    NewCommentBody,
     NewMessageBody,
     NewMessageLink,
     OpenAppButton,
@@ -1407,3 +1413,97 @@ def test_message_callback_unsafe_user_locale() -> None:
     omitted = MessageCallback(callback=make_callback(), timestamp=NOW)
     with pytest.raises(AttributeIsEmptyError):
         _ = omitted.unsafe_user_locale
+
+
+def test_comment_accessors() -> None:
+    sender = make_user()
+    body = CommentMessageBody(mid="comment", seq=1, text="Текст", markup=[])
+    link = CommentLinkedMessage(
+        message=body,
+        type=MessageLinkType.REPLY,
+        chat_id=10,
+        sender=sender,
+    )
+    recipient = Recipient(chat_type=ChatType.CHANNEL, chat_id=10, post_id="post")
+    removed = MessageRemoved(
+        chat_id=10,
+        message_id="comment",
+        post_id="post",
+        timestamp=NOW,
+        user_id=20,
+    )
+    comment_removed = CommentRemoved(
+        chat_id=10,
+        message_id="comment",
+        post_id="post",
+        timestamp=NOW,
+        user_id=20,
+    )
+    comment = CommentMessage(
+        body=body,
+        recipient=recipient,
+        timestamp=NOW,
+        link=link,
+        sender=sender,
+    )
+    new_body = NewCommentBody(format=TextFormat.HTML)
+
+    assert body.unsafe_markup == []
+    assert body.unsafe_text == "Текст"
+    assert link.unsafe_chat_id == 10
+    assert link.unsafe_sender is sender
+    assert recipient.unsafe_post_id == "post"
+    assert removed.unsafe_post_id == "post"
+    assert comment_removed.unsafe_post_id == "post"
+    assert comment.unsafe_link is link
+    assert comment.unsafe_sender is sender
+    assert new_body.unsafe_format is TextFormat.HTML
+
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = new_body.unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = NewCommentBody().unsafe_format
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_markup
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessageBody(mid="comment", seq=1).unsafe_text
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_chat_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentLinkedMessage(
+            message=body,
+            type=MessageLinkType.REPLY,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_link
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentMessage(
+            body=body,
+            recipient=recipient,
+            timestamp=NOW,
+        ).unsafe_sender
+    with pytest.raises(AttributeIsEmptyError):
+        _ = MessageRemoved(
+            chat_id=10,
+            message_id="comment",
+            post_id=None,
+            timestamp=NOW,
+            user_id=20,
+        ).unsafe_post_id
+    with pytest.raises(AttributeIsEmptyError):
+        _ = CommentRemoved(
+            chat_id=10,
+            message_id="comment",
+            post_id=None,
+            timestamp=NOW,
+            user_id=20,
+        ).unsafe_post_id

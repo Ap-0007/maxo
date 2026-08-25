@@ -15,6 +15,7 @@ from maxo.routing.mixins.base import BaseMethodsFacade
 from maxo.routing.mixins.bot import BotMethodsFacade
 from maxo.routing.mixins.callback import CallbackMethodsFacade
 from maxo.routing.mixins.chat import ChatMethodsFacade
+from maxo.routing.mixins.comment import CommentMethodsFacade
 from maxo.routing.mixins.message import MessageMethodsFacade
 from maxo.routing.mixins.subscription import SubscriptionMethodsFacade
 
@@ -24,6 +25,7 @@ __all__ = (
     "BotMethodsFacade",
     "CallbackMethodsFacade",
     "ChatMethodsFacade",
+    "CommentMethodsFacade",
     "MediaInput",
     "MessageMethodsFacade",
     "SubscriptionMethodsFacade",

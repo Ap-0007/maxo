@@ -377,8 +377,12 @@ class _Profile:
         is_update = self._is_update(name)
         class_name = self._class_names[name]
 
+        base_override = overrides.MODEL_BASE_OVERRIDES.get(class_name)
         replaced = overrides.REPLACED_BASES.get(ir_model.base_model or "")
-        if ir_model.base_model is None:
+        if base_override is not None:
+            base = base_override
+            imports.add(Import(naming.type_module(base), base))
+        elif ir_model.base_model is None:
             base = overrides.ROOT_BASE_CLASS
             imports.add(Import(f"{naming.TYPES_PACKAGE}.base", base))
         elif replaced is not None:
@@ -430,11 +434,15 @@ class _Profile:
                 description=ir_field.description,
             )
 
-        annotation = self._annotate(self._field_type(ir_field), imports)
+        class_name = self._class_names[owner]
+        override = overrides.MODEL_FIELD_OVERRIDES.get((class_name, ir_field.name))
+        field_type = self._field_type(ir_field)
+        if override is not None and override.ref is not None:
+            field_type = RefType(override.ref)
+        annotation = self._annotate(field_type, imports)
         # Дефолты свагера игнорируем: необязательное поле - это `Omitted()`.
         omittable = not ir_field.required
         comment: str | None = None
-        override = overrides.MODEL_FIELD_OVERRIDES.get((owner, ir_field.name))
         if override is not None:
             if override.annotation is not None:
                 annotation = override.annotation
@@ -597,18 +605,22 @@ class _Profile:
     ) -> tuple[Field, ...]:
         fields: list[Field] = []
         for parameter in operation.parameters:
+            description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
+                (operation.class_name, parameter.name),
+                parameter.description,
+            )
             annotation = self._method_field_type(
                 operation.class_name,
                 parameter.name,
                 parameter.type,
-                parameter.description,
+                description,
                 imports,
             )
             fields.append(
                 Field(
                     name=parameter.name,
                     annotation=annotation,
-                    description=parameter.description,
+                    description=description,
                     # Дефолты свагера игнорируем: необязательный параметр - `Omitted()`.
                     omittable=not parameter.required,
                     marker=_MARKER_BY_LOCATION[parameter.location],
@@ -626,11 +638,15 @@ class _Profile:
             )
 
         for body_field in body.fields:
+            description = overrides.METHOD_FIELD_DESCRIPTIONS.get(
+                (operation.class_name, body_field.name),
+                body_field.description,
+            )
             annotation = self._method_field_type(
                 operation.class_name,
                 body_field.name,
                 body_field.type,
-                body_field.description,
+                description,
                 imports,
             )
             if body_field.is_file:
@@ -642,7 +658,7 @@ class _Profile:
                 Field(
                     name=body_field.name,
                     annotation=annotation,
-                    description=body_field.description,
+                    description=description,
                     omittable=not body_field.required,
                     marker=marker,
                 ),
@@ -732,8 +748,7 @@ def _is_int(ir_type: IRType) -> bool:
 def _has_timestamp_hint(description: str | None) -> bool:
     text = (description or "").lower()
     return any(
-        re.search(rf"\b{re.escape(hint)}\b", text)
-        for hint in overrides.TIMESTAMP_HINTS
+        re.search(rf"\b{re.escape(hint)}\b", text) for hint in overrides.TIMESTAMP_HINTS
     )
 
 
