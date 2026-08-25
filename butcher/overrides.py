@@ -58,7 +58,7 @@ SKIP_OPERATIONS: frozenset[str] = frozenset(
 # --- типы --------------------------------------------------------------------
 
 #: Схема `bigint` - это просто int64.
-INLINE_ALIASES: dict[str, str] = {"Bigint": "int"}
+INLINE_ALIASES: dict[str, str] = {"Bigint": "int", "MessageId": "str"}
 
 #: Схемы, чей файл не генерируется, но подтипы остаются: их предком становится
 #: указанный класс. В отличие от `SKIP_SCHEMAS`, каскада на наследников нет.
@@ -81,6 +81,13 @@ UPDATE_TYPE_ATTR = "type"
 #: Корень иерархии типов.
 ROOT_BASE_CLASS = "MaxoType"
 
+#: Базы моделей, которыми maxo намеренно уточняет плоские схемы Swagger.
+MODEL_BASE_OVERRIDES: dict[str, str] = {
+    "CommentLinkedMessage": "LinkedMessage",
+    "CommentMessage": "Message",
+    "CommentMessageBody": "MessageBody",
+}
+
 #: Слова в описании, по которым int64 распознаётся как таймстемп.
 TIMESTAMP_HINTS: tuple[str, ...] = ("time", "timestamp", "date", "время")
 
@@ -91,11 +98,22 @@ METHOD_FIELD_TYPES: dict[tuple[str, str], str] = {
     ("GetMessages", "message_ids"): "list[str] | None",
 }
 
+#: Описания полей методов там, где одна wire-модель используется операциями
+#: с разной семантикой
+METHOD_FIELD_DESCRIPTIONS: dict[tuple[str, str], str] = {
+    (
+        "SendMessage",
+        "attachments",
+    ): "Вложения отправляемого сообщения. Пустое значение означает, что вложений нет",
+}
+
 
 @dataclass(slots=True, frozen=True)
 class FieldOverride:
     """Ручная правка поля модели поверх того, что дал генератор."""
 
+    ref: str | None = None
+    """Заменить ссылочный тип поля и его импорт."""
     annotation: str | None = None
     """Заменить тип поля (импорты берутся от исходного типа)."""
     omittable: bool | None = None
@@ -107,6 +125,24 @@ class FieldOverride:
 #: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
 #: ``(класс, поле)``.
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
+    # Swagger ссылается на Message, хотя comment update несет CommentMessage.
+    ("CommentCreated", "message"): FieldOverride(ref="CommentMessage"),
+    ("CommentEdited", "message"): FieldOverride(ref="CommentMessage"),
+    # Wire-модель комментария сужает mutable-поле базового LinkedMessage.
+    ("CommentLinkedMessage", "message"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
+    # Wire-модель комментария сужает mutable-поля базового Message.
+    ("CommentMessage", "body"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
+    ("CommentMessage", "link"): FieldOverride(
+        comment="type: ignore[mutable-override]",
+    ),
+    # Описание допускает `null`, но в Swagger нет `nullable: true`
+    ("CommentMessage", "sender"): FieldOverride(annotation="User | None"),
+    # CommentMessage является Message, поэтому общий контракт допускает `null`.
+    ("Message", "sender"): FieldOverride(annotation="User | None"),
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
         omittable=True,
@@ -282,6 +318,10 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "BotStarted": ("ChatMethodsFacade",),
     "BotStopped": ("ChatMethodsFacade",),
     "ChatTitleChanged": ("ChatMethodsFacade",),
+    "CommentCreated": ("CommentMethodsFacade",),
+    "CommentEdited": ("CommentMethodsFacade",),
+    "CommentMessage": ("CommentMethodsFacade",),
+    "CommentRemoved": ("ChatMethodsFacade",),
     "DialogCleared": ("ChatMethodsFacade",),
     "DialogMuted": ("ChatMethodsFacade",),
     "DialogRemoved": ("ChatMethodsFacade",),
@@ -295,7 +335,7 @@ CLASS_MIXINS: dict[str, tuple[str, ...]] = {
     "UserRemovedFromChat": ("ChatMethodsFacade",),
 }
 
-MIXINS_MODULE = "maxo.routing.mixins"
+MIXINS_MODULE = "maxo.types.facades"
 
 
 # --- ручные символы в __init__.py -------------------------------------------

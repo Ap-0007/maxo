@@ -6,7 +6,7 @@
 языке.
 
 `maxo` - асинхронный Python-фреймворк для разработки ботов российского
-мессенджера MAX (`https://max.ru`). Текущая версия проекта: `0.8.1`.
+мессенджера MAX (`https://max.ru`). Текущая версия проекта: `0.8.2`.
 Поддерживаемые версии Python: `3.12`, `3.13`, `3.14`.
 
 ## Единый источник инструкций
@@ -653,7 +653,7 @@ _ATTACHMENT_TAGS: Mapping[type, AttachmentType] = {
 `src/maxo/types`, `src/maxo/enums` и `src/maxo/bot/methods` генерируются из
 `max-swagger.json` в корне - это единственный источник правды по контракту API.
 Генератор живёт в `butcher/` и работает поверх PyPI-пакета
-`unihttp-openapi-generator` из dependency group `butcher`. Запуск -
+`unihttp-openapi-generator==0.3.1` из dependency group `butcher`. Запуск -
 `just butcher`.
 
 **Правила генерации - в `butcher/AGENTS.md`.** Читай его перед любой правкой

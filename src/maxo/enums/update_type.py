@@ -21,8 +21,11 @@ class UpdateType(StrEnum):
         - `dialog_removed` - пользователь удалил диалог с ботом. Вместе с этим событием одновременно возвращается `bot_stopped` - при удалении диалога бот останавливается автоматически
         - `message_callback` - пользователь нажал на кнопку в чате или канале
          - `message_created` - пользователь отправил новое сообщение или опубликовал пост
-        - `message_edited` - пользователь отредактировал сообщение в чате или канале
+        - `message_edited` - пользователь отредактировал сообщение в чате, пост в канале
         - `message_removed` - пользователь удалил сообщение из чата или канала
+        - `comment_created` - пользователь или бот опубликовал новый комментарий. Для бота на свои действия события не приходят
+        - `comment_edited` - пользователь или бот изменил комментарий в канале. Обратите внимание, боты могут изменять только свои комментарии. Для бота на свои действия события не приходят
+        - `comment_removed` - пользователь или бот удалил комментарий. Для бота на свои действия события не приходят
         - `user_added` - в чат или канал добавлен или перешёл по ссылке новый пользователь
         - `user_removed` - пользователь удалён или покинул чат или канал
 
@@ -34,6 +37,9 @@ class UpdateType(StrEnum):
     BOT_STARTED = "bot_started"
     BOT_STOPPED = "bot_stopped"
     CHAT_TITLE_CHANGED = "chat_title_changed"
+    COMMENT_CREATED = "comment_created"
+    COMMENT_EDITED = "comment_edited"
+    COMMENT_REMOVED = "comment_removed"
     DIALOG_CLEARED = "dialog_cleared"
     DIALOG_MUTED = "dialog_muted"
     DIALOG_REMOVED = "dialog_removed"
