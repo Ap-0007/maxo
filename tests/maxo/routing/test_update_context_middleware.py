@@ -306,7 +306,7 @@ async def run_middleware(
             ),
             27,
             18,
-            None,
+            ChatType.CHANNEL,
             False,
         ),
     ],

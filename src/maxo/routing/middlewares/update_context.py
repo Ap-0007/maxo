@@ -177,7 +177,11 @@ class UpdateContextMiddleware(BaseMiddleware[MaxoUpdate[Any]]):
             _recipient = update.message.recipient
             chat_id = _recipient.chat_id
             chat_type = _recipient.chat_type
-        elif isinstance(update, (CommentRemoved, MessageRemoved)):
+        elif isinstance(update, CommentRemoved):
+            chat_id = update.chat_id
+            user_id = update.user_id
+            chat_type = ChatType.CHANNEL
+        elif isinstance(update, MessageRemoved):
             chat_id = update.chat_id
             user_id = update.user_id
         elif isinstance(update, DialogUpdateEvent):
