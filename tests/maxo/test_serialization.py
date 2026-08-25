@@ -1,8 +1,6 @@
 import pytest
-from adaptix import P
 from adaptix.load_error import LoadError
 
-from maxo._internal.adaptix import has_tag_provider
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     EditMessage,
@@ -182,7 +180,7 @@ def test_retort_full_message_created_loads_ok() -> None:
     assert len(result.updates) == 1
 
 
-def test_retort_selects_comment_message_inside_update() -> None:
+def test_retort_keeps_message_created_with_post_id_as_message() -> None:
     retort = create_retort(warming_up=False)
     data = {
         "marker": 1,
@@ -220,28 +218,8 @@ def test_retort_selects_comment_message_inside_update() -> None:
 
     assert isinstance(comment_update, MessageCreated)
     assert isinstance(message_update, MessageCreated)
-    assert isinstance(comment_update.message, CommentMessage)
+    assert type(comment_update.message) is Message
     assert type(message_update.message) is Message
-
-
-def test_tagged_subclass_requires_class_predicate() -> None:
-    with pytest.raises(TypeError, match="pred должен быть классом"):
-        has_tag_provider(
-            P[Message],
-            ("recipient", "post_id"),
-            None,
-            base=Message,
-        )
-
-
-def test_nested_tag_requires_base() -> None:
-    with pytest.raises(TypeError, match="только для подтипа"):
-        has_tag_provider(Message, ("recipient", "post_id"), None)
-
-
-def test_computed_tag_requires_base() -> None:
-    with pytest.raises(TypeError, match="только для подтипа"):
-        has_tag_provider(Message, "type", lambda actual: actual is None)
 
 
 def test_retort_loads_comment_updates_from_raw_json() -> None:

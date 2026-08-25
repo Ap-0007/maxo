@@ -37,7 +37,6 @@ from maxo.types import (
     ClipboardButton,
     CommentCreated,
     CommentEdited,
-    CommentMessage,
     CommentRemoved,
     ContactAttachment,
     ContactAttachmentRequest,
@@ -56,7 +55,6 @@ from maxo.types import (
     LinkMarkup,
     LocationAttachment,
     LocationAttachmentRequest,
-    Message,
     MessageButton,
     MessageCallback,
     MessageCreated,
@@ -91,12 +89,6 @@ if TYPE_CHECKING:
 
 
 TAG_PROVIDERS = concat_provider(
-    has_tag_provider(
-        CommentMessage,
-        ("recipient", "post_id"),
-        lambda post_id: post_id is not None,
-        base=Message,
-    ),
     # ---> UpdateType <---
     has_tag_provider(BotAddedToChat, "update_type", UpdateType.BOT_ADDED),
     has_tag_provider(BotRemovedFromChat, "update_type", UpdateType.BOT_REMOVED),
