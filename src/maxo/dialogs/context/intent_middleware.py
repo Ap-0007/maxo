@@ -8,6 +8,7 @@ from maxo.dialogs.api.entities import (
     Context,
     DialogUpdateEvent,
     EventContext,
+    MessageEvent,
     Stack,
 )
 from maxo.dialogs.api.exceptions import (
@@ -43,6 +44,7 @@ from maxo.types import (
     BotRemovedFromChat,
     BotStarted,
     BotStopped,
+    CommentCreated,
     ErrorEvent,
     MaxUpdate,
     MessageCallback,
@@ -55,7 +57,6 @@ FORBIDDEN_STACK_KEY = "aiogd_stack_forbidden"
 
 
 def event_context_from_callback(event: MessageCallback, ctx: Ctx) -> EventContext:
-    # Сообщение могли удалить до того, как бот получил колбэк
     if (message := event.message) is not None:
         chat_id, chat_type = message.recipient.chat_id, message.recipient.chat_type
     else:
@@ -71,13 +72,10 @@ def event_context_from_callback(event: MessageCallback, ctx: Ctx) -> EventContex
     )
 
 
-def event_context_from_message(
-    event: MessageCreated,
-    ctx: Ctx,
-) -> EventContext:
+def event_context_from_message(event: MessageEvent, ctx: Ctx) -> EventContext:
     user = ctx.get(EVENT_FROM_USER_KEY)
-    _event_user_id = getattr(event.message.sender, "user_id", None)
-    user_id = _event_user_id or getattr(user, "user_id", None)
+    event_user_id = getattr(event.message.sender, "user_id", None)
+    user_id = event_user_id or getattr(user, "user_id", None)
     return EventContext(
         bot=ctx["bot"],
         user=user,
@@ -86,6 +84,9 @@ def event_context_from_message(
         chat_type=event.message.recipient.chat_type,
         chat=None,
     )
+
+
+event_context_from_comment = event_context_from_message
 
 
 def event_context_from_bot_started(
@@ -138,6 +139,8 @@ def event_context_from_aiogd(event: DialogUpdateEvent) -> EventContext:
 def event_context_from_error(event: ErrorEvent[Any, Any], ctx: Ctx) -> EventContext:
     if isinstance(event.event, MessageCreated):
         return event_context_from_message(event.event, ctx)
+    if isinstance(event.event, CommentCreated):
+        return event_context_from_comment(event.event, ctx)
     if isinstance(event.event, MessageCallback):
         return event_context_from_callback(event.event, ctx)
     if isinstance(event.event, DialogUpdateEvent):
@@ -316,6 +319,17 @@ class IntentMiddlewareFactory:
         await self._load_default_context(update, ctx, event_context)
         return await next(ctx)
 
+    async def process_comment(
+        self,
+        update: CommentCreated,
+        ctx: Ctx,
+        next: NextMiddleware[CommentCreated],
+    ) -> Any:
+        event_context = event_context_from_comment(update, ctx)
+        ctx[EVENT_CONTEXT_KEY] = event_context
+        await self._load_default_context(update, ctx, event_context)
+        return await next(ctx)
+
     async def process_aiogd_update(
         self,
         update: DialogUpdateEvent,
@@ -460,6 +474,7 @@ class IntentMiddlewareFactory:
 
 SUPPORTED_ERROR_EVENTS = (
     MessageCreated,
+    CommentCreated,
     MessageCallback,
     BotStarted,
     BotStopped,

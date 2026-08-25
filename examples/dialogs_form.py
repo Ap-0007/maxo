@@ -10,6 +10,7 @@ from maxo.dialogs import (
     ChatEvent,
     Dialog,
     DialogManager,
+    MessageEvent,
     StartMode,
     Window,
     setup_dialogs,
@@ -45,7 +46,7 @@ async def get_data(dialog_manager: DialogManager, **__: Any) -> dict[str, Any]:
 
 
 async def name_handler(
-    message: MessageCreated,
+    message: MessageEvent,
     text_input: ManagedTextInput[str],
     dialog_manager: DialogManager,
     name: str,
@@ -62,7 +63,7 @@ async def name_handler(
 
 
 async def other_type_handler(
-    message: MessageCreated,
+    message: MessageEvent,
     message_input: MessageInput,
     dialog_manager: DialogManager,
 ) -> None:

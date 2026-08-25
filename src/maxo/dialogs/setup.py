@@ -143,6 +143,7 @@ def _register_middleware(
         ),
     )
     router.message_created.middleware.outer(intent_middleware.process_message)
+    router.comment_created.middleware.outer(intent_middleware.process_comment)
     router.message_callback.middleware.outer(intent_middleware.process_callback)
     router.bot_started.middleware.outer(intent_middleware.process_bot_started)
     router.bot_stopped.middleware.outer(intent_middleware.process_bot_stopped)
@@ -161,6 +162,7 @@ def _register_middleware(
     dialog_updates_handler.middleware.outer(intent_middleware.process_aiogd_update)
 
     router.message_created.middleware.outer(context_unlocker_middleware)
+    router.comment_created.middleware.outer(context_unlocker_middleware)
     router.message_callback.middleware.outer(context_unlocker_middleware)
     router.bot_started.middleware.outer(context_unlocker_middleware)
     router.bot_stopped.middleware.outer(context_unlocker_middleware)
@@ -171,6 +173,7 @@ def _register_middleware(
     dialog_updates_handler.middleware.outer(context_unlocker_middleware)
 
     router.message_created.middleware.inner(manager_middleware)
+    router.comment_created.middleware.inner(manager_middleware)
     router.message_callback.middleware.inner(manager_middleware)
     router.bot_started.middleware.inner(manager_middleware)
     router.bot_stopped.middleware.inner(manager_middleware)
@@ -182,6 +185,7 @@ def _register_middleware(
     dialog_updates_handler.middleware.inner(manager_middleware)
 
     router.message_created.middleware.inner(context_saver_middleware)
+    router.comment_created.middleware.inner(context_saver_middleware)
     router.message_callback.middleware.inner(context_saver_middleware)
     router.bot_started.middleware.inner(context_saver_middleware)
     router.bot_stopped.middleware.inner(context_saver_middleware)

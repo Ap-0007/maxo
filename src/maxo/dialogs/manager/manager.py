@@ -15,6 +15,7 @@ from maxo.dialogs.api.entities import (
     Data,
     EventContext,
     LaunchMode,
+    MessageEvent,
     NewMessage,
     OldMessage,
     ShowMode,
@@ -57,7 +58,6 @@ from maxo.types import (
     Message,
     MessageButton,
     MessageCallback,
-    MessageCreated,
     Recipient,
     User,
 )
@@ -492,7 +492,7 @@ class ManagerImpl(DialogManager):
             return ShowMode.EDIT
         if self.current_stack().id != DEFAULT_STACK_ID:
             return ShowMode.EDIT
-        if isinstance(self.event, MessageCreated):
+        if isinstance(self.event, MessageEvent):
             return ShowMode.SEND
         return ShowMode.EDIT
 
@@ -515,7 +515,7 @@ class ManagerImpl(DialogManager):
         """Get User if we have info about him or FakeUser instead."""
         # TODO: Сделать нормально, это нейрослоп
         event = self.event.event if isinstance(self.event, ErrorEvent) else self.event
-        if isinstance(event, MessageCreated):
+        if isinstance(event, MessageEvent):
             current_user = event.message.unsafe_sender
         else:
             current_user = event.user

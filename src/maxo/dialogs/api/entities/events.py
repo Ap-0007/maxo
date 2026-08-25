@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeAlias
 
 from maxo import Bot
 from maxo.enums import ChatType
@@ -9,6 +9,7 @@ from maxo.types import (
     BotStarted,
     BotStopped,
     Chat,
+    CommentCreated,
     ErrorEvent,
     MessageCallback,
     MessageCreated,
@@ -19,8 +20,10 @@ from maxo.types import (
 
 from .update_event import DialogUpdateEvent
 
-ChatEvent = (
-    MessageCreated
+MessageEvent: TypeAlias = MessageCreated | CommentCreated
+
+ChatEvent: TypeAlias = (
+    MessageEvent
     | MessageCallback
     | BotStarted
     | BotStopped

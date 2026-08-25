@@ -8,6 +8,7 @@ from typing import (
     cast,
 )
 
+from maxo.dialogs.api.entities import MessageEvent
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.dialogs.widgets.common import ManagedWidget
 from maxo.dialogs.widgets.filter_object import FilterObject
@@ -15,7 +16,6 @@ from maxo.dialogs.widgets.widget_event import (
     WidgetEventProcessor,
     ensure_event_processor,
 )
-from maxo.types import MessageCreated
 from maxo.types.message_body import MessageBody
 
 from .base import BaseInput
@@ -28,7 +28,7 @@ class OnSuccess(Protocol[T]):
     @abstractmethod
     async def __call__(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         widget: "ManagedTextInput[T]",
         dialog_manager: DialogManager,
         data: T,
@@ -41,7 +41,7 @@ class OnError(Protocol[T]):
     @abstractmethod
     async def __call__(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         widget: "ManagedTextInput[T]",
         dialog_manager: DialogManager,
         error: ValueError,
@@ -71,7 +71,7 @@ class TextInput(BaseInput, Generic[T]):
 
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:

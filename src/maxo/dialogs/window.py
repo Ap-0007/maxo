@@ -7,6 +7,7 @@ from maxo.dialogs.api.entities import (
     EventContext,
     MarkupVariant,
     MediaAttachment,
+    MessageEvent,
     NewMessage,
 )
 from maxo.dialogs.api.internal import Widget, WindowProtocol
@@ -14,7 +15,7 @@ from maxo.enums import ChatType
 from maxo.enums.text_format import TextFormat
 from maxo.fsm import State
 from maxo.omit import Omittable, Omitted
-from maxo.types import MessageCallback, MessageCreated, Recipient
+from maxo.types import MessageCallback, Recipient
 
 from .api.entities import Data, LinkPreviewOptions
 from .api.internal.widgets import MarkupFactory
@@ -130,7 +131,7 @@ class Window(WindowProtocol):
 
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:

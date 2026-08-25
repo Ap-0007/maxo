@@ -168,15 +168,14 @@ dialog_data - данные между окнами
 
 .. code-block:: python
 
-    from maxo.dialogs import DialogManager
+    from maxo.dialogs import DialogManager, MessageEvent
     from maxo.dialogs.widgets.input import MessageInput
-    from maxo.types import MessageCreated
 
-    async def on_name_input(message: MessageCreated, widget: MessageInput, manager: DialogManager):
+    async def on_name_input(message: MessageEvent, widget: MessageInput, manager: DialogManager):
         manager.dialog_data["name"] = message.message.body.text
         await manager.next()
 
-    async def on_age_input(message: MessageCreated, widget: MessageInput, manager: DialogManager):
+    async def on_age_input(message: MessageEvent, widget: MessageInput, manager: DialogManager):
         manager.dialog_data["age"] = message.message.body.text
         await manager.next()
 

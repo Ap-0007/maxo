@@ -8,10 +8,10 @@ from typing import (
 )
 
 from maxo.dialogs import DialogManager
-from maxo.dialogs.api.entities import MarkupVariant, MediaAttachment
+from maxo.dialogs.api.entities import MarkupVariant, MediaAttachment, MessageEvent
 from maxo.dialogs.api.entities.link_preview import LinkPreviewOptions
 from maxo.dialogs.api.protocols import DialogProtocol
-from maxo.types import MessageCallback, MessageCreated
+from maxo.types import MessageCallback
 from maxo.types.buttons import InlineButtons
 
 
@@ -99,7 +99,7 @@ class InputWidget(Widget, Protocol):
     @abstractmethod
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:

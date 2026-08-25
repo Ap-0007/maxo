@@ -12,6 +12,7 @@ from maxo import Ctx, Dispatcher
 from maxo.dialogs import (
     Dialog,
     DialogManager,
+    MessageEvent,
     StartMode,
     Window,
     setup_dialogs,
@@ -35,7 +36,7 @@ from maxo.routing.middlewares.update_context import (
 )
 from maxo.routing.signals import AfterStartup, BeforeStartup
 from maxo.routing.signals.update import MaxoUpdate
-from maxo.types import MessageCreated, Recipient, User
+from maxo.types import Recipient, User
 from tests.constants import NOW
 
 from .conftest import wait_for_messages
@@ -49,7 +50,7 @@ received_texts: list[str] = []
 
 
 async def on_message(
-    message: MessageCreated,
+    message: MessageEvent,
     widget: MessageInput,
     manager: DialogManager,
 ) -> None:

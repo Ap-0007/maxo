@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from typing import Any
 
+from maxo.dialogs.api.entities import MessageEvent
 from maxo.dialogs.api.protocols import (
     DialogManager,
     DialogProtocol,
 )
 from maxo.dialogs.widgets.filter_object import FilterObject
-from maxo.types import MessageCreated
 
 from .base import BaseInput
 
@@ -25,7 +25,7 @@ class CombinedInput(BaseInput):
 
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:

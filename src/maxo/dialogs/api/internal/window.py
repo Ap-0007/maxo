@@ -1,10 +1,10 @@
 from abc import abstractmethod
 from typing import Any, Protocol
 
-from maxo.dialogs.api.entities import Data, NewMessage
+from maxo.dialogs.api.entities import Data, MessageEvent, NewMessage
 from maxo.dialogs.api.protocols import DialogManager, DialogProtocol
 from maxo.fsm import State
-from maxo.types import MessageCallback, MessageCreated
+from maxo.types import MessageCallback
 
 from .widgets import Widget
 
@@ -13,7 +13,7 @@ class WindowProtocol(Protocol):
     @abstractmethod
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: "DialogProtocol",
         manager: DialogManager,
     ) -> bool:

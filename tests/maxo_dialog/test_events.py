@@ -12,12 +12,15 @@ from maxo.dialogs import (
 )
 from maxo.dialogs.test_tools import BotClient, MockMessageManager
 from maxo.dialogs.test_tools.memory_storage import JsonMemoryStorage
+from maxo.dialogs.widgets.input import MessageInput
 from maxo.dialogs.widgets.text import Format
 from maxo.fsm.key_builder import DefaultKeyBuilder
 from maxo.fsm.state import State, StatesGroup
 from maxo.fsm.storages.memory import SimpleEventIsolation
 from maxo.routing.filters import CommandStart
-from maxo.routing.signals import AfterStartup, BeforeStartup
+from maxo.routing.signals import AfterStartup, BeforeStartup, MaxoUpdate
+from maxo.types import CommentCreated, CommentMessage, CommentMessageBody, Recipient
+from tests.constants import NOW
 
 
 class MainSG(StatesGroup):
@@ -26,6 +29,7 @@ class MainSG(StatesGroup):
 
 window = Window(
     Format("stub"),
+    MessageInput(None),
     state=MainSG.start,
 )
 
@@ -92,3 +96,48 @@ async def test_my_chat_member_update(
     await client.bot_added_to_chat()
     first_message = message_manager.one_message()
     assert first_message.body.text == "stub"
+
+
+async def test_comment_created_starts_dialog(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    dp.comment_created.handler(start)
+
+    await dp.feed_update(
+        MaxoUpdate(update=make_comment_created(client)),
+        client.bot,
+    )
+
+    first_message = message_manager.one_message()
+    assert first_message.body.text == "stub"
+
+
+async def test_active_dialog_processes_comment_created(
+    dp: Dispatcher,
+    client: BotClient,
+    message_manager: MockMessageManager,
+) -> None:
+    dp.message_created.handler(start, CommandStart())
+    await dp.feed_signal(BeforeStartup(), client.bot)
+    await dp.feed_signal(AfterStartup(), client.bot)
+    await client.send("/start")
+
+    await dp.feed_update(MaxoUpdate(update=make_comment_created(client)), client.bot)
+
+    assert len(message_manager.sent_messages) == 2
+
+
+def make_comment_created(client: BotClient) -> CommentCreated:
+    comment = CommentMessage(
+        body=CommentMessageBody(mid="comment", seq=1, text="start"),
+        recipient=Recipient(
+            chat_id=client.chat.chat_id,
+            chat_type=client.chat.type,
+            post_id="post",
+        ),
+        sender=client.user,
+        timestamp=NOW,
+    )
+    return CommentCreated(message=comment, timestamp=NOW)

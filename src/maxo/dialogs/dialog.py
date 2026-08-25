@@ -8,7 +8,13 @@ from typing import (
 )
 
 from maxo import Router, loggers
-from maxo.dialogs.api.entities import Context, Data, LaunchMode, NewMessage
+from maxo.dialogs.api.entities import (
+    Context,
+    Data,
+    LaunchMode,
+    MessageEvent,
+    NewMessage,
+)
 from maxo.dialogs.api.exceptions import UnregisteredWindowError
 from maxo.dialogs.api.internal import Widget, WindowProtocol
 from maxo.dialogs.api.protocols import (
@@ -22,7 +28,7 @@ from maxo.fsm import State, StatesGroup
 from maxo.routing.ctx import Ctx
 from maxo.routing.interfaces import BaseRouter
 from maxo.routing.middlewares.update_context import UPDATE_CONTEXT_KEY
-from maxo.types import MessageCallback, MessageCreated
+from maxo.types import MessageCallback
 from maxo.types.update_context import UpdateContext
 
 from .context.intent_filter import IntentFilter
@@ -133,7 +139,7 @@ class Dialog(Router, DialogProtocol):
 
     async def _message_handler(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         ctx: Ctx,
         dialog_manager: DialogManager,
     ) -> None:
@@ -215,6 +221,7 @@ class Dialog(Router, DialogProtocol):
     def _register_handlers(self) -> None:
         self.message_callback.handler(self._callback_handler)
         self.message_created.handler(self._message_handler)
+        self.comment_created.handler(self._message_handler)
 
     def states_group(self) -> type[StatesGroup]:
         return self._states_group

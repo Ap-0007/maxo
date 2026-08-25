@@ -1,6 +1,6 @@
 from .access import AccessSettings
 from .context import Context, Data
-from .events import EVENT_CONTEXT_KEY, ChatEvent, EventContext
+from .events import EVENT_CONTEXT_KEY, ChatEvent, EventContext, MessageEvent
 from .launch_mode import LaunchMode
 from .link_preview import LinkPreviewOptions
 from .media import MediaAttachment, MediaId
@@ -34,6 +34,7 @@ __all__ = (
     "MarkupVariant",
     "MediaAttachment",
     "MediaId",
+    "MessageEvent",
     "NewMessage",
     "OldMessage",
     "ShowMode",

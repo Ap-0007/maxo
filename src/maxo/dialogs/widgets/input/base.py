@@ -3,6 +3,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 from maxo import Ctx
+from maxo.dialogs.api.entities import MessageEvent
 from maxo.dialogs.api.internal import InputWidget
 from maxo.dialogs.api.protocols import (
     DialogManager,
@@ -16,19 +17,29 @@ from maxo.dialogs.widgets.widget_event import (
 )
 from maxo.enums import AttachmentType
 from maxo.routing.filters import BaseFilter
-from maxo.types import MessageCreated
+from maxo.types import CommentCreated, MessageCreated
 
-MessageHandlerFunc = Callable[
-    [MessageCreated, "MessageInput", DialogManager],
-    Awaitable[Any],
-]
+MessageHandlerFunc = (
+    Callable[
+        [MessageCreated, "MessageInput", DialogManager],
+        Awaitable[Any],
+    ]
+    | Callable[
+        [CommentCreated, "MessageInput", DialogManager],
+        Awaitable[Any],
+    ]
+    | Callable[
+        [MessageEvent, "MessageInput", DialogManager],
+        Awaitable[Any],
+    ]
+)
 
 
 class BaseInput(Actionable, InputWidget):
     @abstractmethod
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
@@ -57,7 +68,7 @@ class MessageInput(BaseInput):
 
     async def process_message(
         self,
-        message: MessageCreated,
+        message: MessageEvent,
         dialog: DialogProtocol,
         manager: DialogManager,
     ) -> bool:
@@ -71,11 +82,11 @@ class MessageInput(BaseInput):
         return True
 
 
-class ContentTypeFilter(BaseFilter[MessageCreated]):
+class ContentTypeFilter(BaseFilter[MessageEvent]):
     def __init__(self, content_types: Sequence[AttachmentType]) -> None:
         self._content_types = content_types
 
-    async def __call__(self, update: MessageCreated, ctx: Ctx) -> bool:
+    async def __call__(self, update: MessageEvent, ctx: Ctx) -> bool:
         if AttachmentType.TEXT in self._content_types and update.message.body.text:
             return True
 

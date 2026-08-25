@@ -211,6 +211,7 @@ from .api.entities import (
     ChatEvent,
     Data,
     LaunchMode,
+    MessageEvent,
     ShowMode,
     StartMode,
 )
@@ -240,6 +241,7 @@ __all__ = (
     "DialogManager",
     "DialogProtocol",
     "LaunchMode",
+    "MessageEvent",
     "ShowMode",
     "StartMode",
     "SubManager",
