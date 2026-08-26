@@ -7,12 +7,12 @@ from typing import Any
 
 from adaptix import Chain, P, Retort, dumper, loader
 from adaptix.type_tools import exec_type_checking
-from unihttp.markers import QueryMarker
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.methods.base import MaxoMethod
+from maxo.bot.methods.markers import QueryMarker
 from maxo.enums import (
     AttachmentRequestType,
     AttachmentType,
