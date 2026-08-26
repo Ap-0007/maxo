@@ -208,7 +208,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 lambda seq: ",".join(str(el) for el in seq),
             ),
             dumper(
-                P[datetime],
+                for_marker(QueryMarker, P[datetime]),  # Для GetComments
                 lambda time: int(time.timestamp() * 1000),
             ),
             dumper(
