@@ -17,6 +17,7 @@ def test_top_level_exports() -> None:
     assert maxo.Dispatcher is Dispatcher
     assert maxo.Router is Router
     assert maxo.Ctx is Ctx
+    assert maxo.BaseMiddleware is BaseMiddleware
     assert maxo.__version__ == __version__
 
 

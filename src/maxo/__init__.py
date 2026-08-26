@@ -5,6 +5,7 @@ from maxo.bot.warming_up import warm_up
 from maxo.routing.ctx import Ctx
 from maxo.routing.dispatcher import Dispatcher
 from maxo.routing.flags import flags
+from maxo.routing.interfaces.middleware import BaseMiddleware
 from maxo.routing.routers.simple import Router
 from maxo.serialization import get_retort
 from maxo.utils.text_decorations import (
@@ -13,6 +14,7 @@ from maxo.utils.text_decorations import (
 )
 
 __all__ = (
+    "BaseMiddleware",
     "Bot",
     "Ctx",
     "Dispatcher",
