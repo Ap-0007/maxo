@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from adaptix import Chain, P, Retort, dumper, loader
 from adaptix.type_tools import exec_type_checking
-from unihttp.markers import QueryMarker
 from unihttp.serializers.adaptix.marker_tools import for_marker
 from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
@@ -13,6 +12,7 @@ from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclas
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import EditComment, EditMessage, SendComment, SendMessage
 from maxo.bot.methods.base import MaxoMethod
+from maxo.bot.methods.markers import QueryMarker
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
 from maxo.enums import (
     AttachmentRequestType,
@@ -208,7 +208,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 lambda seq: ",".join(str(el) for el in seq),
             ),
             dumper(
-                P[datetime],
+                for_marker(QueryMarker, P[datetime]),  # Для GetComments
                 lambda time: int(time.timestamp() * 1000),
             ),
             dumper(
