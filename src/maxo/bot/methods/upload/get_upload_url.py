@@ -15,7 +15,7 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
      #### Пример запроса для загрузки медиафайла
 
     ```bash
-    curl -X POST "https://platform-api.max.ru/uploads?type={type}" \
+    curl -X POST "https://platform-api2.max.ru/uploads?type={type}" \
       -H "Authorization: {access_token}"
     ```
 
@@ -89,14 +89,15 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
     Отправьте запрос:
 
     ```bash
-    curl -X POST "https://platform-api.max.ru/uploads?type={type}" \
+    curl -X POST "https://platform-api2.max.ru/uploads?type={type}" \
       -H "Authorization: {access_token}"
     ```
 
     где `{type}` - тип загружаемого файла:
     - `file` - произвольный файл
     - `image` - изображение
-    - `video` / `audio` - видео или аудио
+    - `video` - видео
+    - `audio` - аудио
 
     Ответ:
     ```json
@@ -108,7 +109,8 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
      > Обратите внимание:  домен в `url` зависит от типа файла. Это ожидаемое поведение:
     `file` → `https://fu.oneme.ru`
     `image` → `https://iu.oneme.ru`
-    `video` / `audio` → `https://vu.okcdn.ru`
+    `video` → `https://omub.okcdn.ru`
+     `audio` → `https://omu.okcdn.ru`
 
     #### 2. Загрузка медиафайла
 
@@ -154,7 +156,7 @@ class GetUploadUrl(MaxoMethod[UploadEndpoint]):
 
     После успешной загрузки сервер обрабатывает файл. Файлы от нескольких мегабайт обрабатываются дольше
 
-    > Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api.max.ru - 30 rps
+    > Для стабильной работы сервисов MAX убедитесь, что максимальное количество запросов в секунду на platform-api2.max.ru - 30 rps
 
     Если отправить сообщение с вложением сразу после загрузки, может возникнуть ошибка:
 

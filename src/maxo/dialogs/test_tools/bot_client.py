@@ -7,7 +7,7 @@ from unihttp.clients.base import BaseAsyncClient
 
 from maxo import Bot, Dispatcher
 from maxo.enums import ChatStatus, ChatType, MessageLinkType
-from maxo.omit import Omitted
+from maxo.omit import Omitted, is_defined
 from maxo.routing.signals import MaxoUpdate
 from maxo.types import (
     BotAddedToChat,
@@ -113,7 +113,9 @@ class BotClient:
             link=(
                 LinkedMessage(
                     type=MessageLinkType.REPLY,
-                    sender=reply_to.sender,
+                    sender=(
+                        reply_to.sender if is_defined(reply_to.sender) else Omitted()
+                    ),
                     chat_id=(
                         Omitted()
                         if reply_to.recipient.chat_id is None

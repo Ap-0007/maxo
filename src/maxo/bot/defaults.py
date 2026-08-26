@@ -1,10 +1,16 @@
 import dataclasses
 from typing import Any, TypeVar
 
-from maxo.bot.methods import AnswerOnCallback, EditMessage, SendMessage
+from maxo.bot.methods import (
+    AnswerOnCallback,
+    EditComment,
+    EditMessage,
+    SendComment,
+    SendMessage,
+)
 from maxo.enums import TextFormat
 from maxo.omit import Omittable, Omitted, is_defined, is_omitted
-from maxo.types import MaxoType
+from maxo.types import MaxoType, NewCommentBody
 
 
 class BotDefaults(MaxoType):
@@ -36,7 +42,10 @@ def _fill(obj: Any, defaults: BotDefaults) -> Any:
 
 
 def apply_defaults(method: _MethodT, defaults: BotDefaults) -> _MethodT:
-    if isinstance(method, (SendMessage, EditMessage)):
+    if isinstance(
+        method,
+        (SendMessage, EditMessage, SendComment, EditComment, NewCommentBody),
+    ):
         return _fill(method, defaults)  # type: ignore[no-any-return]
     if isinstance(method, AnswerOnCallback) and is_defined(method.message):
         return dataclasses.replace(

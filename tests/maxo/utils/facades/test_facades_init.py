@@ -8,6 +8,9 @@ from maxo.routing.facades.bot_removed_from_chat import BotRemovedFromChatFacade
 from maxo.routing.facades.bot_started import BotStartedFacade
 from maxo.routing.facades.bot_stopped import BotStoppedFacade
 from maxo.routing.facades.chat_title_changed import ChatTitleChangedFacade
+from maxo.routing.facades.comment_created import CommentCreatedFacade
+from maxo.routing.facades.comment_edited import CommentEditedFacade
+from maxo.routing.facades.comment_removed import CommentRemovedFacade
 from maxo.routing.facades.dialog_cleared import DialogClearedFacade
 from maxo.routing.facades.dialog_muted import DialogMutedFacade
 from maxo.routing.facades.dialog_removed import DialogRemovedFacade
@@ -76,6 +79,15 @@ def test_all_facades_are_exported() -> None:
 
     assert hasattr(maxo.utils.facades, "ChatTitleChangedFacade")
     assert maxo.utils.facades.ChatTitleChangedFacade is ChatTitleChangedFacade
+
+    assert hasattr(maxo.utils.facades, "CommentCreatedFacade")
+    assert maxo.utils.facades.CommentCreatedFacade is CommentCreatedFacade
+
+    assert hasattr(maxo.utils.facades, "CommentEditedFacade")
+    assert maxo.utils.facades.CommentEditedFacade is CommentEditedFacade
+
+    assert hasattr(maxo.utils.facades, "CommentRemovedFacade")
+    assert maxo.utils.facades.CommentRemovedFacade is CommentRemovedFacade
 
     assert hasattr(maxo.utils.facades, "DialogClearedFacade")
     assert maxo.utils.facades.DialogClearedFacade is DialogClearedFacade

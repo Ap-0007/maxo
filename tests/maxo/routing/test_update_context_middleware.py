@@ -21,6 +21,11 @@ from maxo.types import (
     ChatMember,
     ChatMembersList,
     ChatTitleChanged,
+    CommentCreated,
+    CommentEdited,
+    CommentMessage,
+    CommentMessageBody,
+    CommentRemoved,
     DialogCleared,
     DialogMuted,
     DialogRemoved,
@@ -69,6 +74,19 @@ def make_message_created(chat_id: int = 1, user_id: int = 1) -> MessageCreated:
             timestamp=NOW,
             sender=make_user(user_id=user_id),
         ),
+        timestamp=NOW,
+    )
+
+
+def make_comment(chat_id: int, user_id: int) -> CommentMessage:
+    return CommentMessage(
+        body=CommentMessageBody(mid="comment", seq=1),
+        recipient=Recipient(
+            chat_id=chat_id,
+            chat_type=ChatType.CHANNEL,
+            post_id="post",
+        ),
+        sender=make_user(user_id),
         timestamp=NOW,
     )
 
@@ -258,6 +276,39 @@ async def run_middleware(
         ),
         (make_message_created(chat_id=23, user_id=14), 23, 14, ChatType.CHAT, True),
         (make_message_removed(chat_id=24, user_id=15), 24, 15, None, False),
+        (
+            CommentCreated(
+                message=make_comment(chat_id=25, user_id=16),
+                timestamp=NOW,
+            ),
+            25,
+            16,
+            ChatType.CHANNEL,
+            True,
+        ),
+        (
+            CommentEdited(
+                message=make_comment(chat_id=26, user_id=17),
+                timestamp=NOW,
+            ),
+            26,
+            17,
+            ChatType.CHANNEL,
+            True,
+        ),
+        (
+            CommentRemoved(
+                chat_id=27,
+                message_id="comment",
+                post_id="post",
+                user_id=18,
+                timestamp=NOW,
+            ),
+            27,
+            18,
+            ChatType.CHANNEL,
+            False,
+        ),
     ],
 )
 async def test_resolve_update_context_for_all_update_types(

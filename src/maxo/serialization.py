@@ -33,6 +33,9 @@ from maxo.types import (
     CallbackButton,
     ChatTitleChanged,
     ClipboardButton,
+    CommentCreated,
+    CommentEdited,
+    CommentRemoved,
     ContactAttachment,
     ContactAttachmentRequest,
     DialogCleared,
@@ -79,7 +82,7 @@ from maxo.types import (
     VideoAttachmentRequest,
     base,
 )
-from maxo.types.facades import message
+from maxo.types.facades import comment, message
 
 _UPDATE_TAGS: Mapping[type, UpdateType] = {
     BotAddedToChat: UpdateType.BOT_ADDED,
@@ -87,6 +90,9 @@ _UPDATE_TAGS: Mapping[type, UpdateType] = {
     BotStarted: UpdateType.BOT_STARTED,
     BotStopped: UpdateType.BOT_STOPPED,
     ChatTitleChanged: UpdateType.CHAT_TITLE_CHANGED,
+    CommentCreated: UpdateType.COMMENT_CREATED,
+    CommentEdited: UpdateType.COMMENT_EDITED,
+    CommentRemoved: UpdateType.COMMENT_REMOVED,
     DialogCleared: UpdateType.DIALOG_CLEARED,
     DialogMuted: UpdateType.DIALOG_MUTED,
     DialogRemoved: UpdateType.DIALOG_REMOVED,
@@ -174,6 +180,7 @@ def create_retort() -> Retort:
             return datetime.min.replace(tzinfo=UTC)
 
     exec_type_checking(base)
+    exec_type_checking(comment)
     exec_type_checking(message)
 
     extended = DEFAULT_RETORT.extend(
@@ -193,6 +200,10 @@ def create_retort() -> Retort:
                 lambda seq: ",".join(str(el) for el in seq),
             ),
             dumper(
+                for_marker(QueryMarker, P[datetime]),  # Для GetComments
+                lambda time: int(time.timestamp() * 1000),
+            ),
+            dumper(
                 P[AttachmentsRequests | Attachments],
                 lambda x: x.to_request() if isinstance(x, Attachments) else x,
                 chain=Chain.FIRST,
@@ -200,6 +211,7 @@ def create_retort() -> Retort:
             loader(P[datetime], _load_datetime),
         ],
     )
+
     return typing.cast(Retort, extended)
 
 

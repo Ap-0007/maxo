@@ -31,6 +31,13 @@ from .chat_member import ChatMember
 from .chat_members_list import ChatMembersList
 from .chat_title_changed import ChatTitleChanged
 from .clipboard_button import ClipboardButton
+from .comment_created import CommentCreated
+from .comment_edited import CommentEdited
+from .comment_linked_message import CommentLinkedMessage
+from .comment_message import CommentMessage
+from .comment_message_body import CommentMessageBody
+from .comment_message_list import CommentMessageList
+from .comment_removed import CommentRemoved
 from .contact_attachment import ContactAttachment
 from .contact_attachment_payload import ContactAttachmentPayload
 from .contact_attachment_request import ContactAttachmentRequest
@@ -75,6 +82,7 @@ from .message_removed import MessageRemoved
 from .message_stat import MessageStat
 from .modify_members_result import ModifyMembersResult
 from .monospaced_markup import MonospacedMarkup
+from .new_comment_body import NewCommentBody
 from .new_message_body import NewMessageBody
 from .new_message_link import NewMessageLink
 from .open_app_button import OpenAppButton
@@ -87,6 +95,7 @@ from .quote_markup import QuoteMarkup
 from .recipient import Recipient
 from .request_contact_button import RequestContactButton
 from .request_geo_location_button import RequestGeoLocationButton
+from .send_comment_result import SendCommentResult
 from .send_message_result import SendMessageResult
 from .share_attachment import ShareAttachment
 from .share_attachment_payload import ShareAttachmentPayload
@@ -147,6 +156,13 @@ __all__ = (
     "ChatMembersList",
     "ChatTitleChanged",
     "ClipboardButton",
+    "CommentCreated",
+    "CommentEdited",
+    "CommentLinkedMessage",
+    "CommentMessage",
+    "CommentMessageBody",
+    "CommentMessageList",
+    "CommentRemoved",
     "ContactAttachment",
     "ContactAttachmentPayload",
     "ContactAttachmentRequest",
@@ -194,6 +210,7 @@ __all__ = (
     "MessageStat",
     "ModifyMembersResult",
     "MonospacedMarkup",
+    "NewCommentBody",
     "NewMessageBody",
     "NewMessageLink",
     "OpenAppButton",
@@ -206,6 +223,7 @@ __all__ = (
     "Recipient",
     "RequestContactButton",
     "RequestGeoLocationButton",
+    "SendCommentResult",
     "SendMessageResult",
     "ShareAttachment",
     "ShareAttachmentPayload",

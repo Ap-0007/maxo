@@ -16,6 +16,9 @@ from maxo.routing.facades.bot_removed_from_chat import BotRemovedFromChatFacade
 from maxo.routing.facades.bot_started import BotStartedFacade
 from maxo.routing.facades.bot_stopped import BotStoppedFacade
 from maxo.routing.facades.chat_title_changed import ChatTitleChangedFacade
+from maxo.routing.facades.comment_created import CommentCreatedFacade
+from maxo.routing.facades.comment_edited import CommentEditedFacade
+from maxo.routing.facades.comment_removed import CommentRemovedFacade
 from maxo.routing.facades.dialog_cleared import DialogClearedFacade
 from maxo.routing.facades.dialog_muted import DialogMutedFacade
 from maxo.routing.facades.dialog_removed import DialogRemovedFacade
@@ -33,6 +36,7 @@ from maxo.types.facades import (
     BotMethodsFacade,
     CallbackMethodsFacade,
     ChatMethodsFacade,
+    CommentMethodsFacade,
     MessageMethodsFacade,
     SubscriptionMethodsFacade,
 )
@@ -49,6 +53,10 @@ __all__ = (
     "CallbackMethodsFacade",
     "ChatMethodsFacade",
     "ChatTitleChangedFacade",
+    "CommentCreatedFacade",
+    "CommentEditedFacade",
+    "CommentMethodsFacade",
+    "CommentRemovedFacade",
     "DialogClearedFacade",
     "DialogMutedFacade",
     "DialogRemovedFacade",

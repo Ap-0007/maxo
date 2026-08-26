@@ -4,6 +4,9 @@ from .bot_removed_from_chat import BotRemovedFromChatFacade
 from .bot_started import BotStartedFacade
 from .bot_stopped import BotStoppedFacade
 from .chat_title_changed import ChatTitleChangedFacade
+from .comment_created import CommentCreatedFacade
+from .comment_edited import CommentEditedFacade
+from .comment_removed import CommentRemovedFacade
 from .dialog_cleared import DialogClearedFacade
 from .dialog_muted import DialogMutedFacade
 from .dialog_removed import DialogRemovedFacade
@@ -23,6 +26,9 @@ __all__ = (
     "BotStartedFacade",
     "BotStoppedFacade",
     "ChatTitleChangedFacade",
+    "CommentCreatedFacade",
+    "CommentEditedFacade",
+    "CommentRemovedFacade",
     "DialogClearedFacade",
     "DialogMutedFacade",
     "DialogRemovedFacade",
