@@ -112,6 +112,9 @@ false` - это `Omittable[...] = Omitted()`, а не `= <default>`.
   комментарий. Так генерируются `MessageButton.text` (сужение до `Omittable` с
   `# type: ignore`) и `PhotoAttachmentRequestPayload.photos` (map в свагере, но
   на деле список).
+- `OMITTABLE_MODEL_FIELDS` (`OmittableModelField`) - дополнительные поля,
+  которых нет в Swagger, но которые приходят от API. Для них генерируются
+  `Omittable[...] = Omitted()` и `unsafe_*`.
 
 **Главное правило: если после генерации приходится править файл руками
 одинаковым образом - правь таблицу в `overrides.py`, а не `src/maxo`.**
@@ -129,8 +132,6 @@ Butcher не создаёт и при генерации затрёт, если 
   `UploadMedia.validate_response`.
 - `serialization.py` (`TAG_PROVIDERS`) и `warming_up.py` - butcher их не
   трогает, но при новом полиморфном типе их нужно обновить руками.
-- Поля, которых нет в свагере: `Chat.chat_message_id` вместе с
-  `unsafe_chat_message_id`. Butcher их не знает и вычистит.
 - Алиасы-свойства и сужения типов с `# type: ignore[assignment]`:
   `Message.message`, `Chat.id`, `User.id`/`fullname`, `Callback.id`/`data`,
   `MessageCallback.message`. Без них `just mypy` после генерации падает -

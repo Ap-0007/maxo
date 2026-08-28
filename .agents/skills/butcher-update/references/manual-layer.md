@@ -66,7 +66,9 @@
 
 ## Поля и сужения, которых нет в спеке
 
-- `Chat.chat_message_id: Omittable[str | None]` + `unsafe_chat_message_id`.
+- `BotInfo.is_official`, `BotStarted.is_channel`, `BotStopped.is_channel`,
+  `BotStopped.payload`, `Chat.chat_message_id` и `Subscription.version`
+  генерируются через `OMITTABLE_MODEL_FIELDS` в `butcher/overrides.py`.
 - `ShareAttachment.payload` - `field(default_factory=ShareAttachmentPayload)`
   вместо обязательного поля.
 - `MessageCallback` - `# type: ignore[misc]` на классе, `message: Message | None`

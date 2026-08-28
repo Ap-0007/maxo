@@ -400,6 +400,17 @@ class _Profile:
             self._build_model_field(name, ir_field, imports, is_update=is_update)
             for ir_field in ir_model.fields
         )
+        field_names = {item.name for item in fields}
+        fields += tuple(
+            Field(
+                name=field_name,
+                annotation=extra.annotation,
+                description=extra.description,
+                omittable=True,
+            )
+            for (owner, field_name), extra in overrides.OMITTABLE_MODEL_FIELDS.items()
+            if owner == class_name and field_name not in field_names
+        )
         self._add_field_helpers(fields, imports)
         return Model(
             name=class_name,
