@@ -20,6 +20,7 @@ class CallbackMethodsFacade(SubscriptionMethodsFacade):
         notification: Omittable[str | None] = Omitted(),
         text: Omittable[str | None] = Omitted(),  # Подражание aiogram
         message: NewMessageBody | None = None,
+        disable_link_preview: Omittable[bool] = Omitted(),
     ) -> SimpleQueryResult:
         """
         Ответ на колбэк.
@@ -30,13 +31,15 @@ class CallbackMethodsFacade(SubscriptionMethodsFacade):
             text: Алиас для notification, подражание aiogram.
                   Используется notification или он, преимущество у notification.
             message: Заполните это, если хотите изменить текущее сообщение
-
+            disable_link_preview: Если `true`, сервер не будет генерировать
+                превью для ссылок в тексте сообщения или поста
 
         """
         return await self.bot.answer_on_callback(
             callback_id=self.callback.callback_id,
             notification=notification if is_not_omitted(notification) else text,
             message=message,
+            disable_link_preview=disable_link_preview,
         )
 
     answer = callback_answer  # Подражание aiogram

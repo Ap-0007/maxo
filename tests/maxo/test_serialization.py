@@ -3,6 +3,7 @@ from adaptix.load_error import LoadError
 
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
+    AnswerOnCallback,
     EditMessage,
     GetMembers,
     GetMessages,
@@ -75,7 +76,13 @@ def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
     if is_omitted(default):
         assert "disable_link_preview" not in data["query"]
     else:
-        assert data["query"]["disable_link_preview"] == default
+        assert data["query"]["disable_link_preview"] == str(default).lower()
+
+    data = retort.dump(AnswerOnCallback(callback_id="callback"))
+    if is_omitted(default):
+        assert "disable_link_preview" not in data["query"]
+    else:
+        assert data["query"]["disable_link_preview"] == str(default).lower()
 
 
 @pytest.mark.parametrize(

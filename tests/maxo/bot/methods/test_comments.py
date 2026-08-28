@@ -109,7 +109,7 @@ def test_comment_body_uses_bot_defaults(method: object) -> None:
 
     assert body["format"] == "markdown"
     if isinstance(method, SendComment):
-        assert data["query"]["disable_link_preview"] == 1
+        assert data["query"]["disable_link_preview"] == "true"
 
 
 def test_comment_message_loads_null_sender() -> None:

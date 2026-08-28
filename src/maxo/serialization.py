@@ -10,7 +10,13 @@ from unihttp.serializers.adaptix.serialize import DEFAULT_RETORT
 
 from maxo._internal.adaptix import concat_provider, has_tag_provider, is_subclass
 from maxo.bot.defaults import BotDefaults
-from maxo.bot.methods import EditComment, EditMessage, SendComment, SendMessage
+from maxo.bot.methods import (
+    AnswerOnCallback,
+    EditComment,
+    EditMessage,
+    SendComment,
+    SendMessage,
+)
 from maxo.bot.methods.base import MaxoMethod
 from maxo.bot.methods.markers import QueryMarker
 from maxo.bot.warming_up import WarmingUpType, warming_up_retort
@@ -159,7 +165,8 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
         defaults = BotDefaults()
 
     types_with_defaults = (
-        SendMessage
+        AnswerOnCallback
+        | SendMessage
         | EditMessage
         | SendComment
         | EditComment
@@ -168,11 +175,22 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     )
 
     def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
-        if hasattr(method, "format") and is_omitted(method.format):
+        if isinstance(
+            method,
+            (
+                SendMessage,
+                EditMessage,
+                SendComment,
+                EditComment,
+                NewMessageBody,
+                NewCommentBody,
+            ),
+        ) and is_omitted(method.format):
             method = dataclasses.replace(method, format=defaults.text_format)
-        if hasattr(method, "disable_link_preview") and is_omitted(
-            method.disable_link_preview,
-        ):
+        if isinstance(
+            method,
+            (AnswerOnCallback, SendMessage, SendComment),
+        ) and is_omitted(method.disable_link_preview):
             method = dataclasses.replace(
                 method,
                 disable_link_preview=defaults.disable_link_preview,  # type: ignore[arg-type]
@@ -201,7 +219,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
-                int,
+                lambda flag: str(flag).lower(),
             ),
             dumper(
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),

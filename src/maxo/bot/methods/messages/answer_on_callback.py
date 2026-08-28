@@ -48,6 +48,7 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
              Идентификатор можно получить в обновлениях о событиях через [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions) или [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates)
              Получение обновлений с помощью [Long Polling](https://dev.max.ru/docs-api/methods/GET/updates) ограничено по скорости и сроку хранения событий - этот способ не подходит для production-окружения. Рекомендуем на всех этапах работы использовать [Webhook](https://dev.max.ru/docs-api/methods/POST/subscriptions)
              Когда пользователь нажмёт на кнопку, МАКС отправит событие, содержащее объект [Update](https://dev.max.ru/docs-api/objects/Update) с типом `message_callback` и идентификатором кнопки в поле `updates[i].callback.callback_id`
+        disable_link_preview: Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста
         message: Заполните это, если хотите изменить текущее сообщение
         notification: Заполните это, если хотите просто отправить одноразовое уведомление пользователю
             Примечание: поле отсутствует в актуальном Swagger, но поддерживается библиотекой
@@ -68,6 +69,9 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
 
      Когда пользователь нажмёт на кнопку, МАКС отправит событие, содержащее объект [Update](https://dev.max.ru/docs-api/objects/Update) с типом `message_callback` и идентификатором кнопки в поле `updates[i].callback.callback_id`
     """
+
+    disable_link_preview: Query[Omittable[bool]] = Omitted()
+    """Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста"""
 
     message: Body[Omittable[NewMessageBody | None]] = Omitted()
     """Заполните это, если хотите изменить текущее сообщение"""
