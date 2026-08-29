@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pathlib
 from collections.abc import AsyncIterator, Callable
@@ -271,6 +272,25 @@ class Bot(BaseAsyncClient):
     # Subscriptions
 
     get_subscriptions = bind_method(GetSubscriptions)
+
+    async def clear_subscriptions(self, active_url: str | None = None) -> None:
+        """
+        Удаляет все WebHook-подписки, кроме активной.
+
+        Args:
+            active_url: URL подписки, которую нужно сохранить. Если не передан,
+                удаляются все подписки.
+
+        """
+        subscriptions = await self.get_subscriptions()
+        await asyncio.gather(
+            *(
+                self.unsubscribe(url=subscription.url)
+                for subscription in subscriptions.subscriptions
+                if subscription.url != active_url
+            ),
+        )
+
     get_updates = bind_method(GetUpdates)
     subscribe = bind_method(Subscribe)
     unsubscribe = bind_method(Unsubscribe)

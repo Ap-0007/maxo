@@ -7,7 +7,7 @@ from maxo.bot.bot import Bot
 from maxo.bot.state import ClosedBotState, EmptyBotState, RunningBotState
 from maxo.bot.upload import UploadConfig, UploadMethod
 from maxo.errors import MaxBotApiError
-from maxo.types import BotInfo
+from maxo.types import BotInfo, GetSubscriptionsResult, Subscription
 from maxo.types.upload_media_result import UploadMediaResult
 from maxo.utils.upload_media import BufferedInputFile
 from tests.constants import NOW, TOKEN
@@ -176,3 +176,59 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
         file,
         None,
     )
+
+
+@pytest.mark.parametrize(
+    ("active_url", "removed_urls"),
+    [
+        (None, ["https://one.example/webhook", "https://two.example/webhook"]),
+        ("https://one.example/webhook", ["https://two.example/webhook"]),
+        (
+            "https://missing.example/webhook",
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+        ),
+    ],
+)
+async def test_clear_subscriptions(
+    bot: Bot,
+    active_url: str | None,
+    removed_urls: list[str],
+) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ) as get_subscriptions,
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        await bot.clear_subscriptions(active_url=active_url)
+
+    get_subscriptions.assert_awaited_once_with()
+    assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls
+
+
+async def test_clear_subscriptions_handles_an_empty_list(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(subscriptions=[])
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
+    ):
+        await bot.clear_subscriptions()
+
+    unsubscribe.assert_not_awaited()
