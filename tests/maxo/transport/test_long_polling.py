@@ -369,6 +369,32 @@ async def test_start_does_not_warn_when_there_are_no_subscriptions(
     logger.warning.assert_not_called()
 
 
+async def test_start_continues_when_subscription_check_fails(
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    error = RuntimeError("API unavailable")
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates) as get,
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(side_effect=error),
+        ) as get_subscriptions,
+        patch("maxo.transport.long_polling.loggers.long_polling") as logger,
+    ):
+        await long_polling.start(mock_bot, auto_close_bot=False)
+
+    get_subscriptions.assert_awaited_once_with()
+    get.assert_called_once()
+    logger.warning.assert_called_once_with(
+        "Не удалось проверить WebHook-подписки перед запуском Long Polling - %s: %s",
+        "RuntimeError",
+        error,
+    )
+
+
 def test_run_passes_clear_subscriptions_to_start(mock_bot: Bot) -> None:
     long_polling = LongPolling(dispatcher=Dispatcher())
 

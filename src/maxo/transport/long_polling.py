@@ -94,15 +94,24 @@ class LongPolling:
                 if clear_subscriptions:
                     await bot.clear_subscriptions()
                 else:
-                    subscriptions = await bot.get_subscriptions()
-                    if subscriptions.subscriptions:
+                    try:
+                        subscriptions = await bot.get_subscriptions()
+                    except Exception as exception:  # noqa: BLE001
                         loggers.long_polling.warning(
-                            "У бота @%s есть активные WebHook-подписки (%d). "
-                            "Они не были очищены перед запуском Long Polling. "
-                            "Передайте clear_subscriptions=True, чтобы удалить их.",
-                            bot.state.info.username,
-                            len(subscriptions.subscriptions),
+                            "Не удалось проверить WebHook-подписки перед "
+                            "запуском Long Polling - %s: %s",
+                            type(exception).__name__,
+                            exception,
                         )
+                    else:
+                        if subscriptions.subscriptions:
+                            loggers.long_polling.warning(
+                                "У бота @%s есть активные WebHook-подписки (%d). "
+                                "Они не были очищены перед запуском Long Polling. "
+                                "Передайте clear_subscriptions=True, чтобы удалить их.",
+                                bot.state.info.username,
+                                len(subscriptions.subscriptions),
+                            )
 
                 updates_poller = self._get_updates(
                     bot=bot,
