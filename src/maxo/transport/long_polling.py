@@ -43,6 +43,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         asyncio.run(
@@ -54,6 +55,7 @@ class LongPolling:
                 types=types,
                 auto_close_bot=auto_close_bot,
                 drop_pending_updates=drop_pending_updates,
+                clear_subscriptions=clear_subscriptions,
                 **workflow_data,
             ),
         )
@@ -67,6 +69,7 @@ class LongPolling:
         types: Omittable[Sequence[str]] = Omitted(),
         auto_close_bot: bool = True,
         drop_pending_updates: bool = False,
+        clear_subscriptions: bool = False,
         **workflow_data: Any,
     ) -> None:
         dispatcher = self._dispatcher
@@ -87,6 +90,19 @@ class LongPolling:
                 )
 
                 await dispatcher.feed_signal(AfterStartup(), bot)
+
+                if clear_subscriptions:
+                    await bot.clear_subscriptions()
+                else:
+                    subscriptions = await bot.get_subscriptions()
+                    if subscriptions.subscriptions:
+                        loggers.long_polling.warning(
+                            "У бота @%s есть активные WebHook-подписки (%d). "
+                            "Они не были очищены перед запуском Long Polling. "
+                            "Передайте clear_subscriptions=True, чтобы удалить их.",
+                            bot.state.info.username,
+                            len(subscriptions.subscriptions),
+                        )
 
                 updates_poller = self._get_updates(
                     bot=bot,
