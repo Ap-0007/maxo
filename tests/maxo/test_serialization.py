@@ -1,6 +1,10 @@
+import dataclasses
+import typing
+
 import pytest
 from adaptix.load_error import LoadError
 
+from maxo import methods
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AnswerOnCallback,
@@ -8,12 +12,19 @@ from maxo.bot.methods import (
     GetMembers,
     GetMessages,
     GetUpdates,
+    RemoveMember,
     SendMessage,
 )
+from maxo.bot.methods.base import MaxoMethod
 from maxo.enums import TextFormat
 from maxo.errors import AttributeIsEmptyError
 from maxo.omit import Omittable, Omitted, is_omitted
-from maxo.serialization import create_retort, create_retort_with_bot
+from maxo.serialization import (
+    TypesWithFormat,
+    TypesWithLinkPreview,
+    create_retort,
+    create_retort_with_bot,
+)
 from maxo.types import (
     CommentCreated,
     CommentEdited,
@@ -21,8 +32,10 @@ from maxo.types import (
     CommentRemoved,
     Message,
     MessageCreated,
+    NewCommentBody,
     NewMessageBody,
     UpdateList,
+    User,
 )
 from maxo.types.base import MaxoType
 from tests.factories import make_bot
@@ -71,18 +84,86 @@ def test_bot_default_text_format(default: Omittable[TextFormat | None]) -> None:
 def test_bot_default_disable_link_preview(default: Omittable[bool]) -> None:
     defaults = BotDefaults(disable_link_preview=default)
     retort = create_retort(defaults=defaults, warming_up=False)
+    expected = "true" if default else "false"
 
-    data = retort.dump(SendMessage())
-    if is_omitted(default):
-        assert "disable_link_preview" not in data["query"]
-    else:
-        assert data["query"]["disable_link_preview"] == str(default).lower()
+    for method in (SendMessage(), AnswerOnCallback(callback_id="callback")):
+        data = retort.dump(method)
+        if is_omitted(default):
+            assert "disable_link_preview" not in data["query"]
+        else:
+            assert data["query"]["disable_link_preview"] == expected
 
-    data = retort.dump(AnswerOnCallback(callback_id="callback"))
-    if is_omitted(default):
-        assert "disable_link_preview" not in data["query"]
-    else:
-        assert data["query"]["disable_link_preview"] == str(default).lower()
+
+def test_bot_default_disable_link_preview_does_not_override_explicit() -> None:
+    defaults = BotDefaults(disable_link_preview=True)
+    retort = create_retort(defaults=defaults, warming_up=False)
+
+    data = retort.dump(
+        AnswerOnCallback(callback_id="callback", disable_link_preview=False),
+    )
+    assert data["query"]["disable_link_preview"] == "false"
+
+    data = retort.dump(SendMessage(disable_link_preview=False))
+    assert data["query"]["disable_link_preview"] == "false"
+
+
+def test_bot_default_disable_link_preview_none_is_not_sent() -> None:
+    # `None` в BotDefaults означает "нет значения", а не строку "none" в квери.
+    defaults = BotDefaults()
+    retort = create_retort(defaults=defaults, warming_up=False)
+    defaults.disable_link_preview = None
+
+    assert "disable_link_preview" not in retort.dump(SendMessage())["query"]
+    assert (
+        "disable_link_preview"
+        not in retort.dump(AnswerOnCallback(callback_id="callback"))["query"]
+    )
+
+
+@pytest.mark.parametrize(("block", "expected"), [(True, "true"), (False, "false")])
+def test_query_bool_is_dumped_as_json_literal(block: bool, expected: str) -> None:
+    # Дампер квери-булей общий, поэтому проверяем и не-disable_link_preview поле.
+    retort = create_retort(warming_up=False)
+
+    data = retort.dump(RemoveMember(chat_id=1, user_id=2, block=block))
+
+    assert data["query"]["block"] == expected
+
+
+def test_retort_loads_user_without_last_activity_time() -> None:
+    # MAX не присылает поле, если пользователь скрыл онлайн-статус.
+    retort = create_retort(warming_up=False)
+
+    user = retort.load(
+        {"user_id": 1, "first_name": "Alice", "is_bot": False},
+        User,
+    )
+
+    assert is_omitted(user.last_activity_time)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_last_activity_time
+
+
+def test_types_with_defaults_match_declared_fields() -> None:
+    # Защита от расхождения: butcher может добавить поле в новый метод,
+    # а союзы в serialization.py руками не обновят.
+    candidates: set[type] = {NewCommentBody, NewMessageBody} | {
+        obj
+        for obj in vars(methods).values()
+        if isinstance(obj, type) and issubclass(obj, MaxoMethod)
+    }
+
+    def owners(field_name: str) -> set[type]:
+        return {
+            candidate
+            for candidate in candidates
+            if any(field.name == field_name for field in dataclasses.fields(candidate))
+        }
+
+    assert owners("format") == set(typing.get_args(TypesWithFormat))
+    assert owners("disable_link_preview") == set(
+        typing.get_args(TypesWithLinkPreview),
+    )
 
 
 @pytest.mark.parametrize(

@@ -69,7 +69,6 @@ class AnswerOnCallback(MaxoMethod[SimpleQueryResult]):
 
      Когда пользователь нажмёт на кнопку, МАКС отправит событие, содержащее объект [Update](https://dev.max.ru/docs-api/objects/Update) с типом `message_callback` и идентификатором кнопки в поле `updates[i].callback.callback_id`
     """
-
     disable_link_preview: Query[Omittable[bool]] = Omitted()
     """Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста"""
 

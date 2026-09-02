@@ -27,7 +27,7 @@ from maxo.enums import (
     MarkupElementType,
     UpdateType,
 )
-from maxo.omit import Omitted, is_omitted
+from maxo.omit import Omitted, is_defined, is_omitted
 from maxo.routing.mixins import comment, message
 from maxo.types import (
     Attachments,
@@ -160,40 +160,35 @@ TAG_PROVIDERS = concat_provider(
 )
 
 
+TypesWithFormat = (
+    SendMessage
+    | EditMessage
+    | SendComment
+    | EditComment
+    | NewMessageBody
+    | NewCommentBody
+)
+TypesWithLinkPreview = AnswerOnCallback | SendMessage | SendComment
+TypesWithDefaults = TypesWithFormat | TypesWithLinkPreview
+
+
 def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
     if defaults is None:
         defaults = BotDefaults()
 
-    types_with_defaults = (
-        AnswerOnCallback
-        | SendMessage
-        | EditMessage
-        | SendComment
-        | EditComment
-        | NewMessageBody
-        | NewCommentBody
-    )
-
-    def _set_method_defaults(method: types_with_defaults) -> types_with_defaults:
-        if isinstance(
-            method,
-            (
-                SendMessage,
-                EditMessage,
-                SendComment,
-                EditComment,
-                NewMessageBody,
-                NewCommentBody,
-            ),
-        ) and is_omitted(method.format):
+    def _set_method_defaults(method: TypesWithDefaults) -> TypesWithDefaults:
+        if isinstance(method, TypesWithFormat) and is_omitted(method.format):
             method = dataclasses.replace(method, format=defaults.text_format)
-        if isinstance(
-            method,
-            (AnswerOnCallback, SendMessage, SendComment),
-        ) and is_omitted(method.disable_link_preview):
+
+        disable_link_preview = defaults.disable_link_preview
+        if (
+            isinstance(method, TypesWithLinkPreview)
+            and is_omitted(method.disable_link_preview)
+            and is_defined(disable_link_preview)
+        ):
             method = dataclasses.replace(
                 method,
-                disable_link_preview=defaults.disable_link_preview,  # type: ignore[arg-type]
+                disable_link_preview=disable_link_preview,
             )
         return method
 
@@ -219,7 +214,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
             ),
             dumper(
                 for_marker(QueryMarker, P[bool]),
-                lambda flag: str(flag).lower(),
+                lambda flag: "true" if flag else "false",
             ),
             dumper(
                 for_marker(QueryMarker, P[list[str]] | P[list[int]]),
@@ -230,7 +225,7 @@ def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
                 lambda time: int(time.timestamp() * 1000),
             ),
             dumper(
-                P[*typing.get_args(types_with_defaults)],
+                P[*typing.get_args(TypesWithDefaults)],
                 _set_method_defaults,
                 chain=Chain.FIRST,
             ),

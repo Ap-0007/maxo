@@ -121,6 +121,7 @@ def test_user_accessors() -> None:
     assert user.id == 1
     assert user.fullname == "Alice Tester"
     assert user.full_name == "Alice Tester"
+    assert user.unsafe_last_activity_time == NOW
     assert user.unsafe_last_name == "Tester"
     assert user.unsafe_name == "Alice T."
     assert user.unsafe_username == "alice"
