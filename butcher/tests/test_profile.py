@@ -114,6 +114,18 @@ def test_int64_timestamp_becomes_datetime(document: MaxoDocument) -> None:
     assert fields["seq"].annotation == "int"
 
 
+def test_user_last_activity_time_is_omittable(document: MaxoDocument) -> None:
+    field = next(
+        field
+        for field in _model(document, "User").fields
+        if field.name == "last_activity_time"
+    )
+
+    assert field.annotation == "datetime"
+    assert field.omittable
+    assert field.unsafe
+
+
 def test_base_reference_is_replaced_by_union_alias(document: MaxoDocument) -> None:
     attachments = next(
         f for f in _model(document, "Message").fields if f.name == "attachments"

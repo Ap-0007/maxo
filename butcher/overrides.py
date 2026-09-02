@@ -143,6 +143,9 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     ("CommentMessage", "sender"): FieldOverride(annotation="User | None"),
     # CommentMessage является Message, поэтому общий контракт допускает `null`.
     ("Message", "sender"): FieldOverride(annotation="User | None"),
+    # Описание Swagger допускает отсутствие поля при скрытом онлайн-статусе,
+    # хотя оно ошибочно осталось в required.
+    ("User", "last_activity_time"): FieldOverride(omittable=True),
     # `Button.text` обязателен, но принятая кнопка может прийти без него.
     ("MessageButton", "text"): FieldOverride(
         omittable=True,

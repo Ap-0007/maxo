@@ -27,14 +27,14 @@ class User(MaxoType):
     """Отображаемое имя пользователя или бота"""
     is_bot: bool
     """`true`, если это бот"""
-    last_activity_time: datetime
-    """Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться"""
     user_id: int
     """Идентификатор пользователя или бота"""
 
     username: str | None = None
     """Никнейм бота или уникальное публичное имя пользователя. В случае с пользователем может быть `null`, если тот недоступен или имя не задано"""
 
+    last_activity_time: Omittable[datetime] = Omitted()
+    """Время последней активности пользователя или бота в MAX (Unix timestamp в миллисекундах). Если пользователь отключил в настройках профиля мессенджера MAX возможность видеть, что он в сети онлайн, поле может не возвращаться"""
     last_name: Omittable[str | None] = Omitted()
     """Отображаемая фамилия пользователя. Для ботов это поле не возвращается"""
     name: Omittable[str | None] = Omitted()
@@ -51,6 +51,16 @@ class User(MaxoType):
         return self.first_name
 
     full_name = fullname  # Подражание aiogram
+
+    @property
+    def unsafe_last_activity_time(self) -> datetime:
+        if is_defined(self.last_activity_time):
+            return self.last_activity_time
+
+        raise AttributeIsEmptyError(
+            obj=self,
+            attr="last_activity_time",
+        )
 
     @property
     def unsafe_last_name(self) -> str:
