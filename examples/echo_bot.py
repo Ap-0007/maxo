@@ -2,7 +2,6 @@ import logging
 import os
 
 from maxo import Bot, Dispatcher
-from maxo.enums import UpdateType
 from maxo.types import MessageCreated
 
 bot = Bot(os.environ["TOKEN"])
@@ -18,7 +17,7 @@ async def echo_handler(update: MessageCreated) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
-    dp.run_polling(bot, types=list(UpdateType))
+    dp.run_polling(bot)
 
 
 if __name__ == "__main__":

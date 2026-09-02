@@ -12,7 +12,6 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
 
     Args:
         chat_id: ID диалога, где произошло событие. Как получить ID - в [разделе «Получение chat_id»](https://dev.max.ru/docs-api#Получение%20chat_id)
-        is_channel: Указывает, произошло ли событие в канале
         payload: Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках - [в разделе FAQ](https://dev.max.ru/help/deeplinks)
         type:
         user: Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`
@@ -26,22 +25,10 @@ class BotStarted(MaxUpdate, ChatMethodsFacade):
     user: User
     """Пользователь, который запустил бота через интерфейс, например, нажав кнопку `Start`"""
 
-    is_channel: Omittable[bool] = Omitted()
-    """Указывает, произошло ли событие в канале"""
     payload: Omittable[str | None] = Omitted()
     """Дополнительные данные из диплинков, переданные при запуске бота. Подробнее о диплинках - [в разделе FAQ](https://dev.max.ru/help/deeplinks)"""
     user_locale: Omittable[str] = Omitted()
     """Текущий язык пользователя в формате [IETF BCP 47](https://www.rfc-editor.org/info/bcp47/)"""
-
-    @property
-    def unsafe_is_channel(self) -> bool:
-        if is_defined(self.is_channel):
-            return self.is_channel
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="is_channel",
-        )
 
     @property
     def unsafe_payload(self) -> str:

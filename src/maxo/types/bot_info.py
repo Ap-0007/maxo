@@ -10,13 +10,10 @@ class BotInfo(UserWithPhoto):
 
     Args:
         commands: Команды, поддерживаемые ботом
-        is_official: Указывает, является ли бот официальным
     """
 
     commands: Omittable[list[BotCommand] | None] = Omitted()
     """Команды, поддерживаемые ботом"""
-    is_official: Omittable[bool] = Omitted()
-    """Указывает, является ли бот официальным"""
 
     @property
     def unsafe_commands(self) -> list[BotCommand]:
@@ -26,14 +23,4 @@ class BotInfo(UserWithPhoto):
         raise AttributeIsEmptyError(
             obj=self,
             attr="commands",
-        )
-
-    @property
-    def unsafe_is_official(self) -> bool:
-        if is_defined(self.is_official):
-            return self.is_official
-
-        raise AttributeIsEmptyError(
-            obj=self,
-            attr="is_official",
         )

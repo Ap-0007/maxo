@@ -122,12 +122,6 @@ class FieldOverride:
     """Хвостовой комментарий после объявления (``# ...``)."""
 
 
-@dataclass(slots=True, frozen=True)
-class OmittableModelField:
-    annotation: str
-    description: str
-
-
 #: Точечные правки полей моделей там, где свагер расходится с maxo. Ключ -
 #: ``(класс, поле)``.
 MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
@@ -158,36 +152,6 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     ("PhotoAttachmentRequestPayload", "photos"): FieldOverride(
         annotation="list[PhotoToken] | None",
         comment="TODO: Проверить кто это",
-    ),
-}
-
-#: Дополнительные omittable-поля моделей, которых нет в Swagger
-OMITTABLE_MODEL_FIELDS: dict[tuple[str, str], OmittableModelField] = {
-    ("BotInfo", "is_official"): OmittableModelField(
-        annotation="bool",
-        description="Указывает, является ли бот официальным",
-    ),
-    ("BotStarted", "is_channel"): OmittableModelField(
-        annotation="bool",
-        description="Указывает, произошло ли событие в канале",
-    ),
-    ("BotStopped", "is_channel"): OmittableModelField(
-        annotation="bool",
-        description="Указывает, произошло ли событие в канале",
-    ),
-    ("BotStopped", "payload"): OmittableModelField(
-        annotation="str | None",
-        description="Дополнительные данные события остановки бота",
-    ),
-    ("Chat", "chat_message_id"): OmittableModelField(
-        annotation="str | None",
-        description=(
-            "Идентификатор сообщения с кнопкой, через которую был инициирован чат"
-        ),
-    ),
-    ("Subscription", "version"): OmittableModelField(
-        annotation="str",
-        description="Версия модели данных подписки",
     ),
 }
 
