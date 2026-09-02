@@ -3,6 +3,54 @@
 История релизов автоматически собирается из [GitHub Releases](https://github.com/K1rL3s/maxo/releases) при каждой сборке документации.
 
 
+## [0.8.3](https://github.com/K1rL3s/maxo/releases/tag/v0.8.3) - 2026-08-26
+
+### What's Changed
+- Добавил `MaxBotBadGatewayError` для 502 ошибки by @K1rL3s in https://github.com/K1rL3s/maxo/pull/175
+- Исправил дамп даты-время в таймстамп в квери by @K1rL3s in https://github.com/K1rL3s/maxo/pull/176
+
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.8.2...v0.8.3
+
+
+## [0.8.2](https://github.com/K1rL3s/maxo/releases/tag/v0.8.2) - 2026-08-25
+
+### What's Changed
+- Поддержка комментариев по сваггеру на 25 Aug 2026 10:29:32 GMT by @K1rL3s in https://github.com/K1rL3s/maxo/pull/174
+
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.8.1...v0.8.2
+
+
+## [0.8.1](https://github.com/K1rL3s/maxo/releases/tag/v0.8.1) - 2026-08-17
+
+### What's Changed
+
+- Чуть перфоманса by @K1rL3s in https://github.com/K1rL3s/maxo/pull/158
+  - Ускорил импорт диалогов и поправил прогрев реторты
+  - Сделал реторту в `maxo.dialogs.context.storage` "приватной" и убрал с неё прогрев
+- Сваггер на 22.07.2026 by @K1rL3s in https://github.com/K1rL3s/maxo/pull/161
+- feat(dialogs): двойной рендер медиа при edit на iOS by @K1rL3s in https://github.com/K1rL3s/maxo/pull/157
+  - Добавлен флаг `Window.two_step_media_edit` (по умолчанию выключен).\
+  Когда он включён, редактирование "медиа -> медиа" при ShowMode.EDIT выполняется в два шага
+- ! fix(routing): AttributeIsEmptyError вместо AttributeError в MessageCallback без message by @biradrags in https://github.com/K1rL3s/maxo/pull/163
+- chore(deps): bump extractions/setup-just from 3 to 4 by @dependabot[bot] in https://github.com/K1rL3s/maxo/pull/169
+- chore(deps): bump actions/setup-python from 6 to 7 by @dependabot[bot] in https://github.com/K1rL3s/maxo/pull/170
+- chore(deps): bump codecov/codecov-action from 6 to 7 by @dependabot[bot] in https://github.com/K1rL3s/maxo/pull/171
+- chore(deps): bump actions/checkout from 6 to 7 by @dependabot[bot] in https://github.com/K1rL3s/maxo/pull/172
+- `flags` для хендлеров by @K1rL3s in https://github.com/K1rL3s/maxo/pull/168
+- Кодогенерация by @K1rL3s in https://github.com/K1rL3s/maxo/pull/165
+- ! Фикс передачи `None` (`null`) в квери параметры by @K1rL3s in https://github.com/K1rL3s/maxo/pull/173
+
+#### Breaking changes?
+
+- `MessageCallbackFacade.message` теперь имеет тип `Message | None` и возвращает `None`, когда исходное сообщение удалено. Раньше свойство было `Message` и выбрасывало `AttributeIsEmptyError`. Это может сломать строгую типизацию и код, рассчитывающий на прежнее исключение
+- Удален `DialogAttachmentsFacade`, но это внутренний модуль, не экспортируемый публичным API: `src/maxo/dialogs/manager/attachment_facade.py`
+- `DeleteAdmin` сохранен как алиас `DeleteAdmins`; обычные импорты и вызовы совместимы.
+
+**Full Changelog**: https://github.com/K1rL3s/maxo/compare/v0.8.0...v0.8.1
+
+
 ## [0.8.0](https://github.com/K1rL3s/maxo/releases/tag/v0.8.0) - 2026-07-12
 
 ### What's Changed
