@@ -14,6 +14,7 @@ from maxo.enums import (
     TextFormat,
 )
 from maxo.errors import AttributeIsEmptyError
+from maxo.omit import is_defined
 from maxo.types import (
     AudioAttachment,
     BotCommand,
@@ -120,6 +121,7 @@ def test_user_accessors() -> None:
     assert user.id == 1
     assert user.fullname == "Alice Tester"
     assert user.full_name == "Alice Tester"
+    assert user.unsafe_last_activity_time == NOW
     assert user.unsafe_last_name == "Tester"
     assert user.unsafe_name == "Alice T."
     assert user.unsafe_username == "alice"
@@ -130,9 +132,11 @@ def test_user_unsafe_accessors_raise_for_omitted_fields() -> None:
         user_id=1,
         first_name="Alice",
         is_bot=False,
-        last_activity_time=NOW,
     )
 
+    assert not is_defined(user.last_activity_time)
+    with pytest.raises(AttributeIsEmptyError):
+        _ = user.unsafe_last_activity_time
     with pytest.raises(AttributeIsEmptyError):
         _ = user.unsafe_last_name
     with pytest.raises(AttributeIsEmptyError):

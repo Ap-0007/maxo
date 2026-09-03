@@ -123,6 +123,25 @@ SPEC: dict[str, Any] = {
                     },
                 },
             },
+            "User": {
+                "required": ["user_id", "last_activity_time", "name"],
+                "properties": {
+                    "user_id": {
+                        "type": "integer",
+                        "format": "int64",
+                    },
+                    "last_activity_time": {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Время последней активности",
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": True,
+                        "description": "Устаревшее поле",
+                    },
+                },
+            },
             "MessageBody": {"properties": {}},
             "CommentMessageBody": {"properties": {}},
             "LinkedMessage": {"properties": {}},

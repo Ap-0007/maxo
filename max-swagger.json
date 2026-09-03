@@ -1677,6 +1677,16 @@
                             "minLength": 1,
                             "pattern": "^(?!\\s*$).+"
                         }
+                    },
+                    {
+                        "name": "disable_link_preview",
+                        "description": " Если `true`, сервер не будет генерировать превью для ссылок в тексте сообщения или поста",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
                     }
                 ],
                 "requestBody": {
