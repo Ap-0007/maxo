@@ -272,6 +272,9 @@ class Bot(BaseAsyncClient):
     # Subscriptions
 
     get_subscriptions = bind_method(GetSubscriptions)
+    get_updates = bind_method(GetUpdates)
+    subscribe = bind_method(Subscribe)
+    unsubscribe = bind_method(Unsubscribe)
 
     async def clear_subscriptions(
         self,
@@ -281,16 +284,19 @@ class Bot(BaseAsyncClient):
         Удаляет все WebHook-подписки, кроме активной.
 
         Args:
-            active_url: URL подписки, которую нужно сохранить. Если не передан,
-                удаляются все подписки.
+            active_url: URL подписки, которую нужно сохранить. Сравнение точное,
+                поэтому URL должен совпадать с тем, что вернул
+                `get_subscriptions`. Если не передан, удаляются все подписки.
 
         Returns:
             Удалённые и сохранённые подписки.
 
         Raises:
-            ExceptionGroup: Если хотя бы одну подписку удалить не удалось.
-                В группе лежат `UnsubscribeError` с URL каждой неудачной
-                попытки. Все запросы при этом доводятся до конца.
+            BaseExceptionGroup: Если хотя бы одну подписку удалить не удалось.
+                Все запросы при этом доводятся до конца, а в группу попадают
+                ошибки по каждой неудачной попытке: обычные - обёрнутыми в
+                `UnsubscribeError` с URL, `BaseException` - как есть. Если
+                `BaseException` не было, группа сужается до `ExceptionGroup`.
 
         """
         subscriptions = (await self.get_subscriptions()).subscriptions
@@ -310,24 +316,21 @@ class Bot(BaseAsyncClient):
             return_exceptions=True,
         )
 
-        errors: list[UnsubscribeError] = []
+        errors: list[BaseException] = []
         for subscription, result in zip(to_remove, results, strict=True):
             if not isinstance(result, BaseException):
                 continue
             if not isinstance(result, Exception):
-                raise result
+                errors.append(result)
+                continue
             error = UnsubscribeError(url=subscription.url, error=result)
             error.__cause__ = result
             errors.append(error)
 
         if errors:
-            raise ExceptionGroup("Не удалось удалить WebHook-подписки", errors)
+            raise BaseExceptionGroup("Не удалось удалить WebHook-подписки", errors)
 
         return ClearSubscriptionsResult(removed=to_remove, kept=kept)
-
-    get_updates = bind_method(GetUpdates)
-    subscribe = bind_method(Subscribe)
-    unsubscribe = bind_method(Unsubscribe)
 
     # Uploads
 

@@ -322,7 +322,8 @@ async def test_clear_subscriptions_collects_every_error(bot: Bot) -> None:
     ]
 
 
-async def test_clear_subscriptions_does_not_swallow_cancellation(bot: Bot) -> None:
+async def test_clear_subscriptions_does_not_wrap_cancellation(bot: Bot) -> None:
+    # CancelledError нельзя прятать в UnsubscribeError - она едет в группе как есть.
     subscriptions = GetSubscriptionsResult(
         subscriptions=[
             Subscription(time=NOW, url="https://one.example/webhook"),
@@ -336,9 +337,50 @@ async def test_clear_subscriptions_does_not_swallow_cancellation(bot: Bot) -> No
             new=AsyncMock(return_value=subscriptions),
         ),
         patch.object(Bot, "unsubscribe", new=AsyncMock(side_effect=CancelledError)),
-        pytest.raises(CancelledError),
+        pytest.raises(BaseExceptionGroup) as exc_info,
     ):
         await bot.clear_subscriptions()
+
+    # Группа с BaseException не сужается до ExceptionGroup.
+    assert not isinstance(exc_info.value, ExceptionGroup)
+    assert [type(error) for error in exc_info.value.exceptions] == [CancelledError]
+
+
+async def test_clear_subscriptions_keeps_errors_next_to_cancellation(bot: Bot) -> None:
+    # Отмена одного запроса не должна прятать провалы остальных.
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+            Subscription(time=NOW, url="https://two.example/webhook"),
+        ],
+    )
+    failure = MockMaxBotApiError("boom")
+
+    async def unsubscribe_side_effect(url: str) -> SimpleQueryResult:
+        if url == "https://one.example/webhook":
+            raise CancelledError
+        raise failure
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(
+            Bot,
+            "unsubscribe",
+            new=AsyncMock(side_effect=unsubscribe_side_effect),
+        ),
+        pytest.raises(BaseExceptionGroup) as exc_info,
+    ):
+        await bot.clear_subscriptions()
+
+    cancelled, unsubscribe_error = exc_info.value.exceptions
+    assert isinstance(cancelled, CancelledError)
+    assert isinstance(unsubscribe_error, UnsubscribeError)
+    assert unsubscribe_error.url == "https://two.example/webhook"
+    assert unsubscribe_error.error is failure
 
 
 async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) -> None:

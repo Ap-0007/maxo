@@ -356,6 +356,42 @@ async def test_start_fails_when_clear_subscriptions_fails(
     get_updates.assert_not_called()
 
 
+async def test_start_clears_subscriptions_before_after_startup(
+    mock_dispatcher: Dispatcher,
+    long_polling: LongPolling,
+    mock_bot: Bot,
+) -> None:
+    # Падение очистки не должно оставлять приложение со сработавшими
+    # startup-хуками и несработавшими shutdown.
+    fired: list[str] = []
+
+    @mock_dispatcher.before_startup()
+    async def _before_startup() -> None:
+        fired.append("before_startup")
+
+    @mock_dispatcher.after_startup()
+    async def _after_startup() -> None:
+        fired.append("after_startup")
+
+    failure = ExceptionGroup(
+        "Не удалось удалить WebHook-подписки",
+        [UnsubscribeError(url="https://example.com/webhook", error=ValueError("boom"))],
+    )
+
+    with (
+        patch.object(long_polling, "_get_updates", side_effect=empty_updates),
+        patch.object(Bot, "clear_subscriptions", new=AsyncMock(side_effect=failure)),
+        pytest.raises(ExceptionGroup),
+    ):
+        await long_polling.start(
+            mock_bot,
+            auto_close_bot=False,
+            clear_subscriptions=True,
+        )
+
+    assert fired == ["before_startup"]
+
+
 async def test_start_warns_about_subscriptions_when_not_cleared(
     long_polling: LongPolling,
     mock_bot: Bot,

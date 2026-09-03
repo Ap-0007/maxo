@@ -89,8 +89,6 @@ class LongPolling:
                     bot.state.info.user_id,
                 )
 
-                await dispatcher.feed_signal(AfterStartup(), bot)
-
                 if clear_subscriptions:
                     cleared = await bot.clear_subscriptions()
                     loggers.long_polling.info(
@@ -116,6 +114,8 @@ class LongPolling:
                                 bot.state.info.username,
                                 len(subscriptions.subscriptions),
                             )
+
+                await dispatcher.feed_signal(AfterStartup(), bot)
 
                 updates_poller = self._get_updates(
                     bot=bot,
