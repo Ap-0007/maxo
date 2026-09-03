@@ -160,7 +160,7 @@ TAG_PROVIDERS = concat_provider(
 )
 
 
-TypesWithFormat = (
+TypesWithFormat: typing.TypeAlias = (
     SendMessage
     | EditMessage
     | SendComment
@@ -168,8 +168,8 @@ TypesWithFormat = (
     | NewMessageBody
     | NewCommentBody
 )
-TypesWithLinkPreview = AnswerOnCallback | SendMessage | SendComment
-TypesWithDefaults = TypesWithFormat | TypesWithLinkPreview
+TypesWithLinkPreview: typing.TypeAlias = AnswerOnCallback | SendMessage | SendComment
+TypesWithDefaults: typing.TypeAlias = TypesWithFormat | TypesWithLinkPreview
 
 
 def _create_retort(*, defaults: BotDefaults | None = None) -> Retort:
