@@ -92,7 +92,11 @@ class LongPolling:
                 await dispatcher.feed_signal(AfterStartup(), bot)
 
                 if clear_subscriptions:
-                    await bot.clear_subscriptions()
+                    cleared = await bot.clear_subscriptions()
+                    loggers.long_polling.info(
+                        "Удалено WebHook-подписок перед запуском Long Polling: %d",
+                        len(cleared.removed),
+                    )
                 else:
                     try:
                         subscriptions = await bot.get_subscriptions()

@@ -44,9 +44,34 @@ Webhooks
 
 .. code-block:: python
 
-    await bot.clear_subscriptions(active_url="https://example.com/webhook")
+    result = await bot.clear_subscriptions(active_url="https://example.com/webhook")
+    print(len(result.removed), len(result.kept))
+
+Метод возвращает :class:`~maxo.types.ClearSubscriptionsResult` с двумя списками
+:class:`~maxo.types.Subscription`: ``removed`` - удаленные подписки, ``kept`` -
+сохраненные по ``active_url``.
 
 Если подписок нет, метод завершится без дополнительных запросов.
+
+Ошибки при очистке
+------------------
+
+Все запросы на удаление доводятся до конца, даже если часть из них падает.
+После этого метод кидает ``ExceptionGroup`` с ``UnsubscribeError`` по каждой
+подписке, которую удалить не вышло: в ошибке есть ``url``, исходное исключение
+лежит в ``error`` и в ``__cause__``.
+
+.. code-block:: python
+
+    from maxo.errors import UnsubscribeError
+
+    try:
+        await bot.clear_subscriptions()
+    except* UnsubscribeError as errors:
+        for error in errors.exceptions:
+            print(error.url, error.error)
+
+Ошибка самого ``get_subscriptions`` не оборачивается и летит наружу как есть.
 
 Примеры использования
 ---------------------
