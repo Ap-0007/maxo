@@ -365,6 +365,10 @@ TYPES_EXTRA_EXPORTS: tuple[ExtraExport, ...] = (
         module="base",
         names=("BaseMaxoType", "BaseUpdate", "BotMixin", "MaxUpdate", "MaxoType"),
     ),
+    ExtraExport(
+        module="clear_subscriptions_result",
+        names=("ClearSubscriptionsResult",),
+    ),
     ExtraExport(module="error_event", names=("ErrorEvent",)),
     ExtraExport(module="update_context", names=("UpdateContext",)),
     ExtraExport(module="upload_media_result", names=("UploadMediaResult",)),
