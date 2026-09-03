@@ -1,4 +1,5 @@
 import io
+from asyncio import CancelledError
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -319,6 +320,25 @@ async def test_clear_subscriptions_collects_every_error(bot: Bot) -> None:
         "https://one.example/webhook",
         "https://two.example/webhook",
     ]
+
+
+async def test_clear_subscriptions_does_not_swallow_cancellation(bot: Bot) -> None:
+    subscriptions = GetSubscriptionsResult(
+        subscriptions=[
+            Subscription(time=NOW, url="https://one.example/webhook"),
+        ],
+    )
+
+    with (
+        patch.object(
+            Bot,
+            "get_subscriptions",
+            new=AsyncMock(return_value=subscriptions),
+        ),
+        patch.object(Bot, "unsubscribe", new=AsyncMock(side_effect=CancelledError)),
+        pytest.raises(CancelledError),
+    ):
+        await bot.clear_subscriptions()
 
 
 async def test_clear_subscriptions_propagates_get_subscriptions_error(bot: Bot) -> None:
