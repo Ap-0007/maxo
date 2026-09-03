@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pathlib
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import asynccontextmanager
 from types import TracebackType
 from typing import Any, BinaryIO, Self, TypeVar
@@ -278,15 +278,17 @@ class Bot(BaseAsyncClient):
 
     async def clear_subscriptions(
         self,
-        active_url: str | None = None,
+        active_urls: str | Iterable[str] | None = None,
     ) -> ClearSubscriptionsResult:
         """
-        Удаляет все WebHook-подписки, кроме активной.
+        Удаляет все WebHook-подписки, кроме активных.
 
         Args:
-            active_url: URL подписки, которую нужно сохранить. Сравнение точное,
-                поэтому URL должен совпадать с тем, что вернул
-                `get_subscriptions`. Если не передан, удаляются все подписки.
+            active_urls: URL подписок, которые нужно сохранить: одна строка или
+                итерируемый набор строк. Одновременно может работать несколько
+                подписок (бот, статистика и т.п.). Сравнение точное, поэтому
+                URL должны совпадать с тем, что вернул `get_subscriptions`.
+                Если не передан, удаляются все подписки.
 
         Returns:
             Удалённые и сохранённые подписки.
@@ -299,16 +301,23 @@ class Bot(BaseAsyncClient):
                 `BaseException` не было, группа сужается до `ExceptionGroup`.
 
         """
+        if active_urls is None:
+            urls_to_keep: frozenset[str] = frozenset()
+        elif isinstance(active_urls, str):
+            urls_to_keep = frozenset((active_urls,))
+        else:
+            urls_to_keep = frozenset(active_urls)
+
         subscriptions = (await self.get_subscriptions()).subscriptions
         to_remove = [
             subscription
             for subscription in subscriptions
-            if subscription.url != active_url
+            if subscription.url not in urls_to_keep
         ]
         kept = [
             subscription
             for subscription in subscriptions
-            if subscription.url == active_url
+            if subscription.url in urls_to_keep
         ]
 
         results = await asyncio.gather(

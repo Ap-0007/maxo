@@ -327,8 +327,9 @@ async def test_start_clears_subscriptions_when_requested(
     get.assert_not_awaited()
     logger.warning.assert_not_called()
     logger.info.assert_called_once_with(
-        "Удалено WebHook-подписок перед запуском Long Polling: %d",
+        "Удалено WebHook-подписок перед запуском Long Polling (%d): %s",
         1,
+        ["https://example.com/webhook"],
     )
 
 

@@ -185,7 +185,7 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
 
 
 @pytest.mark.parametrize(
-    ("active_url", "removed_urls"),
+    ("active_urls", "removed_urls"),
     [
         (None, ["https://one.example/webhook", "https://two.example/webhook"]),
         ("https://one.example/webhook", ["https://two.example/webhook"]),
@@ -196,11 +196,19 @@ async def test_bot_upload_media_resumable(bot: Bot) -> None:
                 "https://two.example/webhook",
             ],
         ),
+        (["https://one.example/webhook"], ["https://two.example/webhook"]),
+        (
+            [
+                "https://one.example/webhook",
+                "https://two.example/webhook",
+            ],
+            [],
+        ),
     ],
 )
 async def test_clear_subscriptions(
     bot: Bot,
-    active_url: str | None,
+    active_urls: str | list[str] | None,
     removed_urls: list[str],
 ) -> None:
     subscriptions = GetSubscriptionsResult(
@@ -218,7 +226,7 @@ async def test_clear_subscriptions(
         ) as get_subscriptions,
         patch.object(Bot, "unsubscribe", new=AsyncMock()) as unsubscribe,
     ):
-        result = await bot.clear_subscriptions(active_url=active_url)
+        result = await bot.clear_subscriptions(active_urls=active_urls)
 
     get_subscriptions.assert_awaited_once_with()
     assert [call.kwargs["url"] for call in unsubscribe.await_args_list] == removed_urls

@@ -9,10 +9,10 @@ class ClearSubscriptionsResult(MaxoType):
 
     Args:
         removed: Удалённые подписки
-        kept: Подписки, сохранённые по `active_url`
+        kept: Подписки, сохранённые по `active_urls`
     """
 
     removed: list[Subscription]
     """Удалённые подписки"""
     kept: list[Subscription]
-    """Подписки, сохранённые по `active_url`"""
+    """Подписки, сохранённые по `active_urls`"""
