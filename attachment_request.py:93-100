@@ -1,0 +1,1 @@
+self._items.append(LocationAttachmentRequest(latitude=Decimal(latitude), longitude=Decimal(longitude)),)
