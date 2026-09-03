@@ -124,7 +124,7 @@ SPEC: dict[str, Any] = {
                 },
             },
             "User": {
-                "required": ["user_id", "last_activity_time"],
+                "required": ["user_id", "last_activity_time", "name"],
                 "properties": {
                     "user_id": {
                         "type": "integer",
@@ -134,6 +134,11 @@ SPEC: dict[str, Any] = {
                         "type": "integer",
                         "format": "int64",
                         "description": "Время последней активности",
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": True,
+                        "description": "Устаревшее поле",
                     },
                 },
             },

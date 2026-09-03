@@ -4,7 +4,7 @@ import typing
 import pytest
 from adaptix.load_error import LoadError
 
-from maxo import methods
+from maxo import methods, types
 from maxo.bot.defaults import BotDefaults
 from maxo.bot.methods import (
     AnswerOnCallback,
@@ -32,7 +32,6 @@ from maxo.types import (
     CommentRemoved,
     Message,
     MessageCreated,
-    NewCommentBody,
     NewMessageBody,
     UpdateList,
     User,
@@ -145,12 +144,16 @@ def test_retort_loads_user_without_last_activity_time() -> None:
 
 
 def test_types_with_defaults_match_declared_fields() -> None:
-    # Защита от расхождения: butcher может добавить поле в новый метод,
-    # а союзы в serialization.py руками не обновят.
-    candidates: set[type] = {NewCommentBody, NewMessageBody} | {
+    # Защита от расхождения: butcher может добавить поле в новый метод или
+    # в новое тело запроса, а союзы в serialization.py руками не обновят.
+    # Кандидатов собираем сканом, а не списком имён, иначе новый тип пройдёт
+    # мимо проверки ровно так же, как мимо союза.
+    candidates: set[type] = {
         obj
-        for obj in vars(methods).values()
-        if isinstance(obj, type) and issubclass(obj, MaxoMethod)
+        for obj in (*vars(methods).values(), *vars(types).values())
+        if isinstance(obj, type)
+        and issubclass(obj, MaxoMethod | MaxoType)
+        and dataclasses.is_dataclass(obj)
     }
 
     def owners(field_name: str) -> set[type]:

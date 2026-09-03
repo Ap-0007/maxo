@@ -156,6 +156,10 @@ MODEL_FIELD_OVERRIDES: dict[tuple[str, str], FieldOverride] = {
     # Описание Swagger допускает отсутствие поля при скрытом онлайн-статусе,
     # хотя оно ошибочно осталось в required.
     ("User", "last_activity_time"): FieldOverride(omittable=True),
+    # Поле объявлено устаревшим и уже может не приходить, хотя осталось в
+    # required. Сужение жило в src ручной правкой - переносим в оверрайды,
+    # иначе следующая генерация снесёт его вместе с `unsafe_name`.
+    ("User", "name"): FieldOverride(omittable=True),
 }
 
 
